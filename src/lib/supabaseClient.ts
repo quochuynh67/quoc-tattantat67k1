@@ -64,8 +64,20 @@ export const createPost = async (post) => {
 };
 
 export const updatePost = async (id, updates) => {
-  const { data, error } = await supabase.from('content_items').update(updates).eq('id', id);
-  if (error) throw error;
+  // Use upsert to replace the entire row (PUT semantics)
+  const payload = { id, ...updates };
+  const { data, error } = await supabase
+    .from('content_items')
+    .upsert([payload], { returning: 'representation', onConflict: 'id' })
+    .select()
+    .maybeSingle();
+  if (error) {
+    if (error.code === 'PGRST116') {
+      // No row found (unlikely with upsert)
+      return null;
+    }
+    throw error;
+  }
   return data;
 };
 
@@ -76,16 +88,19 @@ export const deletePost = async (id) => {
 };
 
 export const getVlogByPost = async (postId) => {
-  // Fetch vlog linked to a post via content_item_id
   const { data, error } = await supabase
     .from('vlog_reviews')
     .select('*, vlog_locations(*)')
     .eq('content_item_id', postId)
-    .single();
-  if (error && error.code !== 'PGRST116') { // ignore not‑found error
+    .maybeSingle();
+  if (error) {
+    // If no vlog exists, Supabase returns a 406 error which we treat as null
+    if (error.code === 'PGRST116' || error.status === 406) {
+      return null;
+    }
     throw error;
   }
-  return data; // may be null
+  return data;
 };
 
 

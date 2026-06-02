@@ -1,6 +1,6 @@
 // src/pages/admin/Posts.jsx
 import React, { useEffect, useState } from "react";
-import { Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Grid, FormControlLabel, Switch, List, ListItem, ListItemText } from "@mui/material";
+import { Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Grid, FormControl, InputLabel, Select, MenuItem, FormControlLabel, Switch, List, ListItem, ListItemText } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import EditIcon from "@mui/icons-material/Edit";
@@ -21,18 +21,19 @@ export default function AdminPosts() {
     description: "",
     content: "",
     image_url: "",
-    video_url: "",
     category: "",
     address: "",
     rating: "",
     severity: "",
-    published_date: "",
+    published_date: new Date().toISOString().split('T')[0],
     is_featured: false,
     is_published: true,
   });
+
   const [vlogDialogOpen, setVlogDialogOpen] = useState(false);
   const [currentVlog, setCurrentVlog] = useState(null);
-  const [uploadingVideo, setUploadingVideo] = useState(false);
+  const [uploadingVideo, setUploadingVideo] = useState(false); // Deprecated, retained for potential future use.
+
   const handleViewVlog = async (postId) => {
     try {
       const vlog = await getVlogByPost(postId);
@@ -47,20 +48,10 @@ export default function AdminPosts() {
       alert('Error fetching vlog: ' + e.message);
     }
   };
-  const handleVideoUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploadingVideo(true);
-    try {
-      const url = await uploadPostVideo(file);
-      setForm((prev) => ({ ...prev, video_url: url }));
-    } catch (err) {
-      console.error(err);
-      alert("Video upload error: " + err.message);
-    } finally {
-      setUploadingVideo(false);
-    }
-  };
+// Removed video upload handler as posts no longer handle videos directly.
+  // The uploadPostVideo function and related state have been deprecated.
+  // If video functionality is needed in the future, it can be reimplemented.
+
 
   // Filtering states
   const [searchTerm, setSearchTerm] = useState("");
@@ -68,7 +59,11 @@ export default function AdminPosts() {
 
   const fetchPosts = async () => {
     try {
-      const data = await getPostsBySection(""); // empty filter returns all
+      const { data, error } = await supabase
+        .from('content_items')
+        .select('*')
+        .order('updated_at', { ascending: false });
+      if (error) throw error;
       setPosts(data || []);
     } catch (e) {
       console.error(e);
@@ -140,7 +135,7 @@ export default function AdminPosts() {
       description: form.description || null,
       content: form.content || null,
       image_url: form.image_url || null,
-      video_url: form.video_url || null,
+
       category: form.category || null,
       address: form.address || null,
       rating: form.rating !== "" ? Number(form.rating) : null,
@@ -159,7 +154,7 @@ export default function AdminPosts() {
       }
       resetForm();
       setOpen(false);
-      fetchPosts();
+      await fetchPosts();
     } catch (e) {
       console.error(e);
       alert("Đã xảy ra lỗi khi lưu bài viết: " + e.message);
@@ -287,20 +282,24 @@ export default function AdminPosts() {
               <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
                 <TextField label="Tiêu đề" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} fullWidth variant="outlined" />
                 
-                <TextField 
-                  label="Chuyên mục" 
-                  value={form.section_slug} 
-                  onChange={(e) => setForm({ ...form, section_slug: e.target.value })} 
-                  select 
-                  SelectProps={{ native: true }} 
-                  fullWidth 
-                  variant="outlined"
-                >
-                  <option value="" disabled>Chọn chuyên mục</option>
-                  {sections.map((sec) => (
-                    <option key={sec.id} value={sec.slug}>{sec.title}</option>
-                  ))}
-                </TextField>
+                <FormControl fullWidth variant="outlined" size="small">
+                  <InputLabel id="section-select-label">Chuyên mục</InputLabel>
+                  <Select
+                    fullWidth
+                    labelId="section-select-label"
+                    id="section-select"
+                    value={form.section_slug}
+                    onChange={(e) => setForm({ ...form, section_slug: e.target.value })}
+                    label="Chuyên mục"
+                  >
+                    <MenuItem value=""><em>Chọn chuyên mục</em></MenuItem>
+                    {sections.map((sec) => (
+                      <MenuItem key={sec.id} value={sec.slug}>
+                        {sec.title}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
 
                 <TextField label="Phân loại phụ (Category)" placeholder="Ví dụ: ẩm thực, giải trí..." value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} fullWidth variant="outlined" />
                 
@@ -315,49 +314,13 @@ export default function AdminPosts() {
             {/* Right side: Media, location, metadata */}
             <Grid item xs={12} md={5}>
               <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                <TextField label="Video URL" value={form.video_url} onChange={(e) => setForm({ ...form, video_url: e.target.value })} fullWidth variant="outlined" />
-                <Button component="label" variant="contained" startIcon={<CloudUploadIcon />} disabled={uploadingVideo} sx={{ mt: 1 }}>
-                  {uploadingVideo ? "Uploading..." : "Upload Video"}
-                  <input type="file" accept="video/*" hidden onChange={handleVideoUpload} />
-                </Button>
+                <TextField label="Image URL" value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} fullWidth variant="outlined" />
                 {form.image_url && (
                   <Box sx={{ borderRadius: 2, overflow: "hidden", border: "1px solid", borderColor: "divider", height: "140px", display: "flex", justifyContent: "center", bgcolor: "#f5f5f5" }}>
                     <img src={form.image_url} alt="Post preview" style={{ height: "100%", width: "100%", objectFit: "cover" }} onError={(e) => { e.target.src = "https://placehold.co/400x200?text=Không+thể+tải+ảnh"; }} />
                   </Box>
                 )}
                 <TextField label="Địa chỉ" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} fullWidth variant="outlined" />
-                {/* Video Upload */}
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  <Button component="label" variant="contained" startIcon={<CloudUploadIcon />} size="small" disabled={uploadingVideo} sx={{ textTransform: "none", borderRadius: 1.5 }}>
-                    {uploadingVideo ? "Đang tải..." : "Tải Video"}
-                    <input type="file" accept="video/*" hidden onChange={async (e) => {
-                      const file = e.target.files?.[0];
-                      if (!file) return;
-                      setUploadingVideo(true);
-                      try {
-                        const url = await uploadVideoForVlog(file);
-                        setForm((prev) => ({ ...prev, video_url: url }));
-                        alert("Video uploaded và URL được thiết lập!");
-                      } catch (err) {
-                        console.error(err);
-                        alert("Lỗi tải video: " + err.message);
-                      } finally {
-                        setUploadingVideo(false);
-                      }
-                    }} />
-                  </Button>
-                  {form.video_url && (
-                    <TextField
-                      label="Video URL"
-                      value={form.video_url}
-                      disabled
-                      variant="filled"
-                      size="small"
-                      fullWidth
-                      inputProps={{ style: { fontSize: "0.75rem", fontFamily: "monospace" } }}
-                    />
-                  )}
-                </Box>
 
                 <Grid container spacing={2}>
                   <Grid item xs={6}>
