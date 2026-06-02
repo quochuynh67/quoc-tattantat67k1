@@ -1,0 +1,538 @@
+// src/pages/admin/Vlogs.jsx
+import React, { useEffect, useState } from "react";
+import { Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Grid, FormControlLabel, Switch, Divider, Card, CardContent } from "@mui/material";
+import DeleteIcon from "@mui/icons-material/Delete";
+import EditIcon from "@mui/icons-material/Edit";
+import AddIcon from "@mui/icons-material/Add";
+import CloudUploadIcon from "@mui/icons-material/CloudUpload";
+import { getVlogs, createVlog, updateVlog, deleteVlog, getSections, uploadVlogFile, supabase } from "../../lib/supabaseClient";
+
+export default function AdminVlogs() {
+  const [vlogs, setVlogs] = useState([]);
+  const [posts, setPosts] = useState([]);
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState(null);
+  
+  // Media source modes: 'file' or 'url'
+  const [videoSourceMode, setVideoSourceMode] = useState("url");
+  const [posterSourceMode, setPosterSourceMode] = useState("url");
+  const [uploadingVideo, setUploadingVideo] = useState(false);
+  const [uploadingPoster, setUploadingPoster] = useState(false);
+
+  // Vlog Form State
+  const [form, setForm] = useState({
+    title: "",
+    subtitle: "",
+    video_url: "",
+    poster_url: "",
+    host: "",
+    duration_label: "",
+    content_item_id: "",
+    is_published: true,
+    display_order: 0,
+  });
+
+  // Timeline locations (giai đoạn) state inside dialog
+  const [locations, setLocations] = useState([]);
+
+  // Filtering states
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const fetchVlogs = async () => {
+    try {
+      const data = await getVlogs();
+      setVlogs(data || []);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const fetchPostsAndSections = async () => {
+    try {
+      // Fetch all posts (content_items) to allow linking
+      const { data, error } = await supabase.from("content_items").select("id, title");
+      if (error) throw error;
+      setPosts(data || []);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  useEffect(() => {
+    fetchVlogs();
+    fetchPostsAndSections();
+  }, []);
+
+  const openEdit = (vlog) => {
+    setEditing(vlog.id);
+    setForm({
+      title: vlog.title || "",
+      subtitle: vlog.subtitle || "",
+      video_url: vlog.video_url || "",
+      poster_url: vlog.poster_url || "",
+      host: vlog.host || "",
+      duration_label: vlog.duration_label || "",
+      content_item_id: vlog.content_item_id || "",
+      is_published: vlog.is_published !== false,
+      display_order: vlog.display_order || 0,
+    });
+    
+    // Set locations (giai đoạn)
+    const sortedLocs = [...(vlog.vlog_locations || [])].sort((a, b) => a.time_seconds - b.time_seconds);
+    setLocations(sortedLocs);
+    
+    setVideoSourceMode("url");
+    setPosterSourceMode("url");
+    setOpen(true);
+  };
+
+  const resetForm = () => {
+    setForm({
+      title: "",
+      subtitle: "",
+      video_url: "",
+      poster_url: "",
+      host: "",
+      duration_label: "",
+      content_item_id: "",
+      is_published: true,
+      display_order: 0,
+    });
+    setLocations([]);
+    setVideoSourceMode("url");
+    setPosterSourceMode("url");
+  };
+
+  // Video File upload handler
+  const handleVideoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingVideo(true);
+    try {
+      const publicUrl = await uploadVlogFile(file, "videos");
+      setForm((prev) => ({ ...prev, video_url: publicUrl }));
+    } catch (err) {
+      console.error(err);
+      alert("Lỗi tải video lên: " + err.message);
+    } finally {
+      setUploadingVideo(false);
+    }
+  };
+
+  // Poster File upload handler
+  const handlePosterUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingPoster(true);
+    try {
+      const publicUrl = await uploadVlogFile(file, "posters");
+      setForm((prev) => ({ ...prev, poster_url: publicUrl }));
+    } catch (err) {
+      console.error(err);
+      alert("Lỗi tải ảnh poster lên: " + err.message);
+    } finally {
+      setUploadingPoster(false);
+    }
+  };
+
+  // Milestone Image upload handler
+  const handleMilestoneImageUpload = async (index, file) => {
+    if (!file) return;
+    try {
+      const publicUrl = await uploadVlogFile(file, "milestones");
+      updateLocationField(index, "image_url", publicUrl);
+    } catch (err) {
+      console.error(err);
+      alert("Lỗi tải ảnh lên: " + err.message);
+    }
+  };
+
+  // Location array helpers
+  const addLocationRow = () => {
+    setLocations((prev) => [
+      ...prev,
+      {
+        time_seconds: 0,
+        name: "",
+        note: "",
+        image_url: "",
+        latitude: "",
+        longitude: "",
+      },
+    ]);
+  };
+
+  const removeLocationRow = (index) => {
+    setLocations((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const updateLocationField = (index, field, value) => {
+    setLocations((prev) =>
+      prev.map((loc, i) => (i === index ? { ...loc, [field]: value } : loc))
+    );
+  };
+
+  const handleSubmit = async () => {
+    if (!form.title || !form.video_url) {
+      alert("Vui lòng điền tiêu đề và đường dẫn video!");
+      return;
+    }
+
+    // Sort locations by time_seconds before saving
+    const sortedLocations = [...locations].sort((a, b) => Number(a.time_seconds) - Number(b.time_seconds));
+
+    const vlogPayload = {
+      title: form.title,
+      subtitle: form.subtitle || null,
+      video_url: form.video_url,
+      poster_url: form.poster_url || null,
+      host: form.host || null,
+      duration_label: form.duration_label || null,
+      content_item_id: form.content_item_id || null,
+      is_published: form.is_published,
+      display_order: Number(form.display_order) || 0,
+    };
+
+    try {
+      if (editing) {
+        await updateVlog(editing, vlogPayload, sortedLocations);
+      } else {
+        await createVlog(vlogPayload, sortedLocations);
+      }
+      resetForm();
+      setOpen(false);
+      fetchVlogs();
+    } catch (e) {
+      console.error(e);
+      alert("Lỗi khi lưu Vlog: " + e.message);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("Bạn có chắc chắn muốn xóa Vlog này cùng tất cả giai đoạn của nó?")) return;
+    try {
+      await deleteVlog(id);
+      fetchVlogs();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  // Filtered Vlogs List
+  const filteredVlogs = vlogs.filter((vlog) =>
+    (vlog.title || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (vlog.subtitle || "").toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  return (
+    <Box sx={{ p: 3 }}>
+      <Typography variant="h4" gutterBottom sx={{ fontWeight: 700, mb: 3 }}>
+        Vlogs Management
+      </Typography>
+
+      {/* Filter and Control Bar */}
+      <Paper variant="outlined" sx={{ p: 2.5, mb: 3, borderRadius: 3, display: "flex", flexWrap: "wrap", gap: 2, alignItems: "center" }}>
+        <TextField
+          label="Tìm kiếm vlog..."
+          placeholder="Tìm theo tiêu đề hoặc phụ đề..."
+          variant="outlined"
+          size="small"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          sx={{ flexGrow: 1, minWidth: "220px" }}
+        />
+        <Button 
+          variant="contained" 
+          onClick={() => { setEditing(null); resetForm(); setOpen(true); }}
+          sx={{ px: 3, py: 1, borderRadius: 2, textTransform: "none", fontWeight: 600, height: "40px" }}
+        >
+          Add Vlog
+        </Button>
+      </Paper>
+
+      {/* Vlogs List Table */}
+      <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 3, overflow: "hidden" }}>
+        <Table>
+          <TableHead sx={{ bgcolor: "action.hover" }}>
+            <TableRow>
+              <TableCell sx={{ fontWeight: 600 }}>Vlog Title</TableCell>
+              <TableCell sx={{ fontWeight: 600 }}>Host</TableCell>
+              <TableCell sx={{ fontWeight: 600 }}>Linked Post</TableCell>
+              <TableCell sx={{ fontWeight: 600 }}>Timeline Stages</TableCell>
+              <TableCell align="right" sx={{ fontWeight: 600, pr: 3 }}>Thao tác</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {filteredVlogs.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={5} align="center" sx={{ py: 6, color: "text.secondary" }}>
+                  Không tìm thấy vlog nào phù hợp.
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredVlogs.map((vlog) => (
+                <TableRow key={vlog.id} hover sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
+                  <TableCell>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                      {vlog.title}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: "text.secondary" }}>
+                      {vlog.subtitle}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>{vlog.host || "N/A"}</TableCell>
+                  <TableCell>
+                    {posts.find(p => p.id === vlog.content_item_id)?.title || (
+                      <Typography variant="caption" color="text.disabled">Không liên kết</Typography>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" sx={{ display: "inline-block", bgcolor: "success.light", color: "success.contrastText", px: 1.5, py: 0.5, borderRadius: 1.5, fontSize: "0.75rem", fontWeight: 600 }}>
+                      {vlog.vlog_locations?.length || 0} Giai đoạn
+                    </Typography>
+                  </TableCell>
+                  <TableCell align="right" sx={{ pr: 3 }}>
+                    <Box sx={{ display: "flex", gap: 1, justifyContent: "flex-end" }}>
+                      <IconButton onClick={() => openEdit(vlog)} size="small" color="primary" sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2 }}>
+                        <EditIcon />
+                      </IconButton>
+                      <IconButton onClick={() => handleDelete(vlog.id)} size="small" color="error" sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2 }}>
+                        <DeleteIcon />
+                      </IconButton>
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      {/* Main Dialog */}
+      <Dialog open={open} onClose={() => setOpen(false)} maxWidth="lg" fullWidth PaperProps={{ sx: { borderRadius: 4, p: 1 } }}>
+        <DialogTitle sx={{ fontWeight: 700, pb: 1 }}>{editing ? "Hiệu chỉnh Vlog & Giai đoạn" : "Tạo Vlog mới & Thiết lập Giai đoạn"}</DialogTitle>
+        <DialogContent sx={{ mt: 1, maxHeight: "75vh" }}>
+          <Grid container spacing={3}>
+            {/* Left Column: Vlog basic information */}
+            <Grid item xs={12} md={5}>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: "primary.main" }}>
+                Thông tin cơ bản Vlog
+              </Typography>
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                <TextField label="Tiêu đề Vlog" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} fullWidth variant="outlined" />
+                <TextField label="Phụ đề (Subtitle)" value={form.subtitle} onChange={(e) => setForm({ ...form, subtitle: e.target.value })} fullWidth variant="outlined" />
+                <TextField label="Người dẫn (Host)" value={form.host} onChange={(e) => setForm({ ...form, host: e.target.value })} fullWidth variant="outlined" />
+                
+                <Grid container spacing={2}>
+                  <Grid item xs={6}>
+                    <TextField label="Độ dài (Duration)" placeholder="Ví dụ: 12:45" value={form.duration_label} onChange={(e) => setForm({ ...form, duration_label: e.target.value })} fullWidth variant="outlined" />
+                  </Grid>
+                  <Grid item xs={6}>
+                    <TextField label="Thứ tự hiển thị" type="number" value={form.display_order} onChange={(e) => setForm({ ...form, display_order: e.target.value })} fullWidth variant="outlined" />
+                  </Grid>
+                </Grid>
+
+                <TextField 
+                  label="Liên kết tới bài viết (Post)" 
+                  value={form.content_item_id} 
+                  onChange={(e) => setForm({ ...form, content_item_id: e.target.value })} 
+                  select 
+                  SelectProps={{ native: true }} 
+                  fullWidth 
+                  variant="outlined"
+                >
+                  <option value="">Không liên kết bài viết</option>
+                  {posts.map((post) => (
+                    <option key={post.id} value={post.id}>{post.title}</option>
+                  ))}
+                </TextField>
+
+                {/* Video Source Switcher */}
+                <Card variant="outlined" sx={{ p: 1.5, borderRadius: 2 }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>Video Source</Typography>
+                  <Box sx={{ display: "flex", gap: 2, mb: 1.5 }}>
+                    <Button size="small" variant={videoSourceMode === "url" ? "contained" : "outlined"} onClick={() => setVideoSourceMode("url")}>Dán Link URL</Button>
+                    <Button size="small" variant={videoSourceMode === "file" ? "contained" : "outlined"} onClick={() => setVideoSourceMode("file")}>Tải File Lên</Button>
+                  </Box>
+                  {videoSourceMode === "url" ? (
+                    <TextField label="Video URL" value={form.video_url} onChange={(e) => setForm({ ...form, video_url: e.target.value })} fullWidth variant="outlined" size="small" />
+                  ) : (
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                      <Button component="label" variant="outlined" startIcon={<CloudUploadIcon />} size="small" disabled={uploadingVideo}>
+                        {uploadingVideo ? "Đang tải lên..." : "Tải Video lên"}
+                        <input type="file" accept="video/*" hidden onChange={handleVideoUpload} />
+                      </Button>
+                      <Typography variant="caption" sx={{ overflow: "hidden", textOverflow: "ellipsis", maxWidth: "200px" }}>
+                        {form.video_url ? "Đã tải lên thành công!" : "Chưa chọn file"}
+                      </Typography>
+                    </Box>
+                  )}
+                </Card>
+
+                {/* Poster Source Switcher */}
+                <Card variant="outlined" sx={{ p: 1.5, borderRadius: 2 }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>Poster Image</Typography>
+                  <Box sx={{ display: "flex", gap: 2, mb: 1.5 }}>
+                    <Button size="small" variant={posterSourceMode === "url" ? "contained" : "outlined"} onClick={() => setPosterSourceMode("url")}>Dán Link URL</Button>
+                    <Button size="small" variant={posterSourceMode === "file" ? "contained" : "outlined"} onClick={() => setPosterSourceMode("file")}>Tải File Lên</Button>
+                  </Box>
+                  {posterSourceMode === "url" ? (
+                    <TextField label="Poster URL" value={form.poster_url} onChange={(e) => setForm({ ...form, poster_url: e.target.value })} fullWidth variant="outlined" size="small" />
+                  ) : (
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                      <Button component="label" variant="outlined" startIcon={<CloudUploadIcon />} size="small" disabled={uploadingPoster}>
+                        {uploadingPoster ? "Đang tải lên..." : "Tải Poster"}
+                        <input type="file" accept="image/*" hidden onChange={handlePosterUpload} />
+                      </Button>
+                      <Typography variant="caption" sx={{ overflow: "hidden", textOverflow: "ellipsis", maxWidth: "200px" }}>
+                        {form.poster_url ? "Đã tải lên!" : "Chưa chọn file"}
+                      </Typography>
+                    </Box>
+                  )}
+                  {form.poster_url && (
+                    <Box sx={{ mt: 1.5, borderRadius: 1.5, overflow: "hidden", height: "100px", border: "1px solid", borderColor: "divider" }}>
+                      <img src={form.poster_url} alt="Poster preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    </Box>
+                  )}
+                </Card>
+
+                <FormControlLabel
+                  control={<Switch checked={form.is_published} onChange={(e) => setForm({ ...form, is_published: e.target.checked })} />}
+                  label="Xuất bản công khai Vlog"
+                />
+              </Box>
+            </Grid>
+
+            {/* Right Column: Dynamic Stage Timeline Locations */}
+            <Grid item xs={12} md={7}>
+              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+                <Typography variant="h6" sx={{ fontWeight: 600, color: "primary.main" }}>
+                  Các giai đoạn hành trình trong Video
+                </Typography>
+                <Button variant="outlined" startIcon={<AddIcon />} size="small" onClick={addLocationRow} sx={{ borderRadius: 1.5 }}>
+                  Thêm Giai đoạn
+                </Button>
+              </Box>
+
+              <Divider sx={{ mb: 2 }} />
+
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5, maxHeight: "55vh", overflowY: "auto", pr: 1 }}>
+                {locations.length === 0 ? (
+                  <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 6, border: "2px dashed", borderColor: "divider", borderRadius: 3 }}>
+                    Chưa thiết lập giai đoạn nào. Bấm nút "Thêm Giai đoạn" để bắt đầu gắn địa danh theo dòng thời gian video!
+                  </Typography>
+                ) : (
+                  locations.map((loc, index) => (
+                    <Card key={index} variant="outlined" sx={{ borderRadius: 3, position: "relative", overflow: "visible" }}>
+                      {/* Delete index badge */}
+                      <IconButton 
+                        onClick={() => removeLocationRow(index)} 
+                        size="small" 
+                        color="error" 
+                        sx={{ position: "absolute", top: -10, right: -10, bgcolor: "background.paper", boxShadow: 1, '&:hover': { bgcolor: "error.light", color: "error.contrastText" } }}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+
+                      <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
+                        <Grid container spacing={2}>
+                          {/* Row 1: Time & Milestone Name */}
+                          <Grid item xs={4}>
+                            <TextField 
+                              label="Tại giây thứ" 
+                              type="number" 
+                              value={loc.time_seconds} 
+                              onChange={(e) => updateLocationField(index, "time_seconds", e.target.value)} 
+                              fullWidth 
+                              size="small" 
+                            />
+                          </Grid>
+                          <Grid item xs={8}>
+                            <TextField 
+                              label="Tên địa điểm / Sự kiện" 
+                              value={loc.name} 
+                              onChange={(e) => updateLocationField(index, "name", e.target.value)} 
+                              fullWidth 
+                              size="small" 
+                            />
+                          </Grid>
+
+                          {/* Row 2: Note / Description */}
+                          <Grid item xs={12}>
+                            <TextField 
+                              label="Mô tả chi tiết tại thời điểm này" 
+                              value={loc.note} 
+                              onChange={(e) => updateLocationField(index, "note", e.target.value)} 
+                              multiline 
+                              rows={2} 
+                              fullWidth 
+                              size="small" 
+                            />
+                          </Grid>
+
+                          {/* Row 3: Latitude, Longitude & Milestone Image Upload */}
+                          <Grid item xs={4}>
+                            <TextField 
+                              label="Kinh độ (Lat)" 
+                              type="number"
+                              inputProps={{ step: 0.000001 }}
+                              value={loc.latitude} 
+                              onChange={(e) => updateLocationField(index, "latitude", e.target.value)} 
+                              fullWidth 
+                              size="small" 
+                            />
+                          </Grid>
+                          <Grid item xs={4}>
+                            <TextField 
+                              label="Vĩ độ (Long)" 
+                              type="number"
+                              inputProps={{ step: 0.000001 }}
+                              value={loc.longitude} 
+                              onChange={(e) => updateLocationField(index, "longitude", e.target.value)} 
+                              fullWidth 
+                              size="small" 
+                            />
+                          </Grid>
+                          <Grid item xs={4}>
+                            <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                              <Button component="label" variant="outlined" startIcon={<CloudUploadIcon />} size="small" fullWidth>
+                                Ảnh mốc
+                                <input type="file" accept="image/*" hidden onChange={(e) => handleMilestoneImageUpload(index, e.target.files?.[0])} />
+                              </Button>
+                              <TextField 
+                                placeholder="Hoặc dán Link URL ảnh" 
+                                value={loc.image_url} 
+                                onChange={(e) => updateLocationField(index, "image_url", e.target.value)} 
+                                fullWidth 
+                                size="small" 
+                                inputProps={{ style: { fontSize: "0.75rem", padding: "6px" } }}
+                              />
+                            </Box>
+                          </Grid>
+
+                          {/* Preview image if loaded */}
+                          {loc.image_url && (
+                            <Grid item xs={12}>
+                              <Box sx={{ borderRadius: 1.5, overflow: "hidden", height: "80px", border: "1px solid", borderColor: "divider", width: "160px" }}>
+                                <img src={loc.image_url} alt="Milestone preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                              </Box>
+                            </Grid>
+                          )}
+
+                        </Grid>
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
+              </Box>
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2, pt: 1 }}>
+          <Button onClick={() => setOpen(false)} sx={{ textTransform: "none", fontWeight: 600 }}>Hủy bỏ</Button>
+          <Button onClick={handleSubmit} variant="contained" sx={{ px: 3, borderRadius: 2, textTransform: "none", fontWeight: 600 }}>{editing ? "Cập nhật" : "Lưu Vlog"}</Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
+  );
+}

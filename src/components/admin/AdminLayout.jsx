@@ -6,6 +6,7 @@ import ArticleIcon from "@mui/icons-material/Article";
 import ListAltIcon from "@mui/icons-material/ListAlt";
 import SettingsIcon from "@mui/icons-material/Settings";
 import MenuIcon from "@mui/icons-material/Menu";
+import OndemandVideoIcon from "@mui/icons-material/OndemandVideo";
 
 const drawerWidth = 240;
 
@@ -29,7 +30,11 @@ const AdminLayout = () => {
           <ListItemIcon><ListAltIcon /></ListItemIcon>
           <ListItemText primary="Posts" />
         </ListItemButton>
-            <ListItemButton component={NavLink} to="/admin/settings" selected={location.pathname.startsWith('/admin/settings')}>
+        <ListItemButton component={NavLink} to="/admin/vlogs" selected={location.pathname.startsWith('/admin/vlogs')}>
+          <ListItemIcon><OndemandVideoIcon /></ListItemIcon>
+          <ListItemText primary="Vlogs" />
+        </ListItemButton>
+        <ListItemButton component={NavLink} to="/admin/settings" selected={location.pathname.startsWith('/admin/settings')}>
           <ListItemIcon><SettingsIcon /></ListItemIcon>
           <ListItemText primary="Settings" />
         </ListItemButton>

@@ -14,6 +14,7 @@ import NotFound from "./pages/NotFound";
 import AdminLayout from "./components/admin/AdminLayout";
 import AdminSections from "./pages/admin/Sections";
 import AdminPosts from "./pages/admin/Posts";
+import AdminVlogs from "./pages/admin/Vlogs";
 
 const AppLayout = () => {
   const location = useLocation();
@@ -36,6 +37,7 @@ const AppLayout = () => {
           <Route path="/admin/*" element={<AdminLayout />}>
             <Route path="sections" element={<AdminSections />} />
             <Route path="posts" element={<AdminPosts />} />
+            <Route path="vlogs" element={<AdminVlogs />} />
           </Route>
           {/* Future routes */}
           {/* <Route path="/article/:slug" element={<Article />} /> */}
