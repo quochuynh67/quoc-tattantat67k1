@@ -156,27 +156,29 @@ export const deleteVlog = async (id) => {
   return data;
 };
 
-export const uploadVlogFile = async (file, folder = "vlogs") => {
-  // Ensure the bucket vlogs-posts exists
+export const uploadVlogFile = async (file) => {
+  // Reuse existing uploadVideoForVlog logic to upload video files for Vlogs
+  return await uploadVideoForVlog(file);
+};
+
+export const uploadPostVideo = async (file) => {
+  // Alias for uploading post related videos, reuse existing logic
+  return await uploadVideoForVlog(file);
+};
+
+// Existing uploadVideoForVlog function
+export const uploadVideoForVlog = async (file) => {
+  // Ensure bucket exists (vlogs-posts) and upload to 'videos' folder
   try {
-    await supabase.storage.createBucket("vlogs-posts", { public: true });
+    await supabase.storage.createBucket('vlogs-posts', { public: true });
   } catch (e) {
-    // Ignore if bucket already exists
+    // ignore if bucket already exists
   }
-
-  const fileExt = file.name.split(".").pop();
+  const fileExt = file.name.split('.').pop();
   const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
-  const filePath = `${folder}/${fileName}`;
-
-  const { data, error } = await supabase.storage
-    .from("vlogs-posts")
-    .upload(filePath, file);
-
+  const filePath = `videos/${fileName}`;
+  const { data, error } = await supabase.storage.from('vlogs-posts').upload(filePath, file);
   if (error) throw error;
-
-  const { data: publicUrlData } = supabase.storage
-    .from("vlogs-posts")
-    .getPublicUrl(filePath);
-
+  const { data: publicUrlData } = supabase.storage.from('vlogs-posts').getPublicUrl(filePath);
   return publicUrlData.publicUrl;
 };

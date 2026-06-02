@@ -2,8 +2,9 @@
 import React, { useEffect, useState } from "react";
 import { Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Grid, FormControlLabel, Switch } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
+import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import EditIcon from "@mui/icons-material/Edit";
-import { getPostsBySection, createPost, updatePost, deletePost, getSections } from "../../lib/supabaseClient";
+import { getPostsBySection, createPost, updatePost, deletePost, getSections, uploadVideoForVlog, uploadPostVideo, supabase } from "../../lib/supabaseClient";
 
 export default function AdminPosts() {
   const [posts, setPosts] = useState([]);
@@ -19,6 +20,7 @@ export default function AdminPosts() {
     description: "",
     content: "",
     image_url: "",
+    video_url: "",
     category: "",
     address: "",
     rating: "",
@@ -27,6 +29,21 @@ export default function AdminPosts() {
     is_featured: false,
     is_published: true,
   });
+  const [uploadingVideo, setUploadingVideo] = useState(false);
+  const handleVideoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingVideo(true);
+    try {
+      const url = await uploadPostVideo(file);
+      setForm((prev) => ({ ...prev, video_url: url }));
+    } catch (err) {
+      console.error(err);
+      alert("Video upload error: " + err.message);
+    } finally {
+      setUploadingVideo(false);
+    }
+  };
 
   // Filtering states
   const [searchTerm, setSearchTerm] = useState("");
@@ -106,6 +123,7 @@ export default function AdminPosts() {
       description: form.description || null,
       content: form.content || null,
       image_url: form.image_url || null,
+      video_url: form.video_url || null,
       category: form.category || null,
       address: form.address || null,
       rating: form.rating !== "" ? Number(form.rating) : null,
@@ -280,14 +298,49 @@ export default function AdminPosts() {
             {/* Right side: Media, location, metadata */}
             <Grid item xs={12} md={5}>
               <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                <TextField label="Đường dẫn ảnh (Image URL)" value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} fullWidth variant="outlined" />
+                <TextField label="Video URL" value={form.video_url} onChange={(e) => setForm({ ...form, video_url: e.target.value })} fullWidth variant="outlined" />
+                <Button component="label" variant="contained" startIcon={<CloudUploadIcon />} disabled={uploadingVideo} sx={{ mt: 1 }}>
+                  {uploadingVideo ? "Uploading..." : "Upload Video"}
+                  <input type="file" accept="video/*" hidden onChange={handleVideoUpload} />
+                </Button>
                 {form.image_url && (
                   <Box sx={{ borderRadius: 2, overflow: "hidden", border: "1px solid", borderColor: "divider", height: "140px", display: "flex", justifyContent: "center", bgcolor: "#f5f5f5" }}>
-                    <img src={form.image_url} alt="Post preview" style={{ height: "100%", width: "100%", objectFit: "cover" }} onError={(e) => { e.target.src = "https://placehold.co/400x200?text=L%E1%BB%97i+t%E1%BA%A3i+%E1%BA%A3nh"; }} />
+                    <img src={form.image_url} alt="Post preview" style={{ height: "100%", width: "100%", objectFit: "cover" }} onError={(e) => { e.target.src = "https://placehold.co/400x200?text=Không+thể+tải+ảnh"; }} />
                   </Box>
                 )}
-
                 <TextField label="Địa chỉ" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} fullWidth variant="outlined" />
+                {/* Video Upload */}
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Button component="label" variant="contained" startIcon={<CloudUploadIcon />} size="small" disabled={uploadingVideo} sx={{ textTransform: "none", borderRadius: 1.5 }}>
+                    {uploadingVideo ? "Đang tải..." : "Tải Video"}
+                    <input type="file" accept="video/*" hidden onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      setUploadingVideo(true);
+                      try {
+                        const url = await uploadVideoForVlog(file);
+                        setForm((prev) => ({ ...prev, video_url: url }));
+                        alert("Video uploaded và URL được thiết lập!");
+                      } catch (err) {
+                        console.error(err);
+                        alert("Lỗi tải video: " + err.message);
+                      } finally {
+                        setUploadingVideo(false);
+                      }
+                    }} />
+                  </Button>
+                  {form.video_url && (
+                    <TextField
+                      label="Video URL"
+                      value={form.video_url}
+                      disabled
+                      variant="filled"
+                      size="small"
+                      fullWidth
+                      inputProps={{ style: { fontSize: "0.75rem", fontFamily: "monospace" } }}
+                    />
+                  )}
+                </Box>
 
                 <Grid container spacing={2}>
                   <Grid item xs={6}>
