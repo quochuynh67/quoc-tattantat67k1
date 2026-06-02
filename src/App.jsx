@@ -10,14 +10,10 @@ import SectionList from "./pages/SectionList";
 import VlogFeed from "./pages/VlogFeed";
 import VlogReview from "./pages/VlogReview";
 import NotFound from "./pages/NotFound";
-
-// Future pages (placeholders) – they will be added later
-// import Article from "./pages/Article";
-// import Place from "./pages/Place";
-// import FoodReview from "./pages/FoodReview";
-// import Agriculture from "./pages/Agriculture";
-// import Health from "./pages/Health";
-// import Search from "./pages/Search";
+// Admin UI imports
+import AdminLayout from "./components/admin/AdminLayout";
+import AdminSections from "./pages/admin/Sections";
+import AdminPosts from "./pages/admin/Posts";
 
 const AppLayout = () => {
   const location = useLocation();
@@ -37,6 +33,10 @@ const AppLayout = () => {
           <Route path="/health" element={<SectionList sectionKey="health" />} />
           <Route path="/vlogs" element={<VlogFeed />} />
           <Route path="/vlog/:id" element={<VlogReview />} />
+          <Route path="/admin/*" element={<AdminLayout />}>
+            <Route path="sections" element={<AdminSections />} />
+            <Route path="posts" element={<AdminPosts />} />
+          </Route>
           {/* Future routes */}
           {/* <Route path="/article/:slug" element={<Article />} /> */}
           {/* <Route path="/places" element={<Place />} /> */}
