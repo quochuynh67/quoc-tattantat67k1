@@ -1,6 +1,6 @@
 // src/pages/admin/Vlogs.jsx
 import React, { useEffect, useState } from "react";
-import { Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Grid, FormControlLabel, Switch, Divider, Card, CardContent } from "@mui/material";
+import { Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Grid, FormControlLabel, Switch, Divider, Card, CardContent, FormControl, InputLabel, Select, MenuItem } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import AddIcon from "@mui/icons-material/Add";
@@ -332,17 +332,22 @@ export default function AdminVlogs() {
                   </Grid>
                 </Grid>
 
-                <TextField
-                  label="Liên kết tới bài viết (Post)"
-                  value={form.content_item_id}
-                  onChange={(e) => setForm({ ...form, content_item_id: e.target.value })}
-                  select
-                  SelectProps={{ native: true }}
-                  fullWidth
-                  variant="outlined"
-                >
-                  <option value="">Không liên kết bài viết</option>
-                </TextField>
+<FormControl fullWidth variant="outlined" size="small">
+  <InputLabel id="post-select-label">Liên kết tới bài viết (Post)</InputLabel>
+  <Select
+    labelId="post-select-label"
+    label="Liên kết tới bài viết (Post)"
+    value={form.content_item_id || ""}
+    onChange={(e) => setForm({ ...form, content_item_id: e.target.value })}
+  >
+    <MenuItem value=""><em>Không liên kết bài viết</em></MenuItem>
+    {posts.map((p) => (
+      <MenuItem key={p.id} value={p.id}>
+        {p.title}
+      </MenuItem>
+    ))}
+  </Select>
+</FormControl>
                 <Card variant="outlined" sx={{ p: 2, borderRadius: 3, border: "1px solid", borderColor: "divider" }}>
                   <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: "text.primary" }}>Video Stream (HLS .m3u8)</Typography>
                   <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1.5 }}>

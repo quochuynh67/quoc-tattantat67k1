@@ -200,20 +200,21 @@ export default function AdminPosts() {
           onChange={(e) => setSearchTerm(e.target.value)}
           sx={{ flexGrow: 1, minWidth: "220px" }}
         />
-        <TextField
-          label="Lọc theo Chuyên mục"
-          select
-          SelectProps={{ native: true }}
-          size="small"
-          value={selectedSection}
-          onChange={(e) => setSelectedSection(e.target.value)}
-          sx={{ minWidth: "200px" }}
-        >
-          <option value="all">Tất cả Chuyên mục</option>
-          {sections.map((sec) => (
-            <option key={sec.id} value={sec.slug}>{sec.title}</option>
-          ))}
-        </TextField>
+            <FormControl fullWidth size="small" variant="outlined" sx={{ minWidth: "200px" }}>
+              <InputLabel id="filter-section-label">Lọc theo Chuyên mục</InputLabel>
+              <Select
+                labelId="filter-section-label"
+                label="Lọc theo Chuyên mục"
+                value={selectedSection}
+                onChange={(e) => setSelectedSection(e.target.value)}
+                displayEmpty
+              >
+                <MenuItem value="all"><em>Tất cả Chuyên mục</em></MenuItem>
+                {sections.map((sec) => (
+                  <MenuItem key={sec.id} value={sec.slug}>{sec.title}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
         <Button 
           variant="contained" 
           onClick={() => { setEditing(null); resetForm(); setOpen(true); }}

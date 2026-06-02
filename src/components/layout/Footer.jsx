@@ -5,7 +5,7 @@ import { Link } from "react-router-dom";
 const Footer = () => (
   <footer style={{ padding: "var(--spacing-lg)", background: "var(--color-surface)" }}>
     <div style={{ maxWidth: "1200px", margin: "0 auto", display: "flex", justifyContent: "space-between", flexWrap: "wrap" }}>
-      <Link to="/" style={{ fontFamily: "var(--font-display)", fontSize: "1.2rem", color: "var(--color-primary)" }}>Tất tần tất – Phú Tân</Link>
+      <Link to="/" style={{ fontFamily: "var(--font-display)", fontSize: "1.2rem", color: "var(--color-primary)" }}>Tất tần tật – Phú Tân 67K1</Link>
       <nav>
         <Link to="/" style={{ marginRight: "1rem" }}>Trang chủ</Link>
         <Link to="/news" style={{ marginRight: "1rem" }}>Tin tức</Link>

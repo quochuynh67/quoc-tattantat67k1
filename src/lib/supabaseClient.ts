@@ -143,15 +143,22 @@ export const createVlog = async (vlog, locations = []) => {
 };
 
 export const updateVlog = async (id, updates, locations = []) => {
+  // Use upsert to replace the entire vlog row (PUT semantics)
+  const payload = { id, ...updates };
   const { data, error } = await supabase
     .from('vlog_reviews')
-    .update(updates)
-    .eq('id', id)
+    .upsert([payload], { returning: 'representation', onConflict: 'id' })
     .select()
-    .single();
-  if (error) throw error;
+    .maybeSingle();
+  if (error) {
+    if (error.code === 'PGRST116') {
+      // No row found; treat as null
+      return null;
+    }
+    throw error;
+  }
 
-  // Clear existing locations first and re-insert new ones
+  // Replace locations: delete existing then insert new ones
   const { error: deleteError } = await supabase
     .from('vlog_locations')
     .delete()
