@@ -8,7 +8,7 @@ const Header = () => {
     <header className="header container">
       <div className="logo" style={{ display: "flex", alignItems: "center" }}>
         <span style={{ marginLeft: 8, fontFamily: "var(--font-display)", fontSize: "1.5rem", color: "var(--color-primary)" }}>
-          Tất tần tất – Phú Tân
+          Tất tần tật – Phú Tân 67K1
         </span>
       </div>
       <nav className="nav" style={{ display: "flex", gap: "var(--spacing-md)" }}>
