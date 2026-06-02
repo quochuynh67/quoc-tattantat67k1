@@ -157,6 +157,12 @@ html.dark {
   box-shadow: var(--shadow-medium);
 }
 
+.section-more-button {
+  color: var(--color-primary) !important;
+  font-weight: 800 !important;
+  min-width: max-content !important;
+}
+
 html.dark .theme-toggle-button {
   border-color: rgba(255, 255, 255, 0.12) !important;
 }
@@ -174,6 +180,613 @@ html.dark .theme-toggle-button {
   .nav {
     flex-wrap: wrap;
     row-gap: var(--spacing-xs);
+  }
+}
+
+.vlog-review-page {
+  background: var(--color-background);
+  min-height: 80vh;
+  padding: var(--spacing-lg) 0 var(--spacing-xxl);
+}
+
+.list-page {
+  background: var(--color-background);
+  min-height: 80vh;
+  padding: var(--spacing-lg) 0 var(--spacing-xxl);
+}
+
+.list-back-link {
+  color: var(--color-primary) !important;
+  font-weight: 800 !important;
+  margin-bottom: var(--spacing-md) !important;
+}
+
+.list-page-title {
+  color: var(--color-text);
+  font-family: var(--font-display) !important;
+  font-size: 2.4rem !important;
+  font-weight: 800 !important;
+  line-height: 1.15 !important;
+  margin-bottom: var(--spacing-sm) !important;
+}
+
+.list-page-description {
+  color: var(--color-text-subtle);
+  line-height: 1.6 !important;
+  margin-bottom: var(--spacing-lg) !important;
+  max-width: 760px;
+}
+
+.list-card-grid {
+  display: grid;
+  gap: var(--spacing-lg);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.list-card {
+  background: var(--color-surface) !important;
+  border-radius: var(--radius-md) !important;
+  display: flex;
+  flex-direction: column;
+  min-height: 360px;
+}
+
+.list-card-media {
+  height: 200px;
+  object-fit: cover;
+}
+
+.list-card-content {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  gap: var(--spacing-xs);
+}
+
+.list-card-title {
+  color: var(--color-text);
+  font-family: var(--font-body) !important;
+  font-weight: 800 !important;
+  line-height: 1.3 !important;
+}
+
+.list-card-description {
+  color: var(--color-text-subtle);
+  display: -webkit-box;
+  line-height: 1.45 !important;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+}
+
+.list-alert-grid {
+  display: grid;
+  gap: var(--spacing-md);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.list-health-alert {
+  border-radius: var(--radius-md) !important;
+  color: var(--color-text) !important;
+}
+
+@media (max-width: 1000px) {
+  .list-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .list-card-grid,
+  .list-alert-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .list-page-title {
+    font-size: 1.8rem !important;
+  }
+}
+
+.vlog-back-link {
+  color: var(--color-primary) !important;
+  font-weight: 700 !important;
+  margin-bottom: var(--spacing-md) !important;
+}
+
+.vlog-review-layout {
+  align-items: stretch;
+  display: grid;
+  gap: var(--spacing-lg);
+  grid-template-columns: minmax(280px, 0.8fr) minmax(320px, 1.2fr);
+}
+
+.vlog-video-panel {
+  background: #070807;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-medium);
+  min-height: 620px;
+  overflow: hidden;
+  position: relative;
+}
+
+.vlog-review-video {
+  background: #000;
+  display: block;
+  height: 100%;
+  min-height: 620px;
+  object-fit: cover;
+  width: 100%;
+}
+
+.vlog-video-caption {
+  align-items: center;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.72), transparent);
+  bottom: 0;
+  color: #fff;
+  display: flex;
+  justify-content: space-between;
+  left: 0;
+  padding: var(--spacing-lg) var(--spacing-md) var(--spacing-md);
+  position: absolute;
+  right: 0;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.65);
+}
+
+.vlog-host {
+  color: #fff;
+  font-weight: 800 !important;
+}
+
+.vlog-duration {
+  color: rgba(255, 255, 255, 0.82);
+  font-weight: 700 !important;
+}
+
+.vlog-info-panel {
+  background: var(--color-surface);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-subtle);
+  padding: var(--spacing-lg);
+}
+
+html.dark .vlog-info-panel {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.vlog-kicker {
+  color: var(--color-primary);
+  font-family: var(--font-body) !important;
+  font-weight: 800 !important;
+  letter-spacing: 0 !important;
+}
+
+.vlog-title {
+  color: var(--color-text);
+  font-family: var(--font-display) !important;
+  font-size: 2.25rem !important;
+  font-weight: 800 !important;
+  line-height: 1.15 !important;
+  margin: var(--spacing-xs) 0 var(--spacing-sm) !important;
+}
+
+.vlog-subtitle,
+.vlog-linked-excerpt {
+  color: var(--color-text-subtle);
+  line-height: 1.6 !important;
+}
+
+.vlog-linked-article {
+  background: var(--color-background);
+  border-radius: var(--radius-sm);
+  margin: var(--spacing-lg) 0;
+  padding: var(--spacing-md);
+}
+
+.vlog-linked-label {
+  color: var(--color-primary);
+  font-size: 0.78rem !important;
+  font-weight: 800 !important;
+  margin-bottom: var(--spacing-xs) !important;
+  text-transform: uppercase;
+}
+
+.vlog-linked-title {
+  color: var(--color-text);
+  font-weight: 800 !important;
+  line-height: 1.35 !important;
+  margin-bottom: var(--spacing-xs) !important;
+}
+
+.vlog-location-header {
+  align-items: center;
+  color: var(--color-text);
+  display: flex;
+  gap: var(--spacing-xs);
+  margin-bottom: var(--spacing-md);
+}
+
+.vlog-location-header h2 {
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: 1.05rem;
+  font-weight: 800;
+  margin: 0;
+}
+
+.vlog-location-list {
+  display: grid;
+  gap: var(--spacing-sm);
+}
+
+.vlog-location-item {
+  align-items: center;
+  background: var(--color-background);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: inherit;
+  cursor: pointer;
+  display: grid;
+  gap: var(--spacing-sm);
+  grid-template-columns: 86px 1fr;
+  min-height: 92px;
+  padding: var(--spacing-xs);
+  text-align: left;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+  width: 100%;
+}
+
+.vlog-location-item:hover,
+.vlog-location-item.active {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-subtle);
+  transform: translateY(-1px);
+}
+
+.vlog-location-thumb {
+  aspect-ratio: 1.1;
+  border-radius: var(--radius-sm);
+  height: 76px;
+  object-fit: cover;
+  width: 86px;
+}
+
+.vlog-location-content {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.vlog-location-name {
+  color: var(--color-text);
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.vlog-location-note {
+  color: var(--color-text-subtle);
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+
+.vlog-location-time {
+  align-items: center;
+  color: var(--color-primary);
+  display: inline-flex;
+  font-size: 0.86rem;
+  font-weight: 800;
+  gap: 5px;
+}
+
+.vlog-review-empty {
+  padding: var(--spacing-xxl) var(--spacing-md);
+}
+
+@media (max-width: 900px) {
+  .vlog-review-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .vlog-video-panel,
+  .vlog-review-video {
+    min-height: 520px;
+  }
+
+  .vlog-title {
+    font-size: 1.8rem !important;
+  }
+}
+
+@media (max-width: 560px) {
+  .vlog-info-panel {
+    padding: var(--spacing-md);
+  }
+
+  .vlog-video-panel,
+  .vlog-review-video {
+    min-height: 480px;
+  }
+
+  .vlog-location-item {
+    grid-template-columns: 72px 1fr;
+  }
+
+  .vlog-location-thumb {
+    height: 68px;
+    width: 72px;
+  }
+}
+
+.vlog-scroll-root {
+  background: #050608;
+  color: #fff;
+  height: 100vh;
+  overflow: hidden;
+  width: 100%;
+}
+
+.vlog-scroll-shell {
+  background: #000;
+  height: 100%;
+  margin: 0 auto;
+  max-width: 520px;
+  position: relative;
+  width: 100%;
+}
+
+.vlog-scroll-feed {
+  height: 100%;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+  scroll-snap-type: y mandatory;
+  scrollbar-width: none;
+}
+
+.vlog-scroll-feed::-webkit-scrollbar {
+  display: none;
+}
+
+.vlog-scroll-slide {
+  background: #000;
+  height: 100vh;
+  overflow: hidden;
+  position: relative;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+
+.vlog-scroll-video-wrap {
+  align-items: center;
+  display: flex;
+  height: 100%;
+  justify-content: center;
+  position: relative;
+  width: 100%;
+}
+
+.vlog-scroll-video-wrap::before {
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.82), transparent 44%, rgba(0, 0, 0, 0.55));
+  content: "";
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+  z-index: 2;
+}
+
+.vlog-scroll-video {
+  background: #000;
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
+.vlog-scroll-header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  left: 0;
+  padding: 18px 16px 0;
+  position: absolute;
+  right: 0;
+  top: 0;
+  z-index: 8;
+}
+
+.vlog-scroll-back {
+  background: rgba(0, 0, 0, 0.45) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  border-radius: 999px !important;
+  color: #fff !important;
+  font-weight: 800 !important;
+  min-height: 40px;
+  padding: 7px 14px !important;
+}
+
+.vlog-scroll-badge {
+  background: rgba(20, 22, 30, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  color: #82f3cf;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  padding: 8px 12px;
+  text-transform: uppercase;
+}
+
+.vlog-scroll-info {
+  bottom: 30px;
+  left: 16px;
+  max-width: calc(100% - 106px);
+  position: absolute;
+  z-index: 5;
+}
+
+.vlog-scroll-host {
+  color: #fff;
+  font-weight: 900 !important;
+  margin-bottom: 8px !important;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+}
+
+.vlog-scroll-title {
+  color: #fff;
+  font-size: 1.04rem !important;
+  font-weight: 900 !important;
+  line-height: 1.35 !important;
+  margin-bottom: 8px !important;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.82);
+}
+
+.vlog-scroll-desc {
+  color: rgba(255, 255, 255, 0.78);
+  display: -webkit-box;
+  font-size: 0.88rem !important;
+  line-height: 1.45 !important;
+  overflow: hidden;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.82);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.vlog-scroll-actions {
+  align-items: center;
+  bottom: 126px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: absolute;
+  right: 14px;
+  z-index: 5;
+}
+
+.vlog-scroll-action {
+  align-items: center;
+  background: rgba(20, 22, 30, 0.75) !important;
+  border: 1px solid rgba(255, 255, 255, 0.13) !important;
+  border-radius: 50% !important;
+  color: #fff !important;
+  display: inline-flex;
+  height: 48px;
+  justify-content: center;
+  min-width: 48px !important;
+  padding: 0 !important;
+  width: 48px;
+}
+
+.vlog-scroll-action.static {
+  color: #ff6b92 !important;
+}
+
+.vlog-scroll-action-label {
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 0.72rem;
+  font-weight: 800;
+  margin-bottom: 8px;
+  text-shadow: 0 2px 7px rgba(0, 0, 0, 0.8);
+}
+
+.vlog-scroll-spots {
+  background: rgba(10, 12, 16, 0.74);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  bottom: 124px;
+  left: 14px;
+  max-width: calc(100% - 104px);
+  padding: 10px;
+  position: absolute;
+  z-index: 5;
+}
+
+.vlog-scroll-spots-title {
+  align-items: center;
+  color: #82f3cf;
+  display: flex;
+  font-size: 0.78rem;
+  font-weight: 900;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.vlog-scroll-spot-list {
+  display: flex;
+  gap: 8px;
+  max-width: 100%;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+
+.vlog-scroll-spot-list::-webkit-scrollbar {
+  display: none;
+}
+
+.vlog-scroll-spot {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: #fff;
+  cursor: pointer;
+  display: grid;
+  flex: 0 0 160px;
+  gap: 7px;
+  grid-template-columns: 46px 1fr;
+  min-height: 54px;
+  padding: 6px;
+  text-align: left;
+}
+
+.vlog-scroll-spot.active,
+.vlog-scroll-spot:hover {
+  border-color: #82f3cf;
+  background: rgba(130, 243, 207, 0.14);
+}
+
+.vlog-scroll-spot img {
+  border-radius: 8px;
+  height: 44px;
+  object-fit: cover;
+  width: 46px;
+}
+
+.vlog-scroll-spot span {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.vlog-scroll-spot strong {
+  color: #fff;
+  display: -webkit-box;
+  font-size: 0.76rem;
+  line-height: 1.2;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.vlog-scroll-spot small {
+  color: #82f3cf;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+@media (min-width: 900px) {
+  .vlog-scroll-shell {
+    box-shadow: 0 0 60px rgba(0, 0, 0, 0.72);
+  }
+}
+
+@media (max-width: 520px) {
+  .vlog-scroll-shell {
+    max-width: none;
+  }
+
+  .vlog-scroll-spots {
+    bottom: 132px;
+    max-width: calc(100% - 96px);
   }
 }
 

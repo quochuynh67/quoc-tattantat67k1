@@ -1,10 +1,27 @@
 // src/components/sections/FoodSection.jsx – food review cards with MUI
-import React from "react";
-import { Container, Card, CardMedia, CardContent, Typography, Rating, Box } from "@mui/material";
+import React, { useEffect, useState } from "react";
+import { Link as RouterLink } from "react-router-dom";
+import { Container, Button, Card, CardMedia, CardContent, Typography, Rating, Box } from "@mui/material";
 import { mockFood } from "../../mocks/data";
+import { getSectionCount, getSectionItems } from "../../lib/phuTanApi";
 
 const FoodSection = () => {
-  const displayedFood = mockFood.slice(0, 4);
+  const [displayedFood, setDisplayedFood] = useState(mockFood.slice(0, 4));
+  const [totalItems, setTotalItems] = useState(mockFood.length);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    Promise.all([getSectionItems("food", 4), getSectionCount("food")]).then(([items, count]) => {
+      if (!isMounted) return;
+      setDisplayedFood(items);
+      setTotalItems(count);
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   return (
     <section className="content-section">
@@ -17,6 +34,11 @@ const FoodSection = () => {
           >
             Ẩm thực địa phương
           </Typography>
+          {totalItems > 4 && (
+            <Button component={RouterLink} to="/food" className="section-more-button">
+              Xem thêm
+            </Button>
+          )}
         </Box>
         <Typography
           variant="body1"
@@ -49,7 +71,7 @@ const FoodSection = () => {
                   boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
                 }}
               >
-                <CardMedia component="img" image={item.image} alt={item.name} sx={{ height: 200, objectFit: "cover" }} />
+                <CardMedia component="img" image={item.image} alt={item.name || item.title} sx={{ height: 200, objectFit: "cover" }} />
                 <CardContent sx={{ flexGrow: 1, padding: "var(--spacing-sm)", display: "flex", flexDirection: "column" }}>
                   <Typography
                     variant="h6"
@@ -66,7 +88,7 @@ const FoodSection = () => {
                       minHeight: "3.2rem"
                     }}
                   >
-                    {item.name}
+                    {item.name || item.title}
                   </Typography>
                   <Typography
                     variant="body2"
@@ -84,9 +106,9 @@ const FoodSection = () => {
                     {item.description}
                   </Typography>
                   <Box sx={{ display: 'flex', alignItems: 'center', mt: 'auto' }}>
-                    <Rating value={item.rating} precision={0.5} readOnly size="small" />
+                    <Rating value={item.rating || 0} precision={0.5} readOnly size="small" />
                     <Typography variant="body2" sx={{ ml: 1, color: "var(--color-primary)" }}>
-                      {item.rating}
+                      {item.rating || 0}
                     </Typography>
                   </Box>
                 </CardContent>

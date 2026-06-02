@@ -1,10 +1,27 @@
 // src/components/sections/PlacesSection.jsx – featured places with consistent MUI styling
-import React from "react";
-import { Container, Card, CardMedia, CardContent, Typography, Box } from "@mui/material";
+import React, { useEffect, useState } from "react";
+import { Link as RouterLink } from "react-router-dom";
+import { Container, Button, Card, CardMedia, CardContent, Typography, Box } from "@mui/material";
 import { mockPlaces } from "../../mocks/data";
+import { getSectionCount, getSectionItems } from "../../lib/phuTanApi";
 
 const PlacesSection = () => {
-  const displayedPlaces = mockPlaces.slice(0, 4);
+  const [displayedPlaces, setDisplayedPlaces] = useState(mockPlaces.slice(0, 4));
+  const [totalItems, setTotalItems] = useState(mockPlaces.length);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    Promise.all([getSectionItems("places", 4), getSectionCount("places")]).then(([items, count]) => {
+      if (!isMounted) return;
+      setDisplayedPlaces(items);
+      setTotalItems(count);
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   return (
     <section className="content-section">
@@ -17,6 +34,11 @@ const PlacesSection = () => {
           >
             Địa điểm nổi bật
           </Typography>
+          {totalItems > 4 && (
+            <Button component={RouterLink} to="/places" className="section-more-button">
+              Xem thêm
+            </Button>
+          )}
         </Box>
         <Typography
           variant="body1"
@@ -49,7 +71,7 @@ const PlacesSection = () => {
                   boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
                 }}
               >
-                <CardMedia component="img" image={place.image} alt={place.name} sx={{ height: 200, objectFit: "cover" }} />
+                <CardMedia component="img" image={place.image} alt={place.name || place.title} sx={{ height: 200, objectFit: "cover" }} />
                 <CardContent sx={{ flexGrow: 1, padding: "var(--spacing-sm)", display: "flex", flexDirection: "column" }}>
                   <Typography
                     variant="h6"
@@ -66,7 +88,7 @@ const PlacesSection = () => {
                       minHeight: "3.2rem"
                     }}
                   >
-                    {place.name}
+                    {place.name || place.title}
                   </Typography>
                   <Typography
                     variant="body2"

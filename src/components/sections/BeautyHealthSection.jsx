@@ -1,20 +1,20 @@
-// src/components/sections/AgricultureSection.jsx
+// src/components/sections/BeautyHealthSection.jsx
 import React, { useEffect, useState } from "react";
 import { Link as RouterLink } from "react-router-dom";
-import { Container, Button, Card, CardMedia, CardContent, Typography, Box } from "@mui/material";
-import { mockAgriculture } from "../../mocks/data";
+import { Box, Button, Card, CardContent, CardMedia, Chip, Container, Rating, Typography } from "@mui/material";
+import { mockBeautyHealth } from "../../mocks/data";
 import { getSectionCount, getSectionItems } from "../../lib/phuTanApi";
 
-const AgricultureSection = () => {
-  const [displayedAgri, setDisplayedAgri] = useState(mockAgriculture.slice(0, 4));
-  const [totalItems, setTotalItems] = useState(mockAgriculture.length);
+const BeautyHealthSection = () => {
+  const [displayedServices, setDisplayedServices] = useState(mockBeautyHealth.slice(0, 4));
+  const [totalItems, setTotalItems] = useState(mockBeautyHealth.length);
 
   useEffect(() => {
     let isMounted = true;
 
-    Promise.all([getSectionItems("agriculture", 4), getSectionCount("agriculture")]).then(([items, count]) => {
+    Promise.all([getSectionItems("beautyHealth", 4), getSectionCount("beautyHealth")]).then(([items, count]) => {
       if (!isMounted) return;
-      setDisplayedAgri(items);
+      setDisplayedServices(items);
       setTotalItems(count);
     });
 
@@ -32,10 +32,10 @@ const AgricultureSection = () => {
             component="h2"
             sx={{ fontFamily: "var(--font-display)", color: "primary.main" }}
           >
-            Nông nghiệp & Phát triển nông thôn
+            Làm đẹp & Sức khỏe
           </Typography>
           {totalItems > 4 && (
-            <Button component={RouterLink} to="/agriculture" className="section-more-button">
+            <Button component={RouterLink} to="/beauty-health" className="section-more-button">
               Xem thêm
             </Button>
           )}
@@ -45,7 +45,7 @@ const AgricultureSection = () => {
           gutterBottom
           sx={{ fontFamily: "var(--font-body)", color: "var(--color-text-subtle)", mb: 4 }}
         >
-          Cập nhật tin tức, dự án và sáng kiến nông nghiệp của huyện Phú Tân.
+          Gợi ý spa, hair salon và trị liệu thư giãn để chăm sóc vẻ ngoài lẫn sức khỏe tinh thần.
         </Typography>
         <Box
           sx={{
@@ -55,13 +55,13 @@ const AgricultureSection = () => {
             alignItems: "stretch",
           }}
         >
-          {displayedAgri.map((item) => (
+          {displayedServices.map((item) => (
             <Box key={item.id} sx={{ minWidth: 0 }}>
               <Card
                 elevation={2}
                 sx={{
                   height: "100%",
-                  minHeight: 350,
+                  minHeight: 390,
                   display: "flex",
                   flexDirection: "column",
                   borderRadius: 2,
@@ -71,40 +71,52 @@ const AgricultureSection = () => {
                   boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
                 }}
               >
-                <CardMedia component="img" image={item.image} alt={item.title} sx={{ height: 200, objectFit: "cover" }} />
-                <CardContent sx={{ flexGrow: 1, padding: "var(--spacing-sm)", display: "flex", flexDirection: "column" }}>
+                <CardMedia component="img" image={item.image} alt={item.name || item.title} sx={{ height: 200, objectFit: "cover" }} />
+                <CardContent sx={{ flexGrow: 1, padding: "var(--spacing-sm)", display: "flex", flexDirection: "column", gap: 1 }}>
+                  <Chip
+                    label={item.category}
+                    size="small"
+                    sx={{ alignSelf: "flex-start", color: "var(--color-primary)", fontWeight: 800, backgroundColor: "var(--color-background)" }}
+                  />
                   <Typography
                     variant="h6"
                     component="h3"
                     sx={{
                       fontFamily: "var(--font-body)",
                       color: "var(--color-text)",
-                      marginBottom: "0.5rem",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
                       display: "-webkit-box",
                       WebkitLineClamp: 2,
                       WebkitBoxOrient: "vertical",
-                      minHeight: "3.2rem"
+                      minHeight: "3.2rem",
                     }}
                   >
-                    {item.title}
+                    {item.name || item.title}
                   </Typography>
                   <Typography
                     variant="body2"
                     sx={{
                       fontFamily: "var(--font-body)",
                       color: "var(--color-text-subtle)",
-                      mb: 2,
                       overflow: "hidden",
                       textOverflow: "ellipsis",
                       display: "-webkit-box",
                       WebkitLineClamp: 3,
-                      WebkitBoxOrient: "vertical"
+                      WebkitBoxOrient: "vertical",
                     }}
                   >
                     {item.description}
                   </Typography>
+                  <Typography variant="caption" sx={{ color: "var(--color-text-subtle)" }}>
+                    {item.address}
+                  </Typography>
+                  <Box sx={{ display: "flex", alignItems: "center", mt: "auto" }}>
+                    <Rating value={item.rating || 0} precision={0.5} readOnly size="small" />
+                    <Typography variant="body2" sx={{ ml: 1, color: "var(--color-primary)", fontWeight: 800 }}>
+                      {item.rating || 0}
+                    </Typography>
+                  </Box>
                 </CardContent>
               </Card>
             </Box>
@@ -115,4 +127,4 @@ const AgricultureSection = () => {
   );
 };
 
-export default AgricultureSection;
+export default BeautyHealthSection;

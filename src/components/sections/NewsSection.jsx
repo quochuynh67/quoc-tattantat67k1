@@ -1,10 +1,27 @@
 // src/components/sections/NewsSection.jsx
-import React from "react";
-import { Container, Card, CardMedia, CardContent, Typography, Box } from "@mui/material";
+import React, { useEffect, useState } from "react";
+import { Link as RouterLink } from "react-router-dom";
+import { Container, Button, Card, CardActionArea, CardMedia, CardContent, Typography, Box } from "@mui/material";
 import { mockNews } from "../../mocks/data";
+import { getSectionCount, getSectionItems } from "../../lib/phuTanApi";
 
 const NewsSection = () => {
-  const displayedNews = mockNews.slice(0, 4);
+  const [displayedNews, setDisplayedNews] = useState(mockNews.slice(0, 4));
+  const [totalItems, setTotalItems] = useState(mockNews.length);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    Promise.all([getSectionItems("news", 4), getSectionCount("news")]).then(([items, count]) => {
+      if (!isMounted) return;
+      setDisplayedNews(items);
+      setTotalItems(count);
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   return (
     <section className="content-section">
@@ -17,6 +34,11 @@ const NewsSection = () => {
           >
             Tin tức địa phương
           </Typography>
+          {totalItems > 4 && (
+            <Button component={RouterLink} to="/news" className="section-more-button">
+              Xem thêm
+            </Button>
+          )}
         </Box>
         <Typography
           variant="body1"
@@ -49,47 +71,53 @@ const NewsSection = () => {
                   boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
                 }}
               >
-                <CardMedia component="img" image={item.image} alt={item.title} sx={{ height: 200, objectFit: "cover" }} />
-                <CardContent sx={{ flexGrow: 1, padding: "var(--spacing-sm)", display: "flex", flexDirection: "column" }}>
-                  <Typography
-                    variant="h6"
-                    component="h3"
-                    sx={{
-                      fontFamily: "var(--font-body)",
-                      color: "var(--color-text)",
-                      marginBottom: "0.5rem",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      display: "-webkit-box",
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: "vertical",
-                      minHeight: "3.2rem"
-                    }}
-                  >
-                    {item.title}
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      fontFamily: "var(--font-body)",
-                      color: "var(--color-text-subtle)",
-                      mb: 2,
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      display: "-webkit-box",
-                      WebkitLineClamp: 3,
-                      WebkitBoxOrient: "vertical"
-                    }}
-                  >
-                    {item.excerpt}
-                  </Typography>
-                  <Typography
-                    variant="caption"
-                    sx={{ color: "var(--color-text-subtle)", display: 'block', mt: 'auto' }}
-                  >
-                    {new Date(item.date).toLocaleDateString('vi-VN')}
-                  </Typography>
-                </CardContent>
+                <CardActionArea
+                  component={RouterLink}
+                  to={`/vlog/${item.id}`}
+                  sx={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "stretch" }}
+                >
+                  <CardMedia component="img" image={item.image} alt={item.title} sx={{ height: 200, objectFit: "cover" }} />
+                  <CardContent sx={{ flexGrow: 1, padding: "var(--spacing-sm)", display: "flex", flexDirection: "column" }}>
+                    <Typography
+                      variant="h6"
+                      component="h3"
+                      sx={{
+                        fontFamily: "var(--font-body)",
+                        color: "var(--color-text)",
+                        marginBottom: "0.5rem",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        display: "-webkit-box",
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: "vertical",
+                        minHeight: "3.2rem"
+                      }}
+                    >
+                      {item.title}
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontFamily: "var(--font-body)",
+                        color: "var(--color-text-subtle)",
+                        mb: 2,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        display: "-webkit-box",
+                        WebkitLineClamp: 3,
+                        WebkitBoxOrient: "vertical"
+                      }}
+                    >
+                      {item.excerpt}
+                    </Typography>
+                    <Typography
+                      variant="caption"
+                      sx={{ color: "var(--color-text-subtle)", display: 'block', mt: 'auto' }}
+                    >
+                      {new Date(item.date).toLocaleDateString('vi-VN')} · Xem review vlog
+                    </Typography>
+                  </CardContent>
+                </CardActionArea>
               </Card>
             </Box>
           ))}
