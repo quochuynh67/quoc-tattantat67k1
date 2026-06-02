@@ -1,0 +1,184 @@
+/* src/styles/global.css – CSS reset and design‑system custom properties */
+
+/* Reset */
+html, body, div, span, applet, object, iframe,
+h1, h2, h3, h4, h5, h6, p, blockquote, pre,
+a, abbr, acronym, address, big, cite, code,
+del, dfn, em, img, ins, kbd, q, s, samp,
+small, strike, strong, sub, sup, tt, var,
+b, u, i, center,
+dl, dt, dd, ol, ul, li,
+fieldset, form, label, legend,
+table, caption, tbody, tfoot, thead, tr, th, td,
+article, aside, canvas, details, embed,
+figure, figcaption, footer, header, hgroup,
+menu, nav, output, ruby, section, summary,
+time, mark, audio, video {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-size: 100%;
+  font: inherit;
+  vertical-align: baseline;
+}
+/* HTML5 display‑role reset for older browsers */
+article, aside, details, figcaption, figure,
+footer, header, hgroup, menu, nav, section {
+  display: block;
+}
+body {
+  line-height: 1;
+  background: var(--color-background) !important;
+  color: var(--color-text) !important;
+  font-family: var(--font-body);
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+ol, ul {
+  list-style: none;
+}
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* Custom properties – map tokens to CSS variables */
+:root {
+  /* Colors */
+  --color-background: #F9F6F0;
+  --color-surface: #FFFFFF;
+  --color-text: #3A2B1D;
+  --color-subtle: #9F9278;
+  --color-text-subtle: #6F6250;
+  --color-primary: #2E7D32;
+  --color-secondary: #00695C;
+  --color-accent-gold: #F9A825;
+
+  /* Dark mode – will be swapped via .dark class */
+  --color-dm-background: #1E1A1A;
+  --color-dm-surface: #2A2626;
+  --color-dm-text: #E2E0DF;
+  --color-dm-subtle: #BDB6AD;
+  --color-dm-primary: #81C784;
+  --color-dm-accent-gold: #FFEB3B;
+
+  /* Typography */
+  --font-display: 'Merriweather', serif, Georgia, 'Times New Roman', serif;
+  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-caps: 'Playfair Display SC', serif;
+
+  /* Spacing */
+  --spacing-xxxs: 4px;
+  --spacing-xs: 8px;
+  --spacing-sm: 12px;
+  --spacing-md: 20px;
+  --spacing-lg: 32px;
+  --spacing-xl: 48px;
+  --spacing-xxl: 72px;
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 24px;
+
+  /* Shadows */
+  --shadow-subtle: 0 2px 8px rgba(0,0,0,0.08);
+  --shadow-medium: 0 8px 24px rgba(0,0,0,0.15);
+  --shadow-strong: 0 12px 40px rgba(0,0,0,0.25);
+}
+
+/* Dark mode – apply .dark to <html> */
+html.dark {
+  --color-background: var(--color-dm-background);
+  --color-surface: var(--color-dm-surface);
+  --color-text: var(--color-dm-text);
+  --color-subtle: var(--color-dm-subtle);
+  --color-text-subtle: var(--color-dm-subtle);
+  --color-primary: var(--color-dm-primary);
+  --color-accent-gold: var(--color-dm-accent-gold);
+}
+
+/* Utility classes */
+.home-page {
+  width: 100%;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--spacing-md);
+}
+
+.content-section {
+  box-sizing: border-box;
+  width: 100%;
+  padding: var(--spacing-lg) 0;
+  background: var(--color-background);
+}
+
+.section-container {
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  min-height: 64px;
+  padding-right: 72px;
+}
+
+.nav a {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.nav a.active {
+  color: var(--color-primary);
+}
+
+.theme-toggle-button {
+  position: fixed !important;
+  top: 14px;
+  right: 16px;
+  z-index: 1200;
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  color: var(--color-primary) !important;
+  background: var(--color-surface) !important;
+  box-shadow: var(--shadow-subtle);
+}
+
+.theme-toggle-button:hover {
+  background: var(--color-background) !important;
+  box-shadow: var(--shadow-medium);
+}
+
+html.dark .theme-toggle-button {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+@media (max-width: 768px) {
+  .header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+    padding-bottom: var(--spacing-sm);
+    padding-right: 68px;
+    padding-top: var(--spacing-sm);
+  }
+
+  .nav {
+    flex-wrap: wrap;
+    row-gap: var(--spacing-xs);
+  }
+}
+
+/* Focus outline for accessibility */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
