@@ -1,10 +1,11 @@
 // src/pages/admin/Posts.jsx
 import React, { useEffect, useState } from "react";
-import { Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Grid, FormControlLabel, Switch } from "@mui/material";
+import { Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Grid, FormControlLabel, Switch, List, ListItem, ListItemText } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import EditIcon from "@mui/icons-material/Edit";
-import { getPostsBySection, createPost, updatePost, deletePost, getSections, uploadVideoForVlog, uploadPostVideo, supabase } from "../../lib/supabaseClient";
+import { getPostsBySection, createPost, updatePost, deletePost, getSections, uploadVideoForVlog, uploadPostVideo, getVlogByPost, supabase } from "../../lib/supabaseClient";
+import VisibilityIcon from "@mui/icons-material/Visibility";
 
 export default function AdminPosts() {
   const [posts, setPosts] = useState([]);
@@ -29,7 +30,23 @@ export default function AdminPosts() {
     is_featured: false,
     is_published: true,
   });
+  const [vlogDialogOpen, setVlogDialogOpen] = useState(false);
+  const [currentVlog, setCurrentVlog] = useState(null);
   const [uploadingVideo, setUploadingVideo] = useState(false);
+  const handleViewVlog = async (postId) => {
+    try {
+      const vlog = await getVlogByPost(postId);
+      if (!vlog) {
+        alert('No vlog linked to this post');
+        return;
+      }
+      setCurrentVlog(vlog);
+      setVlogDialogOpen(true);
+    } catch (e) {
+      console.error(e);
+      alert('Error fetching vlog: ' + e.message);
+    }
+  };
   const handleVideoUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;

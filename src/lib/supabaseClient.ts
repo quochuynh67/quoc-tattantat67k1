@@ -75,6 +75,21 @@ export const deletePost = async (id) => {
   return data;
 };
 
+export const getVlogByPost = async (postId) => {
+  // Fetch vlog linked to a post via content_item_id
+  const { data, error } = await supabase
+    .from('vlog_reviews')
+    .select('*, vlog_locations(*)')
+    .eq('content_item_id', postId)
+    .single();
+  if (error && error.code !== 'PGRST116') { // ignore not‑found error
+    throw error;
+  }
+  return data; // may be null
+};
+
+
+
 // Vlog helper functions
 export const getVlogs = async () => {
   const { data, error } = await supabase
