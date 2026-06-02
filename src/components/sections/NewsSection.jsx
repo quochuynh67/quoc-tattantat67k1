@@ -73,7 +73,7 @@ const NewsSection = () => {
               >
                 <CardActionArea
                   component={RouterLink}
-                  to={`/vlog/${item.id}`}
+                  to={`/post-detail/${item.id}`}
                   sx={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "stretch" }}
                 >
                   <CardMedia component="img" image={item.image} alt={item.title} sx={{ height: 200, objectFit: "cover" }} />

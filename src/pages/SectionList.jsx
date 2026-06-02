@@ -1,6 +1,6 @@
 // src/pages/SectionList.jsx
 import React, { useEffect, useMemo, useState } from "react";
-import { Link as RouterLink, useParams } from "react-router-dom";
+import { Link as RouterLink, useParams, useNavigate } from "react-router-dom";
 import {
   Alert,
   AlertTitle,
@@ -11,6 +11,8 @@ import {
   CardMedia,
   Container,
   Rating,
+  Snackbar,
+  Alert as MuiAlert,
   Typography,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
@@ -69,9 +71,12 @@ const getDescription = (item, kind) => {
 
 const SectionList = ({ sectionKey }) => {
   const params = useParams();
+  const navigate = useNavigate();
   const key = sectionKey || params.section;
   const section = sectionConfig[key];
   const [items, setItems] = useState(section?.items || []);
+  const [toastOpen, setToastOpen] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
 
   useEffect(() => {
     if (!section) return;
@@ -117,7 +122,14 @@ const SectionList = ({ sectionKey }) => {
         {pageSection.kind === "health" ? (
           <Box className="list-alert-grid">
             {pageSection.items.map((item) => (
-              <Alert key={item.id} severity={item.severity || "info"} className="list-health-alert">
+              <Alert
+                key={item.id}
+                severity={item.severity || "info"}
+                className="list-health-alert"
+                component={RouterLink}
+                to={`/post-detail/${item.id}`}
+                sx={{ cursor: 'pointer', textDecoration: 'none' }}
+              >
                 <AlertTitle sx={{ fontWeight: 800 }}>{item.title}</AlertTitle>
                 {item.content || item.description}
               </Alert>
@@ -126,44 +138,49 @@ const SectionList = ({ sectionKey }) => {
         ) : (
           <Box className="list-card-grid">
             {pageSection.items.map((item) => (
-              <Card key={item.id} className="list-card" elevation={2}>
+              <Card key={item.id} className="list-card" elevation={2} component={RouterLink} to={`/post-detail/${item.id}`} sx={{ cursor: 'pointer', textDecoration: 'none' }}>
                 <CardMedia
                   component="img"
                   image={item.image}
                   alt={getTitle(item, pageSection.kind)}
                   className="list-card-media"
                 />
-                <CardContent className="list-card-content">
-                  <Typography variant="h6" component="h2" className="list-card-title">
-                    {getTitle(item, pageSection.kind)}
-                  </Typography>
-                  <Typography className="list-card-description">
-                    {getDescription(item, pageSection.kind)}
-                  </Typography>
-                  {pageSection.kind === "beautyHealth" && (
-                    <Typography variant="caption" sx={{ color: "var(--color-primary)", fontWeight: 800, mt: "auto" }}>
-                      {item.category} · {item.address}
+                  <CardContent className="list-card-content">
+                    <Typography variant="h6" component="h2" className="list-card-title">
+                      {getTitle(item, pageSection.kind)}
                     </Typography>
-                  )}
-                  {(pageSection.kind === "food" || pageSection.kind === "beautyHealth") && (
-                    <Box sx={{ display: "flex", alignItems: "center", mt: "auto" }}>
-                      <Rating value={item.rating || 0} precision={0.5} readOnly size="small" />
-                      <Typography variant="body2" sx={{ ml: 1, color: "var(--color-primary)", fontWeight: 800 }}>
-                        {item.rating || 0}
+                    <Typography className="list-card-description">
+                      {getDescription(item, pageSection.kind)}
+                    </Typography>
+                    {pageSection.kind === "beautyHealth" && (
+                      <Typography variant="caption" sx={{ color: "var(--color-primary)", fontWeight: 800, mt: "auto" }}>
+                        {item.category} · {item.address}
                       </Typography>
-                    </Box>
-                  )}
-                  {pageSection.kind === "news" && (
-                    <Typography variant="caption" sx={{ color: "var(--color-text-subtle)", mt: "auto" }}>
-                      {new Date(item.date).toLocaleDateString("vi-VN")}
-                    </Typography>
-                  )}
-                </CardContent>
+                    )}
+                    {(pageSection.kind === "food" || pageSection.kind === "beautyHealth") && (
+                      <Box sx={{ display: "flex", alignItems: "center", mt: "auto" }}>
+                        <Rating value={item.rating || 0} precision={0.5} readOnly size="small" />
+                        <Typography variant="body2" sx={{ ml: 1, color: "var(--color-primary)", fontWeight: 800 }}>
+                          {item.rating || 0}
+                        </Typography>
+                      </Box>
+                    )}
+                    {pageSection.kind === "news" && (
+                      <Typography variant="caption" sx={{ color: "var(--color-text-subtle)", mt: "auto" }}>
+                        {new Date(item.date).toLocaleDateString("vi-VN")}
+                      </Typography>
+                    )}
+                  </CardContent>
               </Card>
             ))}
           </Box>
         )}
       </Container>
+      <Snackbar open={toastOpen} autoHideDuration={3000} onClose={() => setToastOpen(false)}>
+        <MuiAlert severity="error" sx={{ width: '100%' }} onClose={() => setToastOpen(false)}>
+          {toastMessage}
+        </MuiAlert>
+      </Snackbar>
     </main>
   );
 };

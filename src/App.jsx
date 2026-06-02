@@ -10,6 +10,7 @@ import SectionList from "./pages/SectionList";
 import VlogFeed from "./pages/VlogFeed";
 import VlogReview from "./pages/VlogReview";
 import NotFound from "./pages/NotFound";
+import DetailPage from "./pages/DetailPage";
 // Admin UI imports
 import AdminLayout from "./components/admin/AdminLayout";
 import AdminSections from "./pages/admin/Sections";
@@ -33,7 +34,7 @@ const AppLayout = () => {
           <Route path="/agriculture" element={<SectionList sectionKey="agriculture" />} />
           <Route path="/health" element={<SectionList sectionKey="health" />} />
           <Route path="/vlogs" element={<VlogFeed />} />
-          <Route path="/vlog/:id" element={<VlogReview />} />
+          <Route path="/post-detail/:id" element={<VlogReview />} />
           <Route path="/admin/*" element={<AdminLayout />}>
             <Route path="sections" element={<AdminSections />} />
             <Route path="posts" element={<AdminPosts />} />
@@ -46,6 +47,7 @@ const AppLayout = () => {
           {/* <Route path="/agriculture" element={<Agriculture />} /> */}
           {/* <Route path="/health" element={<Health />} /> */}
           {/* <Route path="/search" element={<Search />} /> */}
+          <Route path="/detail/:id" element={<DetailPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>

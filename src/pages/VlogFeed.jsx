@@ -106,7 +106,7 @@ const VlogFeed = () => {
                 <Box className="vlog-scroll-actions" aria-label="Vlog actions">
                   <Button
                     component={RouterLink}
-                    to={`/vlog/${vlog.newsId}`}
+                    to={`/post-detail/${vlog.newsId}`}
                     className="vlog-scroll-action"
                     aria-label="Xem chi tiết review"
                   >

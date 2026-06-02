@@ -49,7 +49,7 @@ const HealthSection = () => {
         </Typography>
         <Stack spacing={3}>
           {displayedHealth.map((item) => (
-            <Alert key={item.id} severity={item.severity || "info"} sx={{ fontFamily: "var(--font-body)", borderRadius: 2, color: "var(--color-text)" }}>
+            <Alert key={item.id} component={RouterLink} to={`/post-detail/${item.id}`} severity={item.severity || "info"} sx={{ fontFamily: "var(--font-body)", borderRadius: 2, color: "var(--color-text)", cursor: "pointer", textDecoration: "none" }}>
               <AlertTitle sx={{ fontFamily: "var(--font-body)", fontWeight: 'bold' }}>
                 {item.title}
               </AlertTitle>

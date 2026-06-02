@@ -59,6 +59,8 @@ const FoodSection = () => {
             <Box key={item.id} sx={{ minWidth: 0 }}>
               <Card
                 elevation={2}
+                component={RouterLink}
+                to={`/post-detail/${item.id}`}
                 sx={{
                   height: "100%",
                   minHeight: 370,
@@ -69,6 +71,8 @@ const FoodSection = () => {
                   "&:hover": { boxShadow: "0 8px 24px rgba(0,0,0,0.15)", transform: "translateY(-2px)" },
                   backgroundColor: "var(--color-surface)",
                   boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
+                  cursor: "pointer",
+                  textDecoration: "none"
                 }}
               >
                 <CardMedia component="img" image={item.image} alt={item.name || item.title} sx={{ height: 200, objectFit: "cover" }} />
