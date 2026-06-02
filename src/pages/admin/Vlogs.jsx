@@ -332,56 +332,107 @@ export default function AdminVlogs() {
                   </Grid>
                 </Grid>
 
-                <TextField 
-                  label="Liên kết tới bài viết (Post)" 
-                  value={form.content_item_id} 
-                  onChange={(e) => setForm({ ...form, content_item_id: e.target.value })} 
-                  select 
-                  SelectProps={{ native: true }} 
-                  fullWidth 
+                <TextField
+                  label="Liên kết tới bài viết (Post)"
+                  value={form.content_item_id}
+                  onChange={(e) => setForm({ ...form, content_item_id: e.target.value })}
+                  select
+                  SelectProps={{ native: true }}
+                  fullWidth
                   variant="outlined"
                 >
                   <option value="">Không liên kết bài viết</option>
-                  {posts.map((post) => (
-                    <option key={post.id} value={post.id}>{post.title}</option>
-                  ))}
                 </TextField>
-
-                {/* Video Source Switcher */}
-                <Card variant="outlined" sx={{ p: 1.5, borderRadius: 2 }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>Video Source</Typography>
-                  <Box sx={{ display: "flex", gap: 2, mb: 1.5 }}>
-                    <Button size="small" variant={videoSourceMode === "url" ? "contained" : "outlined"} onClick={() => setVideoSourceMode("url")}>Dán Link URL</Button>
-                    <Button size="small" variant={videoSourceMode === "file" ? "contained" : "outlined"} onClick={() => setVideoSourceMode("file")}>Tải File Lên</Button>
+                <Card variant="outlined" sx={{ p: 2, borderRadius: 3, border: "1px solid", borderColor: "divider" }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: "text.primary" }}>Video Stream (HLS .m3u8)</Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1.5 }}>
+                    Hệ thống tự động đồng bộ hóa đường dẫn video `.mp4` sau khi upload sang luồng truyền phát phân đoạn `.m3u8` để tối ưu hóa tốc độ tải và chống giật lag.
+                  </Typography>
+                  
+                  <Box sx={{ display: "flex", gap: 1.5, mb: 2 }}>
+                    <Button size="small" variant={videoSourceMode === "url" ? "contained" : "outlined"} onClick={() => setVideoSourceMode("url")} sx={{ textTransform: "none", borderRadius: 1.5 }}>
+                      Dán Link URL
+                    </Button>
+                    <Button size="small" variant={videoSourceMode === "file" ? "contained" : "outlined"} onClick={() => setVideoSourceMode("file")} sx={{ textTransform: "none", borderRadius: 1.5 }}>
+                      Tải File .mp4 Lên
+                    </Button>
                   </Box>
+
                   {videoSourceMode === "url" ? (
-                    <TextField label="Video URL" value={form.video_url} onChange={(e) => setForm({ ...form, video_url: e.target.value })} fullWidth variant="outlined" size="small" />
+                    <TextField 
+                      label="Video URL (HLS / MP4)" 
+                      value={form.video_url} 
+                      onChange={(e) => setForm({ ...form, video_url: e.target.value })} 
+                      fullWidth 
+                      variant="outlined" 
+                      size="small" 
+                    />
                   ) : (
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                      <Button component="label" variant="outlined" startIcon={<CloudUploadIcon />} size="small" disabled={uploadingVideo}>
-                        {uploadingVideo ? "Đang tải lên..." : "Tải Video lên"}
-                        <input type="file" accept="video/*" hidden onChange={handleVideoUpload} />
-                      </Button>
-                      <Typography variant="caption" sx={{ overflow: "hidden", textOverflow: "ellipsis", maxWidth: "200px" }}>
-                        {form.video_url ? "Đã tải lên thành công!" : "Chưa chọn file"}
-                      </Typography>
+                    <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                        <Button component="label" variant="contained" startIcon={<CloudUploadIcon />} size="small" disabled={uploadingVideo} sx={{ textTransform: "none", borderRadius: 1.5 }}>
+                          {uploadingVideo ? "Đang xử lý..." : "Chọn File Video"}
+                          <input type="file" accept="video/*" hidden onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            setUploadingVideo(true);
+                            try {
+                              const publicUrl = await uploadVlogFile(file, "videos");
+                              // Auto-translate to target HLS path .m3u8 matching convert-videos-to-hls.mjs
+                              let hlsUrl = publicUrl;
+                              if (publicUrl.includes("/public/vlogs-posts/")) {
+                                hlsUrl = publicUrl
+                                  .replace("/public/vlogs-posts/", "/public/video-hls/")
+                                  .replace(/\.mp4$/i, "/index.m3u8");
+                              } else {
+                                hlsUrl = publicUrl.replace(/\.mp4$/i, "/index.m3u8");
+                              }
+                              setForm((prev) => ({ ...prev, video_url: hlsUrl }));
+                              alert("Đã upload MP4 gốc lên storage. Đường dẫn video tự động tối ưu hóa sang HLS (.m3u8) để tương thích thiết bị di động!");
+                            } catch (err) {
+                              console.error(err);
+                              alert("Lỗi tải video lên: " + err.message);
+                            } finally {
+                              setUploadingVideo(false);
+                            }
+                          }} />
+                        </Button>
+                        <Typography variant="caption" sx={{ color: form.video_url ? "success.main" : "text.secondary", fontWeight: 600 }}>
+                          {form.video_url ? "Đã tối ưu sang HLS!" : "Chưa chọn file"}
+                        </Typography>
+                      </Box>
+                      {form.video_url && (
+                        <TextField 
+                          value={form.video_url} 
+                          disabled 
+                          size="small" 
+                          variant="filled" 
+                          fullWidth 
+                          label="Target HLS Playback URL" 
+                          inputProps={{ style: { fontSize: "0.75rem", fontFamily: "monospace" } }} 
+                        />
+                      )}
                     </Box>
                   )}
                 </Card>
 
                 {/* Poster Source Switcher */}
-                <Card variant="outlined" sx={{ p: 1.5, borderRadius: 2 }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>Poster Image</Typography>
-                  <Box sx={{ display: "flex", gap: 2, mb: 1.5 }}>
-                    <Button size="small" variant={posterSourceMode === "url" ? "contained" : "outlined"} onClick={() => setPosterSourceMode("url")}>Dán Link URL</Button>
-                    <Button size="small" variant={posterSourceMode === "file" ? "contained" : "outlined"} onClick={() => setPosterSourceMode("file")}>Tải File Lên</Button>
+                <Card variant="outlined" sx={{ p: 2, borderRadius: 3, border: "1px solid", borderColor: "divider" }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: "text.primary" }}>Poster Image</Typography>
+                  <Box sx={{ display: "flex", gap: 1.5, mb: 2 }}>
+                    <Button size="small" variant={posterSourceMode === "url" ? "contained" : "outlined"} onClick={() => setPosterSourceMode("url")} sx={{ textTransform: "none", borderRadius: 1.5 }}>
+                      Dán Link URL
+                    </Button>
+                    <Button size="small" variant={posterSourceMode === "file" ? "contained" : "outlined"} onClick={() => setPosterSourceMode("file")} sx={{ textTransform: "none", borderRadius: 1.5 }}>
+                      Tải File Lên
+                    </Button>
                   </Box>
                   {posterSourceMode === "url" ? (
                     <TextField label="Poster URL" value={form.poster_url} onChange={(e) => setForm({ ...form, poster_url: e.target.value })} fullWidth variant="outlined" size="small" />
                   ) : (
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                      <Button component="label" variant="outlined" startIcon={<CloudUploadIcon />} size="small" disabled={uploadingPoster}>
-                        {uploadingPoster ? "Đang tải lên..." : "Tải Poster"}
+                      <Button component="label" variant="outlined" startIcon={<CloudUploadIcon />} size="small" disabled={uploadingPoster} sx={{ textTransform: "none", borderRadius: 1.5 }}>
+                        {uploadingPoster ? "Đang tải..." : "Tải Poster"}
                         <input type="file" accept="image/*" hidden onChange={handlePosterUpload} />
                       </Button>
                       <Typography variant="caption" sx={{ overflow: "hidden", textOverflow: "ellipsis", maxWidth: "200px" }}>
@@ -390,7 +441,7 @@ export default function AdminVlogs() {
                     </Box>
                   )}
                   {form.poster_url && (
-                    <Box sx={{ mt: 1.5, borderRadius: 1.5, overflow: "hidden", height: "100px", border: "1px solid", borderColor: "divider" }}>
+                    <Box sx={{ mt: 1.5, borderRadius: 2, overflow: "hidden", height: "100px", border: "1px solid", borderColor: "divider" }}>
                       <img src={form.poster_url} alt="Poster preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                     </Box>
                   )}
@@ -409,115 +460,137 @@ export default function AdminVlogs() {
                 <Typography variant="h6" sx={{ fontWeight: 600, color: "primary.main" }}>
                   Các giai đoạn hành trình trong Video
                 </Typography>
-                <Button variant="outlined" startIcon={<AddIcon />} size="small" onClick={addLocationRow} sx={{ borderRadius: 1.5 }}>
+                <Button variant="outlined" startIcon={<AddIcon />} size="small" onClick={addLocationRow} sx={{ borderRadius: 1.5, textTransform: "none", fontWeight: 600 }}>
                   Thêm Giai đoạn
                 </Button>
               </Box>
 
               <Divider sx={{ mb: 2 }} />
 
-              <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5, maxHeight: "55vh", overflowY: "auto", pr: 1 }}>
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 3, maxHeight: "55vh", overflowY: "auto", pr: 1 }}>
                 {locations.length === 0 ? (
                   <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 6, border: "2px dashed", borderColor: "divider", borderRadius: 3 }}>
-                    Chưa thiết lập giai đoạn nào. Bấm nút "Thêm Giai đoạn" để bắt đầu gắn địa danh theo dòng thời gian video!
+                    Chưa thiết lập giai đoạn nào. Bấm nút "Thêm Giai đoạn" để gắn địa danh hành trình tại các mốc giây tương ứng!
                   </Typography>
                 ) : (
                   locations.map((loc, index) => (
                     <Card key={index} variant="outlined" sx={{ borderRadius: 3, position: "relative", overflow: "visible" }}>
-                      {/* Delete index badge */}
+                      {/* Absolute delete button at the top right of card */}
                       <IconButton 
                         onClick={() => removeLocationRow(index)} 
                         size="small" 
                         color="error" 
-                        sx={{ position: "absolute", top: -10, right: -10, bgcolor: "background.paper", boxShadow: 1, '&:hover': { bgcolor: "error.light", color: "error.contrastText" } }}
+                        sx={{ position: "absolute", top: -12, right: -12, bgcolor: "background.paper", boxShadow: "0px 2px 8px rgba(0,0,0,0.12)", border: "1px solid", borderColor: "divider", '&:hover': { bgcolor: "error.light", color: "white" } }}
                       >
-                        <DeleteIcon />
+                        <DeleteIcon fontSize="small" />
                       </IconButton>
 
                       <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
                         <Grid container spacing={2}>
-                          {/* Row 1: Time & Milestone Name */}
-                          <Grid item xs={4}>
-                            <TextField 
-                              label="Tại giây thứ" 
-                              type="number" 
-                              value={loc.time_seconds} 
-                              onChange={(e) => updateLocationField(index, "time_seconds", e.target.value)} 
-                              fullWidth 
-                              size="small" 
-                            />
-                          </Grid>
-                          <Grid item xs={8}>
-                            <TextField 
-                              label="Tên địa điểm / Sự kiện" 
-                              value={loc.name} 
-                              onChange={(e) => updateLocationField(index, "name", e.target.value)} 
-                              fullWidth 
-                              size="small" 
-                            />
-                          </Grid>
+                          
+                          {/* Left inputs column (size 8) */}
+                          <Grid item xs={12} sm={8}>
+                            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                              <Box sx={{ display: "flex", gap: 2 }}>
+                                <TextField 
+                                  label="Tại giây thứ" 
+                                  type="number" 
+                                  value={loc.time_seconds} 
+                                  onChange={(e) => updateLocationField(index, "time_seconds", e.target.value)} 
+                                  sx={{ width: "120px" }}
+                                  size="small" 
+                                  variant="outlined"
+                                />
+                                <TextField 
+                                  label="Tên địa điểm / Sự kiện" 
+                                  value={loc.name} 
+                                  onChange={(e) => updateLocationField(index, "name", e.target.value)} 
+                                  fullWidth 
+                                  size="small" 
+                                  variant="outlined"
+                                />
+                              </Box>
 
-                          {/* Row 2: Note / Description */}
-                          <Grid item xs={12}>
-                            <TextField 
-                              label="Mô tả chi tiết tại thời điểm này" 
-                              value={loc.note} 
-                              onChange={(e) => updateLocationField(index, "note", e.target.value)} 
-                              multiline 
-                              rows={2} 
-                              fullWidth 
-                              size="small" 
-                            />
-                          </Grid>
-
-                          {/* Row 3: Latitude, Longitude & Milestone Image Upload */}
-                          <Grid item xs={4}>
-                            <TextField 
-                              label="Kinh độ (Lat)" 
-                              type="number"
-                              inputProps={{ step: 0.000001 }}
-                              value={loc.latitude} 
-                              onChange={(e) => updateLocationField(index, "latitude", e.target.value)} 
-                              fullWidth 
-                              size="small" 
-                            />
-                          </Grid>
-                          <Grid item xs={4}>
-                            <TextField 
-                              label="Vĩ độ (Long)" 
-                              type="number"
-                              inputProps={{ step: 0.000001 }}
-                              value={loc.longitude} 
-                              onChange={(e) => updateLocationField(index, "longitude", e.target.value)} 
-                              fullWidth 
-                              size="small" 
-                            />
-                          </Grid>
-                          <Grid item xs={4}>
-                            <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                              <Button component="label" variant="outlined" startIcon={<CloudUploadIcon />} size="small" fullWidth>
-                                Ảnh mốc
-                                <input type="file" accept="image/*" hidden onChange={(e) => handleMilestoneImageUpload(index, e.target.files?.[0])} />
-                              </Button>
                               <TextField 
-                                placeholder="Hoặc dán Link URL ảnh" 
-                                value={loc.image_url} 
-                                onChange={(e) => updateLocationField(index, "image_url", e.target.value)} 
+                                label="Mô tả hành trình tại mốc thời gian này" 
+                                value={loc.note || ""} 
+                                onChange={(e) => updateLocationField(index, "note", e.target.value)} 
+                                multiline 
+                                rows={2} 
                                 fullWidth 
                                 size="small" 
-                                inputProps={{ style: { fontSize: "0.75rem", padding: "6px" } }}
+                                variant="outlined"
                               />
+
+                              <Box sx={{ display: "flex", gap: 2 }}>
+                                <TextField 
+                                  label="Kinh độ (Lat)" 
+                                  type="number"
+                                  inputProps={{ step: 0.000001 }}
+                                  value={loc.latitude || ""} 
+                                  onChange={(e) => updateLocationField(index, "latitude", e.target.value)} 
+                                  fullWidth 
+                                  size="small" 
+                                  variant="outlined"
+                                />
+                                <TextField 
+                                  label="Vĩ độ (Long)" 
+                                  type="number"
+                                  inputProps={{ step: 0.000001 }}
+                                  value={loc.longitude || ""} 
+                                  onChange={(e) => updateLocationField(index, "longitude", e.target.value)} 
+                                  fullWidth 
+                                  size="small" 
+                                  variant="outlined"
+                                />
+                              </Box>
                             </Box>
                           </Grid>
 
-                          {/* Preview image if loaded */}
-                          {loc.image_url && (
-                            <Grid item xs={12}>
-                              <Box sx={{ borderRadius: 1.5, overflow: "hidden", height: "80px", border: "1px solid", borderColor: "divider", width: "160px" }}>
-                                <img src={loc.image_url} alt="Milestone preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                          {/* Right Image/Upload column (size 4) */}
+                          <Grid item xs={12} sm={4}>
+                            <Box sx={{ display: "flex", flexDirection: "column", gap: 1, height: "100%", justifyContent: "space-between" }}>
+                              <Typography variant="caption" sx={{ fontWeight: 600, color: "text.secondary" }}>
+                                Ảnh mốc hành trình
+                              </Typography>
+                              
+                              <Box sx={{ 
+                                border: "1px dashed", 
+                                borderColor: "divider", 
+                                borderRadius: 2, 
+                                height: "80px", 
+                                overflow: "hidden", 
+                                position: "relative",
+                                bgcolor: "action.hover",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center"
+                              }}>
+                                {loc.image_url ? (
+                                  <img src={loc.image_url} alt="Milestone preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                ) : (
+                                  <Typography variant="caption" color="text.disabled" sx={{ textAlign: "center", p: 1 }}>
+                                    Chưa có ảnh
+                                  </Typography>
+                                )}
                               </Box>
-                            </Grid>
-                          )}
+
+                              <Button component="label" variant="outlined" startIcon={<CloudUploadIcon />} size="small" fullWidth sx={{ textTransform: "none", borderRadius: 1.5, py: 0.5 }}>
+                                Tải ảnh lên
+                                <input type="file" accept="image/*" hidden onChange={(e) => handleMilestoneImageUpload(index, e.target.files?.[0])} />
+                              </Button>
+
+                              <TextField 
+                                placeholder="Dán Link URL ảnh" 
+                                value={loc.image_url || ""} 
+                                onChange={(e) => updateLocationField(index, "image_url", e.target.value)} 
+                                fullWidth 
+                                size="small" 
+                                inputProps={{ style: { fontSize: "0.72rem", padding: "6px" } }}
+                                variant="outlined"
+                              />
+                            </Box>
+                          </Grid>
 
                         </Grid>
                       </CardContent>
