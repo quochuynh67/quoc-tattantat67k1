@@ -3,9 +3,11 @@ import React, { lazy, Suspense } from "react";
 import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import { ThemeProvider } from "./hooks/useTheme";
+import { AdminAuthProvider } from "./contexts/AdminAuthContext";
 import Header from "./components/layout/Header";
 import Footer from "./components/layout/Footer";
 import ScrollRestoration from "./components/ScrollRestoration";
+import ProtectedAdminRoute from "./components/ProtectedAdminRoute";
 
 // Eagerly loaded — rendered on every page
 import Home from "./pages/Home";
@@ -18,6 +20,7 @@ const DetailPage    = lazy(() => import("./pages/DetailPage"));
 const NotFound      = lazy(() => import("./pages/NotFound"));
 
 // Admin — separate chunk, rarely visited
+const AdminLogin    = lazy(() => import("./pages/AdminLogin"));
 const AdminLayout   = lazy(() => import("./components/admin/AdminLayout"));
 const AdminSections = lazy(() => import("./pages/admin/Sections"));
 const AdminPosts    = lazy(() => import("./pages/admin/Posts"));
@@ -44,7 +47,8 @@ const AppLayout = () => {
             <Route path="/health"        element={<SectionList sectionKey="health" />} />
             <Route path="/vlogs"         element={<VlogFeed />} />
             <Route path="/post-detail/:id" element={<VlogReview />} />
-            <Route path="/admin/*" element={<AdminLayout />}>
+            <Route path="/admin-login" element={<AdminLogin />} />
+            <Route path="/admin/*" element={<ProtectedAdminRoute><AdminLayout /></ProtectedAdminRoute>}>
               <Route path="sections" element={<AdminSections />} />
               <Route path="posts"    element={<AdminPosts />} />
               <Route path="vlogs"    element={<AdminVlogs />} />
@@ -64,9 +68,11 @@ export default function App() {
   return (
     <HelmetProvider>
       <ThemeProvider>
-        <Router>
-          <AppLayout />
-        </Router>
+        <AdminAuthProvider>
+          <Router>
+            <AppLayout />
+          </Router>
+        </AdminAuthProvider>
       </ThemeProvider>
     </HelmetProvider>
   );
