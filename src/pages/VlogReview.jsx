@@ -341,13 +341,58 @@ const VlogReview = () => {
 
   // ── TAB MODE ───────────────────────────────────────────────────────────────
   const activeTime = activeSpotByVlog[activeVlog?.id];
+  const isHealth = post?.section === "health";
 
   return (
     <main className="vlog-review-page">
       <Container maxWidth={false} className="section-container">
         <PageHeader />
 
-        {vlogs.length > 1 && (
+        {/* POST INFO SECTION */}
+        {post && (
+          <Box sx={{ mb: 4, pb: 3, borderBottom: "1px solid var(--color-border)" }}>
+            {isHealth ? (
+              <Alert severity={post.severity || "info"} sx={{ fontSize: "1rem", borderRadius: 2, mb: 2 }}>
+                <Typography variant="h5">{post.title}</Typography>
+              </Alert>
+            ) : post.image ? (
+              <img src={post.image} alt={post.title} style={{ width: "50%", height: "auto", borderRadius: 8, marginBottom: 16 }} />
+            ) : null}
+            <Typography variant="overline" sx={{ color: "var(--color-text-subtle)" }}>{post.category || "Chi tiết"}</Typography>
+            <Typography variant="h4" sx={{ mt: 1, mb: 2, fontFamily: "var(--font-display)" }}>{post.title}</Typography>
+            {(post.description || post.excerpt) && (
+              <Typography sx={{ mb: 2, color: "var(--color-text)" }}>{post.description || post.excerpt}</Typography>
+            )}
+            {post.content && post.content !== post.description && (
+              <Typography sx={{ mb: 2, color: "var(--color-text)" }}>{post.content}</Typography>
+            )}
+            <Box sx={{ display: "flex", gap: 3, flexWrap: "wrap" }}>
+              {post.address && (
+                <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, color: "var(--color-text-subtle)" }}>
+                  <LocationOnIcon fontSize="small" />
+                  <Typography variant="body2">{post.address}</Typography>
+                </Box>
+              )}
+              {post.rating !== undefined && (
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Rating value={post.rating} precision={0.5} readOnly size="small" />
+                  <Typography variant="body2" sx={{ fontWeight: 700 }}>{post.rating}</Typography>
+                </Box>
+              )}
+              {post.date && (
+                <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, color: "var(--color-text-subtle)" }}>
+                  <CalendarTodayIcon fontSize="small" />
+                  <Typography variant="caption">{new Date(post.date).toLocaleDateString("vi-VN")}</Typography>
+                </Box>
+              )}
+            </Box>
+          </Box>
+        )}
+
+        {/* VLOG SECTION */}
+        {vlogs.length > 0 && (
+          <>
+            {vlogs.length > 1 && (
           <Tabs
             value={activeVlogIdx}
             onChange={handleSelectTab}
@@ -359,9 +404,9 @@ const VlogReview = () => {
               <Tab key={v.id} label={v.title || `Vlog ${idx + 1}`} />
             ))}
           </Tabs>
-        )}
+            )}
 
-        <Box className="vlog-review-layout">
+            <Box className="vlog-review-layout">
           <Box className="vlog-video-panel">
             <video
               key={activeVlog.id}
@@ -437,9 +482,12 @@ const VlogReview = () => {
                 </Box>
               </>
             )}
+            </Box>
           </Box>
-        </Box>
+          </>
+        )}
       </Container>
+      <AgentChat section={post?.section} />
     </main>
   );
 };

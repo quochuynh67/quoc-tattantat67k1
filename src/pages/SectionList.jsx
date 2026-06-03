@@ -121,19 +121,9 @@ const SectionList = ({ sectionKey }) => {
             ? <AlertSkeleton count={4} />
             : <CardSkeletonGrid count={6} hasRating={pageSection.kind === "food" || pageSection.kind === "beautyHealth"} hasChip={pageSection.kind === "beautyHealth"} />
         ) : pageSection.kind === "health" ? (
-          <Box className="list-alert-grid">
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
             {pageSection.items.map((item) => (
-              <Alert
-                key={item.id}
-                severity={item.severity || "info"}
-                className="list-health-alert"
-                component={RouterLink}
-                to={`/post-detail/${item.id}`}
-                sx={{ cursor: 'pointer', textDecoration: 'none' }}
-              >
-                <AlertTitle sx={{ fontWeight: 800 }}>{item.title}</AlertTitle>
-                {item.content || item.description}
-              </Alert>
+              <HealthCard key={item.id} item={item} showDesc={true} />
             ))}
           </Box>
         ) : (
