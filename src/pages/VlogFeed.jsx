@@ -19,11 +19,11 @@ const formatTime = (seconds) => {
 };
 
 const createNumberedIcon = (number, isActive, isVisited) => {
-  const bgColor = isActive ? "#82f3cf" : isVisited ? "rgba(130,243,207,0.85)" : "rgba(130,243,207,0.15)";
-  const borderColor = isActive ? "#fff" : isVisited ? "#82f3cf" : "rgba(130,243,207,0.3)";
+  const bgColor = isActive ? "#1976d2" : isVisited ? "rgba(25,118,210,0.85)" : "rgba(25,118,210,0.2)";
+  const borderColor = isActive ? "#fff" : isVisited ? "#1976d2" : "rgba(25,118,210,0.4)";
   const size = isActive ? 24 : isVisited ? 20 : 16;
   const fontSize = isActive ? 12 : isVisited ? 11 : 9;
-  const color = isActive ? "#1a1c24" : "#fff";
+  const color = "#fff";
 
   return L.divIcon({
     html: `<div style="
@@ -75,6 +75,19 @@ const ActiveMarkerHighlight = ({ location }) => {
     if (!location?.latitude || !location?.longitude) return;
     map.panTo([location.latitude, location.longitude], { animate: true, duration: 0.4 });
   }, [location, map]);
+  return null;
+};
+
+/* ── Map resizer for bottom sheet ─────────────────────────────────────── */
+const MapResizer = () => {
+  const map = useMap();
+  useEffect(() => {
+    const observer = new ResizeObserver(() => {
+      map.invalidateSize();
+    });
+    observer.observe(map.getContainer());
+    return () => observer.disconnect();
+  }, [map]);
   return null;
 };
 
@@ -378,7 +391,8 @@ const VlogFeed = () => {
                   attributionControl={false}
                   style={{ width: "100%", height: "100%", borderRadius: "12px" }}
                 >
-                  <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
+                  <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                  <MapResizer />
                   <FitBounds locations={locationsWithCoords} />
                   {activeLocation?.latitude && <ActiveMarkerHighlight location={activeLocation} />}
 
@@ -387,9 +401,9 @@ const VlogFeed = () => {
                     <Polyline
                       positions={upcomingCoords}
                       pathOptions={{
-                        color: "#82f3cf",
-                        weight: 2,
-                        opacity: 0.25,
+                        color: "#1976d2",
+                        weight: 3,
+                        opacity: 0.5,
                         dashArray: "6, 8",
                         lineCap: "round",
                       }}
@@ -401,7 +415,7 @@ const VlogFeed = () => {
                     <Polyline
                       positions={traversedCoords}
                       pathOptions={{
-                        color: "#82f3cf",
+                        color: "#1976d2",
                         weight: 4,
                         opacity: 0.9,
                         lineCap: "round",
@@ -435,10 +449,10 @@ const VlogFeed = () => {
                   {activeLocation?.latitude && activeLocation?.longitude && (
                     <CircleMarker
                       center={[activeLocation.latitude, activeLocation.longitude]}
-                      radius={16}
+                      radius={20}
                       pathOptions={{
-                        color: "#82f3cf",
-                        fillColor: "#82f3cf",
+                        color: "#1976d2",
+                        fillColor: "#1976d2",
                         fillOpacity: 0.18,
                         weight: 2,
                         opacity: 0.5,
