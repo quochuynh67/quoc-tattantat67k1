@@ -28,11 +28,27 @@ export interface Message {
   content: string;
 }
 
-export async function callAgent(messages: Message[], section: string, agent: AgentConfig): Promise<string> {
-  const apiKey = (import.meta as any).env?.VITE_ANTHROPIC_API_KEY;
+function getEndpoint(): string | null {
+  const env = (import.meta as any).env ?? {};
 
-  if (!apiKey) {
-    return "AI chưa được cấu hình. Thêm VITE_ANTHROPIC_API_KEY vào .env.local nha cưng~";
+  // 1. Explicit override (e.g. VITE_AI_PROXY_URL=https://your-backend.com/...)
+  if (env.VITE_AI_PROXY_URL) return env.VITE_AI_PROXY_URL;
+
+  // 2. Dev: Vite proxy → no CORS
+  if (env.DEV) return "/api/claude/v1/messages";
+
+  // 3. Production: Supabase Edge Function
+  const supabaseUrl = env.VITE_SUPABASE_URL as string | undefined;
+  if (supabaseUrl) return `${supabaseUrl}/functions/v1/claude-proxy`;
+
+  return null;
+}
+
+export async function callAgent(messages: Message[], section: string, agent: AgentConfig): Promise<string> {
+  const endpoint = getEndpoint();
+
+  if (!endpoint) {
+    return "Proxy chưa được cấu hình nha cưng~";
   }
 
   const system = `Bạn là ${agent.name}, trợ lý AI thân thiện của trang thông tin huyện Phú Tân, tỉnh An Giang.
@@ -40,25 +56,28 @@ Bạn chuyên về ${SECTION_TOPICS[section] || "thông tin huyện Phú Tân"}.
 Luôn trả lời bằng tiếng Việt, giọng thân thiện, gần gũi theo phong cách miền Tây Nam Bộ (dùng từ "cưng", "nha", "á", "nè"...).
 Câu trả lời ngắn gọn, dưới 150 từ, không dùng markdown.`;
 
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-      "anthropic-dangerous-allow-browser": "true",
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 400,
-      system,
-      messages: messages.map((m) => ({ role: m.role, content: m.content })),
-    }),
-  });
+  let res: Response;
+  try {
+    res = await fetch(endpoint, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 400,
+        system,
+        messages: messages.map((m) => ({ role: m.role, content: m.content })),
+      }),
+    });
+  } catch (err) {
+    console.error("[AgentAPI] Network error:", err);
+    throw new Error("Lỗi mạng — kiểm tra kết nối nha cưng~");
+  }
 
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err?.error?.message || "API error");
+    const body = await res.json().catch(() => ({}));
+    const msg = body?.error?.message ?? `HTTP ${res.status}`;
+    console.error("[AgentAPI] Error:", res.status, body);
+    throw new Error(msg);
   }
 
   const data = await res.json();

@@ -18,6 +18,7 @@ import {
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { getSectionItems, getSectionItemsSync } from "../lib/phuTanApi";
 import { CardSkeletonGrid, AlertSkeleton } from "../components/CardSkeleton";
+import { HealthCard } from "../components/HealthCard";
 import AgentChat from "../components/AgentChat";
 
 const sectionConfig = {
