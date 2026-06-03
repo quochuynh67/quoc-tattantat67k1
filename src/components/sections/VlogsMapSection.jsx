@@ -1,6 +1,6 @@
 // src/components/sections/VlogsMapSection.jsx
 import React, { useEffect, useState, useMemo, useCallback } from "react";
-import { Link as RouterLink, useNavigate } from "react-router-dom";
+import { Link as RouterLink, useNavigate, useLocation } from "react-router-dom";
 import { Container, Button, Card, CardActionArea, CardMedia, CardContent, Typography, Box } from "@mui/material";
 import MyLocationIcon from "@mui/icons-material/MyLocation";
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from "react-leaflet";
@@ -59,11 +59,29 @@ const MapTracker = ({ onBoundsChange }) => {
 
 const UserTracker = ({ userLocation }) => {
   const map = useMap();
+  const location = useLocation();
+  
   useEffect(() => {
-    if (userLocation) {
+    if (userLocation && location.pathname === "/" && map.getSize().x > 0 && map.getSize().y > 0) {
       map.flyTo(userLocation, 14, { duration: 1.5 });
     }
-  }, [userLocation, map]);
+  }, [userLocation, map, location.pathname]);
+  return null;
+};
+
+const MapResizer = () => {
+  const map = useMap();
+  const location = useLocation();
+  
+  useEffect(() => {
+    if (location.pathname === "/") {
+      const timer = setTimeout(() => {
+        map.invalidateSize();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [location.pathname, map]);
+  
   return null;
 };
 
@@ -147,6 +165,7 @@ const VlogsMapSection = () => {
             scrollWheelZoom={false}
             style={{ width: "100%", height: "100%" }}
           >
+            <MapResizer />
             <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
             <MapTracker onBoundsChange={handleBoundsChange} />
             <UserTracker userLocation={userLocation} />

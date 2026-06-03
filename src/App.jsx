@@ -30,15 +30,19 @@ const AdminSettings = lazy(() => import("./pages/admin/Settings"));
 const AppLayout = () => {
   const location = useLocation();
   const isVlogFeed = location.pathname === "/vlogs";
+  const isHome = location.pathname === "/";
 
   return (
     <>
       <ScrollRestoration />
       {!isVlogFeed && <Header />}
       <main style={{ minHeight: isVlogFeed ? "100vh" : "80vh" }}>
+        <div style={{ display: isHome ? "block" : "none" }}>
+          <Home />
+        </div>
         <Suspense fallback={null}>
           <Routes>
-            <Route path="/" element={<Home />} />
+            <Route path="/" element={null} />
             <Route path="/news"          element={<SectionList sectionKey="news" />} />
             <Route path="/places"        element={<SectionList sectionKey="places" />} />
             <Route path="/food"          element={<SectionList sectionKey="food" />} />
