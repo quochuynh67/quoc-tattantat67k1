@@ -7,6 +7,17 @@ import AddIcon from "@mui/icons-material/Add";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import { getVlogs, createVlog, updateVlog, deleteVlog, getSections, uploadVlogFile, uploadHlsFolder, uploadTimelineImage, supabase } from "../../lib/supabaseClient";
 
+const formatDuration = (seconds) => {
+  if (isNaN(seconds) || seconds <= 0) return "";
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  if (h > 0) {
+    return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  }
+  return `${m}:${s.toString().padStart(2, '0')}`;
+};
+
 export default function AdminVlogs() {
   const [vlogs, setVlogs] = useState([]);
   const [posts, setPosts] = useState([]);
@@ -21,6 +32,7 @@ export default function AdminVlogs() {
   const [uploadingPoster, setUploadingPoster] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pendingFolderFiles, setPendingFolderFiles] = useState(null);
+  const [originalDuration, setOriginalDuration] = useState("");
 
   const videoRef = useRef(null);
 
@@ -70,6 +82,7 @@ export default function AdminVlogs() {
 
   const openEdit = (vlog) => {
     setEditing(vlog.id);
+    setOriginalDuration(vlog.duration_label || "");
     setForm({
       title: vlog.title || "",
       subtitle: vlog.subtitle || "",
@@ -92,6 +105,7 @@ export default function AdminVlogs() {
   };
 
   const resetForm = () => {
+    setOriginalDuration("");
     setForm({
       title: "",
       subtitle: "",
@@ -365,7 +379,21 @@ export default function AdminVlogs() {
 
                 <Grid container spacing={2}>
                   <Grid item xs={6}>
-                    <TextField label="Độ dài (Duration)" placeholder="Ví dụ: 12:45" value={form.duration_label} onChange={(e) => setForm({ ...form, duration_label: e.target.value })} fullWidth variant="outlined" />
+                    <TextField 
+                      label="Độ dài (Duration)" 
+                      placeholder="Tự động lấy từ video" 
+                      value={form.duration_label} 
+                      disabled 
+                      fullWidth 
+                      variant="outlined" 
+                      color={originalDuration && form.duration_label && originalDuration !== form.duration_label ? "error" : "primary"}
+                      sx={originalDuration && form.duration_label && originalDuration !== form.duration_label ? {
+                        "& .MuiInputBase-input.Mui-disabled": {
+                          WebkitTextFillColor: "#f44336",
+                        }
+                      } : {}}
+                      helperText={originalDuration && form.duration_label && originalDuration !== form.duration_label ? `Lệch so với DB: ${originalDuration}` : ""}
+                    />
                   </Grid>
                   <Grid item xs={6}>
                     <TextField label="Thứ tự hiển thị" type="number" value={form.display_order} onChange={(e) => setForm({ ...form, display_order: e.target.value })} fullWidth variant="outlined" />
@@ -557,6 +585,11 @@ export default function AdminVlogs() {
                     src={form.video_url}
                     controls
                     style={{ width: "100%", display: "block", maxHeight: "350px", objectFit: "contain" }}
+                    onLoadedMetadata={(e) => {
+                      if (e.target.duration) {
+                        setForm((prev) => ({ ...prev, duration_label: formatDuration(e.target.duration) }));
+                      }
+                    }}
                   />
                 </Box>
               )}
