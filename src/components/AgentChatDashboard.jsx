@@ -83,6 +83,17 @@ export default function AgentChatDashboard() {
     return () => document.removeEventListener("mousedown", handler);
   }, [pickerOpen]);
 
+  // Listen for inline section buttons dispatching 'phutan:open-agent'
+  const selectAgentRef = useRef(null);
+  useEffect(() => {
+    selectAgentRef.current = selectAgent;
+  });
+  useEffect(() => {
+    const handler = (e) => selectAgentRef.current?.(e.detail.section);
+    window.addEventListener("phutan:open-agent", handler);
+    return () => window.removeEventListener("phutan:open-agent", handler);
+  }, []);
+
   const selectAgent = (sectionKey) => {
     if (sectionKey === selectedSection) {
       // same agent — just open chat

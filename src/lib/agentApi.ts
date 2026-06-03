@@ -2,15 +2,16 @@ export interface AgentConfig {
   name: string;
   greeting: string;
   color: string;
+  emoji: string;
 }
 
 export const DEFAULT_AGENTS: Record<string, AgentConfig> = {
-  news:         { name: "Cậu Út Tin Tức",   greeting: "Ê cưng! Có gì muốn biết về tin tức Phú Tân thì hỏi Cậu Út nha~",              color: "#1976d2" },
-  places:       { name: "Út Miền Tây",       greeting: "Chào cưng! Muốn khám phá đâu ở Phú Tân thì hỏi Út nha~",                     color: "#388e3c" },
-  food:         { name: "Cô Út Bếp Núc",    greeting: "Ê cưng ơi! Hỏi Cô Út món ăn gì ngon ở Phú Tân nha, Cô biết hết á~",         color: "#f57c00" },
-  beautyHealth: { name: "Chị Út Spa",        greeting: "Hi cưng! Cần tư vấn làm đẹp hay sức khỏe thì cứ hỏi Chị Út nha~",           color: "#c2185b" },
-  agriculture:  { name: "Chú Út Nông Dân",   greeting: "Chào bà con! Có gì về nông nghiệp, mùa vụ Phú Tân thì hỏi Chú Út nha~",     color: "#5d4037" },
-  health:       { name: "Bác Út Y Tế",       greeting: "Xin chào cưng! Có gì liên quan sức khỏe, dịch bệnh thì hỏi Bác Út nha~",    color: "#d32f2f" },
+  news:         { name: "Cậu Út Tin Tức",   greeting: "Ê cưng! Có gì muốn biết về tin tức Phú Tân thì hỏi Cậu Út nha~",              color: "#1976d2", emoji: "📰" },
+  places:       { name: "Út Miền Tây",       greeting: "Chào cưng! Muốn khám phá đâu ở Phú Tân thì hỏi Út nha~",                     color: "#388e3c", emoji: "🗺️" },
+  food:         { name: "Cô Út Bếp Núc",    greeting: "Ê cưng ơi! Hỏi Cô Út món ăn gì ngon ở Phú Tân nha, Cô biết hết á~",         color: "#f57c00", emoji: "🍜" },
+  beautyHealth: { name: "Chị Út Spa",        greeting: "Hi cưng! Cần tư vấn làm đẹp hay sức khỏe thì cứ hỏi Chị Út nha~",           color: "#c2185b", emoji: "💆" },
+  agriculture:  { name: "Chú Út Nông Dân",   greeting: "Chào bà con! Có gì về nông nghiệp, mùa vụ Phú Tân thì hỏi Chú Út nha~",     color: "#5d4037", emoji: "🌾" },
+  health:       { name: "Bác Út Y Tế",       greeting: "Xin chào cưng! Có gì liên quan sức khỏe, dịch bệnh thì hỏi Bác Út nha~",    color: "#d32f2f", emoji: "🏥" },
 };
 
 const SECTION_TOPICS: Record<string, string> = {

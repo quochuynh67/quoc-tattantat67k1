@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState } from "react";
 import { Box, CircularProgress, IconButton, InputBase, Paper, Typography } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import SendIcon from "@mui/icons-material/Send";
-import ChatBubbleIcon from "@mui/icons-material/ChatBubble";
 import { getSiteSetting } from "../lib/phuTanApi";
 import { callAgent, DEFAULT_AGENTS } from "../lib/agentApi";
 
@@ -201,35 +200,35 @@ export default function AgentChat({ section, variant = "float" }) {
     </Box>
   );
 
-  // ── Inline variant ─────────────────────────────────────────────────────────
+  // ── Inline variant — delegates to AgentChatDashboard via custom event ─────
   if (variant === "inline") {
+    const dispatch = () =>
+      window.dispatchEvent(new CustomEvent("phutan:open-agent", { detail: { section } }));
     return (
-      <>
-        <Box
-          ref={triggerRef}
-          onClick={handleOpen}
-          sx={{
-            display: "inline-flex", alignItems: "center", gap: 0.7,
-            px: 1.2, py: 0.5,
-            border: `1.5px solid ${agent.color}`,
-            borderRadius: "999px",
-            cursor: "pointer",
-            background: open ? agent.color : `${agent.color}18`,
-            color: open ? "#fff" : agent.color,
-            transition: "background 0.2s, color 0.2s",
-            "&:hover": { background: agent.color, color: "#fff" },
-            userSelect: "none",
-            flexShrink: 0,
-          }}
+      <Box
+        onClick={dispatch}
+        sx={{
+          display: "inline-flex", alignItems: "center",
+          px: 1.2, py: 0.5,
+          border: `1.5px solid ${agent.color}`,
+          borderRadius: "999px",
+          cursor: "pointer",
+          background: `${agent.color}18`,
+          color: agent.color,
+          transition: "background 0.2s, color 0.2s",
+          "&:hover": { background: agent.color, color: "#fff",
+            "& .agent-inline-text": { color: "#fff !important" } },
+          userSelect: "none",
+          flexShrink: 0,
+        }}
+      >
+        <Typography
+          className="agent-inline-text"
+          sx={{ fontSize: "0.76rem", fontWeight: 700, lineHeight: 1, color: `${agent.color} !important` }}
         >
-          <Avatar name={agent.name} color={open ? "rgba(255,255,255,0.3)" : agent.color} size={20} />
-          <Typography color="inherit" sx={{ fontSize: "0.76rem", fontWeight: 700, lineHeight: 1 }}>
-            {agent.name}
-          </Typography>
-          <ChatBubbleIcon sx={{ fontSize: 13 }} />
-        </Box>
-        {panel}
-      </>
+          Chat với {agent.name} {agent.emoji}
+        </Typography>
+      </Box>
     );
   }
 
