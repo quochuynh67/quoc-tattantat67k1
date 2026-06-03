@@ -1,5 +1,7 @@
 // src/pages/admin/Posts.jsx
 import React, { useEffect, useState } from "react";
+import ReactQuill from "react-quill";
+import "react-quill/dist/quill.snow.css";
 import { Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Grid, FormControl, InputLabel, Select, MenuItem, FormControlLabel, Switch, List, ListItem, ListItemText } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
@@ -276,11 +278,11 @@ export default function AdminPosts() {
       {/* Dialog for Add/Edit Post */}
       <Dialog open={open} onClose={() => setOpen(false)} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 4, p: 1 } }}>
         <DialogTitle sx={{ fontWeight: 700, pb: 1 }}>{editing ? "Hiệu chỉnh bài viết" : "Thêm bài viết mới"}</DialogTitle>
-        <DialogContent sx={{ mt: 1 }}>
+        <DialogContent sx={{ mt: 1, pt: 1 }}>
           <Grid container spacing={2.5}>
             {/* Left side: Information */}
             <Grid item xs={12} md={7}>
-              <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>
                 <TextField label="Tiêu đề" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} fullWidth variant="outlined" />
                 
                 <FormControl fullWidth variant="outlined" size="small">
@@ -306,15 +308,31 @@ export default function AdminPosts() {
                 
                 <TextField label="Tóm tắt ngắn (Excerpt)" value={form.excerpt} onChange={(e) => setForm({ ...form, excerpt: e.target.value })} multiline rows={2} fullWidth variant="outlined" />
                 
-                <TextField label="Mô tả chi tiết (Description)" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} multiline rows={3} fullWidth variant="outlined" />
+                <Box sx={{ mt: 1, mb: 1 }}>
+                  <Typography variant="body2" sx={{ mb: 1, color: "text.secondary" }}>Mô tả chi tiết (Description)</Typography>
+                  <ReactQuill 
+                    theme="snow" 
+                    value={form.description || ""} 
+                    onChange={(value) => setForm({ ...form, description: value })} 
+                    style={{ height: "200px", marginBottom: "50px" }} 
+                  />
+                </Box>
                 
-                <TextField label="Nội dung đầy đủ (Content)" value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} multiline rows={5} fullWidth variant="outlined" />
+                <Box sx={{ mt: 1, mb: 1 }}>
+                  <Typography variant="body2" sx={{ mb: 1, color: "text.secondary" }}>Nội dung đầy đủ (Content)</Typography>
+                  <ReactQuill 
+                    theme="snow" 
+                    value={form.content} 
+                    onChange={(value) => setForm({ ...form, content: value })} 
+                    style={{ height: "300px", marginBottom: "50px" }} 
+                  />
+                </Box>
               </Box>
             </Grid>
 
             {/* Right side: Media, location, metadata */}
             <Grid item xs={12} md={5}>
-              <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>
                 <TextField label="Image URL" value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} fullWidth variant="outlined" />
                 {form.image_url && (
                   <Box sx={{ borderRadius: 2, overflow: "hidden", border: "1px solid", borderColor: "divider", height: "140px", display: "flex", justifyContent: "center", bgcolor: "#f5f5f5" }}>

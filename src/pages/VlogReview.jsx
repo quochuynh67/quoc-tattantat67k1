@@ -186,11 +186,13 @@ const VlogReview = () => {
             <Box className="vlog-info-panel">
               <Typography variant="overline" className="vlog-kicker">{post.category || "Chi tiết"}</Typography>
               <Typography variant="h3" component="h1" className="vlog-title">{post.title}</Typography>
-              {(post.description || post.excerpt) && (
-                <Typography className="vlog-subtitle">{post.description || post.excerpt}</Typography>
-              )}
+              {post.description ? (
+                <Box className="vlog-subtitle quill-content" dangerouslySetInnerHTML={{ __html: post.description }} />
+              ) : post.excerpt ? (
+                <Typography className="vlog-subtitle">{post.excerpt}</Typography>
+              ) : null}
               {post.content && post.content !== post.description && (
-                <Typography className="vlog-subtitle" sx={{ mt: 2 }}>{post.content}</Typography>
+                <Box className="vlog-subtitle quill-content" sx={{ mt: 2 }} dangerouslySetInnerHTML={{ __html: post.content }} />
               )}
               {post.address && (
                 <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mt: 2, color: "var(--color-text-subtle)" }}>
@@ -360,11 +362,13 @@ const VlogReview = () => {
             ) : null}
             <Typography variant="overline" sx={{ color: "var(--color-text-subtle)" }}>{post.category || "Chi tiết"}</Typography>
             <Typography variant="h4" sx={{ mt: 1, mb: 2, fontFamily: "var(--font-display)" }}>{post.title}</Typography>
-            {(post.description || post.excerpt) && (
-              <Typography sx={{ mb: 2, color: "var(--color-text)" }}>{post.description || post.excerpt}</Typography>
-            )}
+            {post.description ? (
+              <Box sx={{ mb: 2, color: "var(--color-text)" }} className="quill-content" dangerouslySetInnerHTML={{ __html: post.description }} />
+            ) : post.excerpt ? (
+              <Typography sx={{ mb: 2, color: "var(--color-text)" }}>{post.excerpt}</Typography>
+            ) : null}
             {post.content && post.content !== post.description && (
-              <Typography sx={{ mb: 2, color: "var(--color-text)" }}>{post.content}</Typography>
+              <Box sx={{ mb: 2, color: "var(--color-text)" }} className="quill-content" dangerouslySetInnerHTML={{ __html: post.content }} />
             )}
             <Box sx={{ display: "flex", gap: 3, flexWrap: "wrap" }}>
               {post.address && (

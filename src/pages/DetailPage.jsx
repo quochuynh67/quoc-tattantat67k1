@@ -44,7 +44,9 @@ export default function DetailPage() {
   }
 
   const getTitle = () => item.title || item.name || "Chi tiết";
-  const getDescription = () => item.excerpt || item.description || item.content || "";
+  const getExcerpt = () => item.excerpt || "";
+  const getDescription = () => item.description || "";
+  const getContent = () => item.content || "";
 
   return (
     <Box sx={{ p: 4, display: "flex", justifyContent: "center" }}>
@@ -56,9 +58,17 @@ export default function DetailPage() {
           <Typography variant="h4" gutterBottom>
             {getTitle()}
           </Typography>
-          <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
-            {getDescription()}
-          </Typography>
+          {getExcerpt() && !getDescription() && (
+            <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
+              {getExcerpt()}
+            </Typography>
+          )}
+          {getDescription() && (
+            <Box className="quill-content" sx={{ mb: 2, color: "text.secondary" }} dangerouslySetInnerHTML={{ __html: getDescription() }} />
+          )}
+          {getContent() && getContent() !== getDescription() && (
+            <Box className="quill-content" sx={{ mb: 2 }} dangerouslySetInnerHTML={{ __html: getContent() }} />
+          )}
           <Button component={RouterLink} to="/" variant="contained">
             Quay lại
           </Button>
