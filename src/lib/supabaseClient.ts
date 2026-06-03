@@ -220,6 +220,21 @@ export const uploadVideoForVlog = async (file) => {
   return publicUrlData.publicUrl;
 };
 
+export const uploadTimelineImage = async (file) => {
+  try {
+    await supabase.storage.createBucket('vlogs-posts', { public: true });
+  } catch (e) {
+    // ignore if bucket already exists
+  }
+  const fileExt = file.name.split('.').pop();
+  const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
+  const filePath = `images/timeline-stages/${fileName}`;
+  const { data, error } = await supabase.storage.from('vlogs-posts').upload(filePath, file);
+  if (error) throw error;
+  const { data: publicUrlData } = supabase.storage.from('vlogs-posts').getPublicUrl(filePath);
+  return publicUrlData.publicUrl;
+};
+
 // Upload entire HLS folder
 export const uploadHlsFolder = async (files, onProgress) => {
   try {

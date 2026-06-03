@@ -5,21 +5,23 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import AddIcon from "@mui/icons-material/Add";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
-import { getVlogs, createVlog, updateVlog, deleteVlog, getSections, uploadVlogFile, uploadHlsFolder, supabase } from "../../lib/supabaseClient";
+import { getVlogs, createVlog, updateVlog, deleteVlog, getSections, uploadVlogFile, uploadHlsFolder, uploadTimelineImage, supabase } from "../../lib/supabaseClient";
 
 export default function AdminVlogs() {
   const [vlogs, setVlogs] = useState([]);
   const [posts, setPosts] = useState([]);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
-  
+
   // Media source modes: 'file' or 'url'
   const [videoSourceMode, setVideoSourceMode] = useState("url");
   const [posterSourceMode, setPosterSourceMode] = useState("url");
   const [uploadingVideo, setUploadingVideo] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadingPoster, setUploadingPoster] = useState(false);
-  
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pendingFolderFiles, setPendingFolderFiles] = useState(null);
+
   const videoRef = useRef(null);
 
   // Vlog Form State
@@ -79,11 +81,11 @@ export default function AdminVlogs() {
       is_published: vlog.is_published !== false,
       display_order: vlog.display_order || 0,
     });
-    
+
     // Set locations (giai đoạn)
     const sortedLocs = [...(vlog.vlog_locations || [])].sort((a, b) => a.time_seconds - b.time_seconds);
     setLocations(sortedLocs);
-    
+
     setVideoSourceMode("url");
     setPosterSourceMode("url");
     setOpen(true);
@@ -102,6 +104,7 @@ export default function AdminVlogs() {
       display_order: 0,
     });
     setLocations([]);
+    setPendingFolderFiles(null);
     setVideoSourceMode("url");
     setPosterSourceMode("url");
   };
@@ -139,15 +142,12 @@ export default function AdminVlogs() {
   };
 
   // Milestone Image upload handler
-  const handleMilestoneImageUpload = async (index, file) => {
+  const handleMilestoneImageUpload = (index, file) => {
     if (!file) return;
-    try {
-      const publicUrl = await uploadVlogFile(file, "milestones");
-      updateLocationField(index, "image_url", publicUrl);
-    } catch (err) {
-      console.error(err);
-      alert("Lỗi tải ảnh lên: " + err.message);
-    }
+    const localUrl = URL.createObjectURL(file);
+    setLocations((prev) =>
+      prev.map((loc, i) => (i === index ? { ...loc, image_url: localUrl, pending_image_file: file } : loc))
+    );
   };
 
   // Location array helpers
@@ -176,18 +176,53 @@ export default function AdminVlogs() {
   };
 
   const handleSubmit = async () => {
-    if (!form.title || !form.video_url) {
-      alert("Vui lòng điền tiêu đề và đường dẫn video!");
+    if (!form.title || (!form.video_url && !pendingFolderFiles)) {
+      alert("Vui lòng điền tiêu đề và đường dẫn/thư mục video!");
       return;
+    }
+
+    setIsSubmitting(true);
+    let finalVideoUrl = form.video_url;
+
+    if (pendingFolderFiles) {
+      setUploadProgress(0);
+      try {
+        finalVideoUrl = await uploadHlsFolder(pendingFolderFiles, (uploaded, total) => {
+          setUploadProgress(Math.round((uploaded / total) * 100));
+        });
+        setForm(prev => ({ ...prev, video_url: finalVideoUrl }));
+        setPendingFolderFiles(null);
+      } catch (e) {
+        console.error(e);
+        alert("Lỗi tải thư mục HLS lên: " + e.message);
+        setIsSubmitting(false);
+        return;
+      }
     }
 
     // Sort locations by time_seconds before saving
     const sortedLocations = [...locations].sort((a, b) => Number(a.time_seconds) - Number(b.time_seconds));
 
+    // Upload any pending timeline stage images
+    for (let i = 0; i < sortedLocations.length; i++) {
+      if (sortedLocations[i].pending_image_file) {
+        try {
+          const publicUrl = await uploadTimelineImage(sortedLocations[i].pending_image_file);
+          sortedLocations[i].image_url = publicUrl;
+          delete sortedLocations[i].pending_image_file;
+        } catch (e) {
+          console.error(e);
+          alert("Lỗi tải ảnh giai đoạn lên: " + e.message);
+          setIsSubmitting(false);
+          return;
+        }
+      }
+    }
+
     const vlogPayload = {
       title: form.title,
       subtitle: form.subtitle || null,
-      video_url: form.video_url,
+      video_url: finalVideoUrl,
       poster_url: form.poster_url || null,
       host: form.host || null,
       duration_label: form.duration_label || null,
@@ -208,6 +243,8 @@ export default function AdminVlogs() {
     } catch (e) {
       console.error(e);
       alert("Lỗi khi lưu Vlog: " + e.message);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -244,8 +281,8 @@ export default function AdminVlogs() {
           onChange={(e) => setSearchTerm(e.target.value)}
           sx={{ flexGrow: 1, minWidth: "220px" }}
         />
-        <Button 
-          variant="contained" 
+        <Button
+          variant="contained"
           onClick={() => { setEditing(null); resetForm(); setOpen(true); }}
           sx={{ px: 3, py: 1, borderRadius: 2, textTransform: "none", fontWeight: 600, height: "40px" }}
         >
@@ -325,7 +362,7 @@ export default function AdminVlogs() {
                 <TextField label="Tiêu đề Vlog" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} fullWidth variant="outlined" />
                 <TextField label="Phụ đề (Subtitle)" value={form.subtitle} onChange={(e) => setForm({ ...form, subtitle: e.target.value })} fullWidth variant="outlined" />
                 <TextField label="Người dẫn (Host)" value={form.host} onChange={(e) => setForm({ ...form, host: e.target.value })} fullWidth variant="outlined" />
-                
+
                 <Grid container spacing={2}>
                   <Grid item xs={6}>
                     <TextField label="Độ dài (Duration)" placeholder="Ví dụ: 12:45" value={form.duration_label} onChange={(e) => setForm({ ...form, duration_label: e.target.value })} fullWidth variant="outlined" />
@@ -335,48 +372,48 @@ export default function AdminVlogs() {
                   </Grid>
                 </Grid>
 
-<FormControl fullWidth variant="outlined" size="small">
-  <InputLabel id="post-select-label">Liên kết tới bài viết (Post)</InputLabel>
-  <Select
-    labelId="post-select-label"
-    label="Liên kết tới bài viết (Post)"
-    value={form.content_item_id || ""}
-    onChange={(e) => setForm({ ...form, content_item_id: e.target.value })}
-  >
-    <MenuItem value=""><em>Không liên kết bài viết</em></MenuItem>
-    {posts.map((p) => (
-      <MenuItem key={p.id} value={p.id}>
-        {p.title}
-      </MenuItem>
-    ))}
-  </Select>
-</FormControl>
+                <FormControl fullWidth variant="outlined" size="small">
+                  <InputLabel id="post-select-label">Liên kết tới bài viết (Post)</InputLabel>
+                  <Select
+                    labelId="post-select-label"
+                    label="Liên kết tới bài viết (Post)"
+                    value={form.content_item_id || ""}
+                    onChange={(e) => setForm({ ...form, content_item_id: e.target.value })}
+                  >
+                    <MenuItem value=""><em>Không liên kết bài viết</em></MenuItem>
+                    {posts.map((p) => (
+                      <MenuItem key={p.id} value={p.id}>
+                        {p.title}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
                 <Card variant="outlined" sx={{ p: 2, borderRadius: 3, border: "1px solid", borderColor: "divider" }}>
                   <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: "text.primary" }}>Video Stream (HLS .m3u8)</Typography>
                   <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1.5 }}>
                     Hệ thống tự động đồng bộ hóa đường dẫn video `.mp4` sau khi upload sang luồng truyền phát phân đoạn `.m3u8` để tối ưu hóa tốc độ tải và chống giật lag.
                   </Typography>
-                  
+
                   <Box sx={{ display: "flex", gap: 1.5, mb: 2 }}>
                     <Button size="small" variant={videoSourceMode === "url" ? "contained" : "outlined"} onClick={() => setVideoSourceMode("url")} sx={{ textTransform: "none", borderRadius: 1.5 }}>
                       Dán Link URL
                     </Button>
-                    <Button size="small" variant={videoSourceMode === "file" ? "contained" : "outlined"} onClick={() => setVideoSourceMode("file")} sx={{ textTransform: "none", borderRadius: 1.5 }}>
+                    {/* <Button size="small" variant={videoSourceMode === "file" ? "contained" : "outlined"} onClick={() => setVideoSourceMode("file")} sx={{ textTransform: "none", borderRadius: 1.5 }}>
                       Tải File .mp4 Lên
-                    </Button>
+                    </Button> */}
                     <Button size="small" variant={videoSourceMode === "folder" ? "contained" : "outlined"} onClick={() => setVideoSourceMode("folder")} sx={{ textTransform: "none", borderRadius: 1.5 }}>
                       Tải Thư Mục HLS (.m3u8)
                     </Button>
                   </Box>
 
                   {videoSourceMode === "url" ? (
-                    <TextField 
-                      label="Video URL (HLS / MP4)" 
-                      value={form.video_url} 
-                      onChange={(e) => setForm({ ...form, video_url: e.target.value })} 
-                      fullWidth 
-                      variant="outlined" 
-                      size="small" 
+                    <TextField
+                      label="Video URL (HLS / MP4)"
+                      value={form.video_url}
+                      onChange={(e) => setForm({ ...form, video_url: e.target.value })}
+                      fullWidth
+                      variant="outlined"
+                      size="small"
                     />
                   ) : videoSourceMode === "file" ? (
                     <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
@@ -389,6 +426,21 @@ export default function AdminVlogs() {
                             setUploadingVideo(true);
                             try {
                               const publicUrl = await uploadVlogFile(file, "videos");
+
+                              // Trigger local HLS conversion API
+                              const sourcePath = publicUrl.split('/public/vlogs-posts/')[1] || publicUrl;
+                              try {
+                                const res = await fetch('/api/convert-hls', {
+                                  method: 'POST',
+                                  body: JSON.stringify({ sourcePath })
+                                });
+                                if (res.ok) {
+                                  alert("Tự động convert HLS bằng local script thành công!");
+                                }
+                              } catch (apiErr) {
+                                console.log("Local conversion API unavailable (expected if deployed).");
+                              }
+
                               // Auto-translate to target HLS path .m3u8 matching convert-videos-to-hls.mjs
                               let hlsUrl = publicUrl;
                               if (publicUrl.includes("/public/vlogs-posts/")) {
@@ -413,54 +465,42 @@ export default function AdminVlogs() {
                         </Typography>
                       </Box>
                       {form.video_url && (
-                        <TextField 
-                          value={form.video_url} 
-                          disabled 
-                          size="small" 
-                          variant="filled" 
-                          fullWidth 
-                          label="Target HLS Playback URL" 
-                          inputProps={{ style: { fontSize: "0.75rem", fontFamily: "monospace" } }} 
+                        <TextField
+                          value={form.video_url}
+                          disabled
+                          size="small"
+                          variant="filled"
+                          fullWidth
+                          label="Target HLS Playback URL"
+                          inputProps={{ style: { fontSize: "0.75rem", fontFamily: "monospace" } }}
                         />
                       )}
                     </Box>
                   ) : (
                     <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
                       <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                        <Button component="label" variant="contained" startIcon={<CloudUploadIcon />} size="small" disabled={uploadingVideo} sx={{ textTransform: "none", borderRadius: 1.5 }}>
-                          {uploadingVideo ? `Đang xử lý... ${uploadProgress}%` : "Chọn Thư Mục"}
-                          <input type="file" webkitdirectory="" directory="" hidden onChange={async (e) => {
+                        <Button component="label" variant="contained" startIcon={<CloudUploadIcon />} size="small" disabled={isSubmitting} sx={{ textTransform: "none", borderRadius: 1.5 }}>
+                          Chọn Thư Mục HLS
+                          <input type="file" webkitdirectory="" directory="" hidden onChange={(e) => {
                             const files = e.target.files;
                             if (!files || files.length === 0) return;
-                            setUploadingVideo(true);
-                            setUploadProgress(0);
-                            try {
-                              const publicUrl = await uploadHlsFolder(files, (uploaded, total) => {
-                                setUploadProgress(Math.round((uploaded / total) * 100));
-                              });
-                              setForm((prev) => ({ ...prev, video_url: publicUrl }));
-                              alert("Đã upload thư mục HLS thành công!");
-                            } catch (err) {
-                              console.error(err);
-                              alert("Lỗi tải thư mục lên: " + err.message);
-                            } finally {
-                              setUploadingVideo(false);
-                            }
+                            setPendingFolderFiles(files);
+                            setForm((prev) => ({ ...prev, video_url: `[Sẽ upload ${files.length} files khi Lưu Vlog]` }));
                           }} />
                         </Button>
-                        <Typography variant="caption" sx={{ color: form.video_url ? "success.main" : "text.secondary", fontWeight: 600 }}>
-                          {form.video_url ? "Đã upload HLS!" : "Chưa chọn thư mục"}
+                        <Typography variant="caption" sx={{ color: pendingFolderFiles ? "warning.main" : form.video_url ? "success.main" : "text.secondary", fontWeight: 600 }}>
+                          {pendingFolderFiles ? `Đã chọn thư mục (${pendingFolderFiles.length} files)` : form.video_url ? "Đã có HLS!" : "Chưa chọn thư mục"}
                         </Typography>
                       </Box>
-                      {form.video_url && (
-                        <TextField 
-                          value={form.video_url} 
-                          disabled 
-                          size="small" 
-                          variant="filled" 
-                          fullWidth 
-                          label="Target HLS Playback URL" 
-                          inputProps={{ style: { fontSize: "0.75rem", fontFamily: "monospace" } }} 
+                      {(form.video_url || pendingFolderFiles) && (
+                        <TextField
+                          value={form.video_url}
+                          disabled
+                          size="small"
+                          variant="filled"
+                          fullWidth
+                          label="Target HLS Playback URL"
+                          inputProps={{ style: { fontSize: "0.75rem", fontFamily: "monospace" } }}
                         />
                       )}
                     </Box>
@@ -512,11 +552,11 @@ export default function AdminVlogs() {
                   <Typography variant="caption" sx={{ display: "block", bgcolor: "rgba(255,255,255,0.1)", color: "#fff", p: 1, textAlign: "center" }}>
                     Video Preview (Dùng để canh thời gian cho các giai đoạn)
                   </Typography>
-                  <video 
+                  <video
                     ref={videoRef}
-                    src={form.video_url} 
-                    controls 
-                    style={{ width: "100%", display: "block", maxHeight: "350px", objectFit: "contain" }} 
+                    src={form.video_url}
+                    controls
+                    style={{ width: "100%", display: "block", maxHeight: "350px", objectFit: "contain" }}
                   />
                 </Box>
               )}
@@ -541,10 +581,10 @@ export default function AdminVlogs() {
                   locations.map((loc, index) => (
                     <Card key={index} variant="outlined" sx={{ borderRadius: 3, position: "relative", overflow: "visible" }}>
                       {/* Absolute delete button at the top right of card */}
-                      <IconButton 
-                        onClick={() => removeLocationRow(index)} 
-                        size="small" 
-                        color="error" 
+                      <IconButton
+                        onClick={() => removeLocationRow(index)}
+                        size="small"
+                        color="error"
                         sx={{ position: "absolute", top: -12, right: -12, bgcolor: "background.paper", boxShadow: "0px 2px 8px rgba(0,0,0,0.12)", border: "1px solid", borderColor: "divider", '&:hover': { bgcolor: "error.light", color: "white" } }}
                       >
                         <DeleteIcon fontSize="small" />
@@ -552,19 +592,19 @@ export default function AdminVlogs() {
 
                       <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
                         <Grid container spacing={2}>
-                          
+
                           {/* Left inputs column (size 8) */}
                           <Grid item xs={12} sm={8}>
                             <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
                               <Box sx={{ display: "flex", gap: 2 }}>
                                 <Box sx={{ display: "flex", gap: 1 }}>
-                                  <TextField 
-                                    label="Tại giây thứ" 
-                                    type="number" 
-                                    value={loc.time_seconds} 
-                                    onChange={(e) => updateLocationField(index, "time_seconds", e.target.value)} 
+                                  <TextField
+                                    label="Tại giây thứ"
+                                    type="number"
+                                    value={loc.time_seconds}
+                                    onChange={(e) => updateLocationField(index, "time_seconds", e.target.value)}
                                     sx={{ width: "100px" }}
-                                    size="small" 
+                                    size="small"
                                     variant="outlined"
                                   />
                                   <Button
@@ -584,46 +624,46 @@ export default function AdminVlogs() {
                                     ⏱️
                                   </Button>
                                 </Box>
-                                <TextField 
-                                  label="Tên địa điểm / Sự kiện" 
-                                  value={loc.name} 
-                                  onChange={(e) => updateLocationField(index, "name", e.target.value)} 
-                                  fullWidth 
-                                  size="small" 
+                                <TextField
+                                  label="Tên địa điểm / Sự kiện"
+                                  value={loc.name}
+                                  onChange={(e) => updateLocationField(index, "name", e.target.value)}
+                                  fullWidth
+                                  size="small"
                                   variant="outlined"
                                 />
                               </Box>
 
-                              <TextField 
-                                label="Mô tả hành trình tại mốc thời gian này" 
-                                value={loc.note || ""} 
-                                onChange={(e) => updateLocationField(index, "note", e.target.value)} 
-                                multiline 
-                                rows={2} 
-                                fullWidth 
-                                size="small" 
+                              <TextField
+                                label="Mô tả hành trình tại mốc thời gian này"
+                                value={loc.note || ""}
+                                onChange={(e) => updateLocationField(index, "note", e.target.value)}
+                                multiline
+                                rows={2}
+                                fullWidth
+                                size="small"
                                 variant="outlined"
                               />
 
                               <Box sx={{ display: "flex", gap: 2 }}>
-                                <TextField 
-                                  label="Kinh độ (Lat)" 
+                                <TextField
+                                  label="Kinh độ (Lat)"
                                   type="number"
                                   inputProps={{ step: 0.000001 }}
-                                  value={loc.latitude || ""} 
-                                  onChange={(e) => updateLocationField(index, "latitude", e.target.value)} 
-                                  fullWidth 
-                                  size="small" 
+                                  value={loc.latitude || ""}
+                                  onChange={(e) => updateLocationField(index, "latitude", e.target.value)}
+                                  fullWidth
+                                  size="small"
                                   variant="outlined"
                                 />
-                                <TextField 
-                                  label="Vĩ độ (Long)" 
+                                <TextField
+                                  label="Vĩ độ (Long)"
                                   type="number"
                                   inputProps={{ step: 0.000001 }}
-                                  value={loc.longitude || ""} 
-                                  onChange={(e) => updateLocationField(index, "longitude", e.target.value)} 
-                                  fullWidth 
-                                  size="small" 
+                                  value={loc.longitude || ""}
+                                  onChange={(e) => updateLocationField(index, "longitude", e.target.value)}
+                                  fullWidth
+                                  size="small"
                                   variant="outlined"
                                 />
                               </Box>
@@ -636,13 +676,13 @@ export default function AdminVlogs() {
                               <Typography variant="caption" sx={{ fontWeight: 600, color: "text.secondary" }}>
                                 Ảnh mốc hành trình
                               </Typography>
-                              
-                              <Box sx={{ 
-                                border: "1px dashed", 
-                                borderColor: "divider", 
-                                borderRadius: 2, 
-                                height: "80px", 
-                                overflow: "hidden", 
+
+                              <Box sx={{
+                                border: "1px dashed",
+                                borderColor: "divider",
+                                borderRadius: 2,
+                                height: "80px",
+                                overflow: "hidden",
                                 position: "relative",
                                 bgcolor: "action.hover",
                                 display: "flex",
@@ -663,12 +703,12 @@ export default function AdminVlogs() {
                                 <input type="file" accept="image/*" hidden onChange={(e) => handleMilestoneImageUpload(index, e.target.files?.[0])} />
                               </Button>
 
-                              <TextField 
-                                placeholder="Dán Link URL ảnh" 
-                                value={loc.image_url || ""} 
-                                onChange={(e) => updateLocationField(index, "image_url", e.target.value)} 
-                                fullWidth 
-                                size="small" 
+                              <TextField
+                                placeholder="Dán Link URL ảnh"
+                                value={loc.image_url || ""}
+                                onChange={(e) => updateLocationField(index, "image_url", e.target.value)}
+                                fullWidth
+                                size="small"
                                 inputProps={{ style: { fontSize: "0.72rem", padding: "6px" } }}
                                 variant="outlined"
                               />
@@ -685,8 +725,12 @@ export default function AdminVlogs() {
           </Grid>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2, pt: 1 }}>
-          <Button onClick={() => setOpen(false)} sx={{ textTransform: "none", fontWeight: 600 }}>Hủy bỏ</Button>
-          <Button onClick={handleSubmit} variant="contained" sx={{ px: 3, borderRadius: 2, textTransform: "none", fontWeight: 600 }}>{editing ? "Cập nhật" : "Lưu Vlog"}</Button>
+          <Button onClick={() => setOpen(false)} disabled={isSubmitting} sx={{ textTransform: "none", fontWeight: 600 }}>Hủy bỏ</Button>
+          <Button onClick={handleSubmit} disabled={isSubmitting} variant="contained" sx={{ px: 3, borderRadius: 2, textTransform: "none", fontWeight: 600 }}>
+            {isSubmitting
+              ? (pendingFolderFiles ? `Đang upload thư mục HLS... ${uploadProgress}%` : "Đang lưu...")
+              : (editing ? "Cập nhật" : "Lưu Vlog")}
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>
