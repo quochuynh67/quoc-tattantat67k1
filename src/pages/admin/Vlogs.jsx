@@ -1,5 +1,5 @@
 // src/pages/admin/Vlogs.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Grid, FormControlLabel, Switch, Divider, Card, CardContent, FormControl, InputLabel, Select, MenuItem } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
@@ -19,6 +19,8 @@ export default function AdminVlogs() {
   const [uploadingVideo, setUploadingVideo] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadingPoster, setUploadingPoster] = useState(false);
+  
+  const videoRef = useRef(null);
 
   // Vlog Form State
   const [form, setForm] = useState({
@@ -505,6 +507,20 @@ export default function AdminVlogs() {
 
             {/* Right Column: Dynamic Stage Timeline Locations */}
             <Grid item xs={12} md={7}>
+              {form.video_url && (
+                <Box sx={{ mb: 3, borderRadius: 2, overflow: "hidden", bgcolor: "#000", border: "1px solid", borderColor: "divider" }}>
+                  <Typography variant="caption" sx={{ display: "block", bgcolor: "rgba(255,255,255,0.1)", color: "#fff", p: 1, textAlign: "center" }}>
+                    Video Preview (Dùng để canh thời gian cho các giai đoạn)
+                  </Typography>
+                  <video 
+                    ref={videoRef}
+                    src={form.video_url} 
+                    controls 
+                    style={{ width: "100%", display: "block", maxHeight: "350px", objectFit: "contain" }} 
+                  />
+                </Box>
+              )}
+
               <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
                 <Typography variant="h6" sx={{ fontWeight: 600, color: "primary.main" }}>
                   Các giai đoạn hành trình trong Video
@@ -541,15 +557,33 @@ export default function AdminVlogs() {
                           <Grid item xs={12} sm={8}>
                             <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
                               <Box sx={{ display: "flex", gap: 2 }}>
-                                <TextField 
-                                  label="Tại giây thứ" 
-                                  type="number" 
-                                  value={loc.time_seconds} 
-                                  onChange={(e) => updateLocationField(index, "time_seconds", e.target.value)} 
-                                  sx={{ width: "120px" }}
-                                  size="small" 
-                                  variant="outlined"
-                                />
+                                <Box sx={{ display: "flex", gap: 1 }}>
+                                  <TextField 
+                                    label="Tại giây thứ" 
+                                    type="number" 
+                                    value={loc.time_seconds} 
+                                    onChange={(e) => updateLocationField(index, "time_seconds", e.target.value)} 
+                                    sx={{ width: "100px" }}
+                                    size="small" 
+                                    variant="outlined"
+                                  />
+                                  <Button
+                                    variant="outlined"
+                                    size="small"
+                                    onClick={() => {
+                                      if (videoRef.current) {
+                                        const currentTime = Math.floor(videoRef.current.currentTime);
+                                        updateLocationField(index, "time_seconds", currentTime);
+                                      } else {
+                                        alert("Vui lòng tải video và bật video preview để lấy mốc thời gian!");
+                                      }
+                                    }}
+                                    sx={{ minWidth: 0, px: 1, borderRadius: 1.5 }}
+                                    title="Lấy thời gian hiện tại từ Video Preview"
+                                  >
+                                    ⏱️
+                                  </Button>
+                                </Box>
                                 <TextField 
                                   label="Tên địa điểm / Sự kiện" 
                                   value={loc.name} 
