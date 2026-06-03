@@ -47,7 +47,7 @@ const NewsSection = () => {
           gutterBottom
           sx={{ fontFamily: "var(--font-body)", color: "var(--color-text-subtle)", mb: 4 }}
         >
-          Cập nhật những sự kiện, hoạt động cộng đồng và thông tin mới nhất tại huyện Phú Tân.
+          Cập nhật những sự kiện, hoạt động cộng đồng và thông tin mới nhất tại Phú Tân 67K1 AG.
         </Typography>
         {loading ? <CardSkeletonGrid count={4} /> : <Box
           sx={{

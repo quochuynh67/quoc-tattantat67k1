@@ -47,7 +47,7 @@ const AgricultureSection = () => {
           gutterBottom
           sx={{ fontFamily: "var(--font-body)", color: "var(--color-text-subtle)", mb: 4 }}
         >
-          Cập nhật tin tức, dự án và sáng kiến nông nghiệp của huyện Phú Tân.
+          Cập nhật tin tức, dự án và sáng kiến nông nghiệp của Phú Tân 67K1 AG.
         </Typography>
         {loading ? <CardSkeletonGrid count={4} /> : <Box
           sx={{

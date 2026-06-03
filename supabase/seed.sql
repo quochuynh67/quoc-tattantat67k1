@@ -3,7 +3,7 @@
 insert into public.site_settings (row_key, value) values
 ('hero', jsonb_build_object(
   'title', 'Câu chuyện về Phú Tân',
-  'subtitle', 'Khám phá nét đẹp và tiềm năng của huyện Phú Tân',
+  'subtitle', 'Khám phá nét đẹp và tiềm năng của Phú Tân 67K1 AG',
   'description', 'Phú Tân – nơi giao thoa của truyền thống và hiện đại, với những lễ hội rực rỡ, cảnh quan thiên nhiên hữu tình và cộng đồng nông dân năng động.',
   'image', 'https://picsum.photos/seed/hero/1200/600'
 )),
@@ -15,7 +15,7 @@ insert into public.site_settings (row_key, value) values
 on conflict (row_key) do update set value = excluded.value;
 
 insert into public.content_sections (slug, title, description, route, display_order) values
-('news', 'Tin tức địa phương', 'Toàn bộ sự kiện, hoạt động cộng đồng và thông tin mới nhất tại huyện Phú Tân.', '/news', 10),
+('news', 'Tin tức địa phương', 'Toàn bộ sự kiện, hoạt động cộng đồng và thông tin mới nhất tại Phú Tân 67K1 AG.', '/news', 10),
 ('places', 'Địa điểm nổi bật', 'Khám phá đầy đủ các địa danh, điểm đến và không gian trải nghiệm tại Phú Tân.', '/places', 20),
 ('food', 'Ẩm thực địa phương', 'Danh sách món ngon, đặc sản và trải nghiệm ẩm thực nên thử khi ghé Phú Tân.', '/food', 30),
 ('beautyHealth', 'Làm đẹp & Sức khỏe', 'Danh sách spa, hair salon và dịch vụ trị liệu giúp chăm sóc vẻ ngoài, thư giãn và phục hồi năng lượng.', '/beauty-health', 40),

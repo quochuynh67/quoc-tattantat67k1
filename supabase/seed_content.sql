@@ -2,7 +2,7 @@
 
 with rows(section_slug, legacy_id, title, excerpt, description, image_url, category, address, rating, severity, published_date, display_order) as (
   values
-  ('news', 1, 'Lễ hội Cải Ngọt – Sự kiện năm mới của huyện Phú Tân', 'Hàng nghìn người đã tụ họp tại trung tâm thị trấn để cùng chào đón mùa xuân với những điệu múa truyền thống và ẩm thực đặc sắc.', null, 'https://picsum.photos/seed/news1/800/400', null, null, null, null, '2026-06-01'::date, 1),
+  ('news', 1, 'Lễ hội Cải Ngọt – Sự kiện năm mới của Phú Tân 67K1 AG', 'Hàng nghìn người đã tụ họp tại trung tâm thị trấn để cùng chào đón mùa xuân với những điệu múa truyền thống và ẩm thực đặc sắc.', null, 'https://picsum.photos/seed/news1/800/400', null, null, null, null, '2026-06-01'::date, 1),
   ('news', 2, 'Dự án Hạ tầng Đường nông thôn – Tiến độ 75%', 'Chính quyền địa phương đang đẩy mạnh công tác cải thiện giao thông nông thôn, nối liền các làng mạc xa xôi.', null, 'https://picsum.photos/seed/news2/800/400', null, null, null, null, '2026-05-28'::date, 2),
   ('news', 3, 'Cảnh báo dịch bệnh thủy triều mới – Khiến nông dân cảnh giác', 'Các chuyên gia y tế khuyến cáo người dân tăng cường vệ sinh và tiêm phòng sớm.', null, 'https://picsum.photos/seed/news3/800/400', null, null, null, null, '2026-05-20'::date, 3),
   ('news', 4, 'Khánh thành trung tâm văn hóa mới', 'Trung tâm văn hóa huyện đã chính thức đi vào hoạt động với nhiều phòng chức năng hiện đại.', null, 'https://picsum.photos/seed/news4/800/400', null, null, null, null, '2026-05-15'::date, 4),

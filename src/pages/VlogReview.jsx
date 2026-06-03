@@ -1,8 +1,10 @@
 // src/pages/VlogReview.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link as RouterLink, useParams, useNavigate } from "react-router-dom";
-import { Alert, Box, Button, Container, Rating, Tab, Tabs, Typography } from "@mui/material";
+import { Alert, Box, Button, Container, Rating, Tab, Tabs, Tooltip, Typography } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import GridViewIcon from "@mui/icons-material/GridView";
+import ViewDayIcon from "@mui/icons-material/ViewDay";
 import PlaceIcon from "@mui/icons-material/Place";
 import PlayCircleIcon from "@mui/icons-material/PlayCircle";
 import LocationOnIcon from "@mui/icons-material/LocationOn";
@@ -20,14 +22,18 @@ const formatTime = (seconds) => {
 const VlogReview = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const videoRef = useRef(null);
+
+  // Tab mode: single video ref; scroll mode: ref map keyed by vlog id
+  const tabVideoRef = useRef(null);
+  const scrollVideoRefs = useRef({});
 
   const [vlogs, setVlogs] = useState([]);
   const [activeVlogIdx, setActiveVlogIdx] = useState(0);
-  const [activeTime, setActiveTime] = useState(0);
+  const [activeSpotByVlog, setActiveSpotByVlog] = useState({});
   const [newsItems, setNewsItems] = useState([]);
   const [post, setPost] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState("tab"); // "tab" | "scroll"
 
   useEffect(() => {
     let isMounted = true;
@@ -72,30 +78,35 @@ const VlogReview = () => {
 
   const activeVlog = vlogs[activeVlogIdx] ?? null;
 
-  const news = useMemo(
-    () => newsItems.find((item) => String(item.id) === String(activeVlog?.newsId)),
-    [newsItems, activeVlog]
+  const newsForVlog = useMemo(
+    () => (vlog) => newsItems.find((item) => String(item.id) === String(vlog?.newsId)),
+    [newsItems]
   );
 
-  const handleSelectVlog = (_, idx) => {
+  // Tab mode handlers
+  const handleSelectTab = (_, idx) => {
     setActiveVlogIdx(idx);
-    setActiveTime(0);
+    setActiveSpotByVlog((s) => ({ ...s, [vlogs[idx]?.id]: undefined }));
   };
 
-  const seekToLocation = (location) => {
-    if (videoRef.current) {
-      videoRef.current.currentTime = location.time;
-      videoRef.current.play().catch(() => {});
+  const seekToLocation = (vlogId, location, isScroll) => {
+    const video = isScroll
+      ? scrollVideoRefs.current[vlogId]
+      : tabVideoRef.current;
+    if (video) {
+      video.currentTime = location.time;
+      video.play().catch(() => {});
     }
-    setActiveTime(location.time);
+    setActiveSpotByVlog((s) => ({ ...s, [vlogId]: location.time }));
   };
 
-  const handleTimeUpdate = () => {
-    const currentTime = videoRef.current?.currentTime || 0;
-    const active = [...(activeVlog?.locations || [])]
-      .reverse()
-      .find((loc) => currentTime >= loc.time);
-    if (active) setActiveTime(active.time);
+  const handleTimeUpdate = (vlog, isScroll) => {
+    const video = isScroll
+      ? scrollVideoRefs.current[vlog.id]
+      : tabVideoRef.current;
+    const currentTime = video?.currentTime || 0;
+    const active = [...(vlog.locations || [])].reverse().find((loc) => currentTime >= loc.time);
+    if (active) setActiveSpotByVlog((s) => ({ ...s, [vlog.id]: active.time }));
   };
 
   if (loading) return <DetailSkeleton />;
@@ -116,7 +127,7 @@ const VlogReview = () => {
     );
   }
 
-  // No vlog — rich content-only view
+  // No vlogs — content-only detail
   if (vlogs.length === 0 && post) {
     const isHealth = post.section === "health";
     return (
@@ -128,9 +139,7 @@ const VlogReview = () => {
           <Box className="vlog-review-layout">
             <Box className="vlog-video-panel">
               {isHealth ? (
-                <Alert severity={post.severity || "info"} sx={{ fontSize: "1rem", borderRadius: 2 }}>
-                  {post.title}
-                </Alert>
+                <Alert severity={post.severity || "info"} sx={{ fontSize: "1rem", borderRadius: 2 }}>{post.title}</Alert>
               ) : post.image ? (
                 <img src={post.image} alt={post.title} style={{ width: "100%", borderRadius: "12px", objectFit: "cover", maxHeight: 420 }} />
               ) : null}
@@ -169,18 +178,114 @@ const VlogReview = () => {
     );
   }
 
-  // Vlog view (1 or multiple)
+  // ── Shared header (back + toggle) ─────────────────────────────────────────
+  const PageHeader = () => (
+    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+      <Button onClick={() => navigate(-1)} startIcon={<ArrowBackIcon />} className="vlog-back-link" sx={{ mb: "0 !important" }}>
+        Quay lại
+      </Button>
+      <Tooltip title={viewMode === "tab" ? "Chuyển sang dạng cuộn" : "Chuyển sang dạng tab"}>
+        <Button
+          variant="outlined"
+          size="small"
+          startIcon={viewMode === "tab" ? <ViewDayIcon /> : <GridViewIcon />}
+          onClick={() => setViewMode((v) => (v === "tab" ? "scroll" : "tab"))}
+        >
+          {viewMode === "tab" ? "Dạng cuộn" : "Dạng tab"}
+        </Button>
+      </Tooltip>
+    </Box>
+  );
+
+  // ── SCROLL MODE ────────────────────────────────────────────────────────────
+  if (viewMode === "scroll") {
+    return (
+      <main className="vlog-scroll-root" style={{ position: "fixed", inset: 0, zIndex: 1300 }}>
+        <Box className="vlog-scroll-shell">
+          <Box className="vlog-scroll-header" sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <Button onClick={() => navigate(-1)} startIcon={<ArrowBackIcon />} className="vlog-scroll-back">
+              Quay lại
+            </Button>
+            <Tooltip title="Chuyển sang dạng tab">
+              <Button variant="outlined" size="small" startIcon={<GridViewIcon />} onClick={() => setViewMode("tab")}
+                sx={{ color: "#fff", borderColor: "rgba(255,255,255,0.5)", "&:hover": { borderColor: "#fff", background: "rgba(255,255,255,0.1)" } }}>
+                Dạng tab
+              </Button>
+            </Tooltip>
+          </Box>
+
+          <Box className="vlog-scroll-feed">
+            {vlogs.map((vlog) => {
+              const news = newsForVlog(vlog);
+              const activeTime = activeSpotByVlog[vlog.id] ?? vlog.locations?.[0]?.time;
+
+              return (
+                <section className="vlog-scroll-slide" key={vlog.id}>
+                  <Box className="vlog-scroll-video-wrap">
+                    <video
+                      ref={(node) => { if (node) scrollVideoRefs.current[vlog.id] = node; }}
+                      className="vlog-scroll-video"
+                      src={vlog.videoUrl}
+                      poster={vlog.poster}
+                      playsInline
+                      controls
+                      preload="metadata"
+                      onTimeUpdate={() => handleTimeUpdate(vlog, true)}
+                    />
+                  </Box>
+
+                  {/* Title + description overlaid on video */}
+                  <Box className="vlog-scroll-info">
+                    <Typography className="vlog-scroll-host">@{vlog.host}</Typography>
+                    <Typography component="h2" className="vlog-scroll-title">{vlog.title}</Typography>
+                    <Typography className="vlog-scroll-desc">{news?.excerpt || vlog.subtitle}</Typography>
+                  </Box>
+
+                  {vlog.locations?.length > 0 && (
+                    <Box className="vlog-scroll-spots">
+                      <Box className="vlog-scroll-spots-title">
+                        <PlaceIcon fontSize="small" />
+                        <span>Vị trí theo giây</span>
+                      </Box>
+                      <Box className="vlog-scroll-spot-list">
+                        {vlog.locations.map((loc) => (
+                          <button
+                            key={`${vlog.id}-${loc.time}`}
+                            type="button"
+                            className={`vlog-scroll-spot ${activeTime === loc.time ? "active" : ""}`}
+                            onClick={() => seekToLocation(vlog.id, loc, true)}
+                          >
+                            <img src={loc.image} alt={loc.name} />
+                            <span>
+                              <strong>{loc.name}</strong>
+                              <small>{formatTime(loc.time)}</small>
+                            </span>
+                          </button>
+                        ))}
+                      </Box>
+                    </Box>
+                  )}
+                </section>
+              );
+            })}
+          </Box>
+        </Box>
+      </main>
+    );
+  }
+
+  // ── TAB MODE ───────────────────────────────────────────────────────────────
+  const activeTime = activeSpotByVlog[activeVlog?.id];
+
   return (
     <main className="vlog-review-page">
       <Container maxWidth={false} className="section-container">
-        <Button onClick={() => navigate(-1)} startIcon={<ArrowBackIcon />} className="vlog-back-link">
-          Quay lại
-        </Button>
+        <PageHeader />
 
         {vlogs.length > 1 && (
           <Tabs
             value={activeVlogIdx}
-            onChange={handleSelectVlog}
+            onChange={handleSelectTab}
             variant="scrollable"
             scrollButtons="auto"
             sx={{ mb: 3, borderBottom: 1, borderColor: "divider" }}
@@ -195,13 +300,13 @@ const VlogReview = () => {
           <Box className="vlog-video-panel">
             <video
               key={activeVlog.id}
-              ref={videoRef}
+              ref={tabVideoRef}
               className="vlog-review-video"
               controls
               playsInline
               poster={activeVlog.poster}
               src={activeVlog.videoUrl}
-              onTimeUpdate={handleTimeUpdate}
+              onTimeUpdate={() => handleTimeUpdate(activeVlog, false)}
             />
             <Box className="vlog-video-caption">
               <Typography className="vlog-host">{activeVlog.host}</Typography>
@@ -214,15 +319,15 @@ const VlogReview = () => {
             <Typography variant="h3" component="h1" className="vlog-title">{activeVlog.title}</Typography>
             <Typography className="vlog-subtitle">{activeVlog.subtitle}</Typography>
 
-            {news && (
+            {newsForVlog(activeVlog) && (
               <Box className="vlog-linked-article">
                 <Typography className="vlog-linked-label">Bài viết liên kết</Typography>
-                <Typography className="vlog-linked-title">{news.title}</Typography>
-                <Typography className="vlog-linked-excerpt">{news.excerpt}</Typography>
+                <Typography className="vlog-linked-title">{newsForVlog(activeVlog).title}</Typography>
+                <Typography className="vlog-linked-excerpt">{newsForVlog(activeVlog).excerpt}</Typography>
               </Box>
             )}
 
-            {activeVlog.locations && activeVlog.locations.length > 0 && (
+            {activeVlog.locations?.length > 0 && (
               <>
                 <Box className="vlog-location-header">
                   <PlaceIcon fontSize="small" />
@@ -234,7 +339,7 @@ const VlogReview = () => {
                       type="button"
                       key={`${loc.time}-${loc.name}`}
                       className={`vlog-location-item ${activeTime === loc.time ? "active" : ""}`}
-                      onClick={() => seekToLocation(loc)}
+                      onClick={() => seekToLocation(activeVlog.id, loc, false)}
                     >
                       <img src={loc.image} alt={loc.name} className="vlog-location-thumb" />
                       <span className="vlog-location-content">

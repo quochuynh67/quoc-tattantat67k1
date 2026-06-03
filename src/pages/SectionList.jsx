@@ -22,7 +22,7 @@ import { CardSkeletonGrid, AlertSkeleton } from "../components/CardSkeleton";
 const sectionConfig = {
   news: {
     title: "Tin tức địa phương",
-    description: "Toàn bộ sự kiện, hoạt động cộng đồng và thông tin mới nhất tại huyện Phú Tân.",
+    description: "Toàn bộ sự kiện, hoạt động cộng đồng và thông tin mới nhất tại Phú Tân.",
     kind: "news",
   },
   places: {
@@ -144,32 +144,32 @@ const SectionList = ({ sectionKey }) => {
                   alt={getTitle(item, pageSection.kind)}
                   className="list-card-media"
                 />
-                  <CardContent className="list-card-content">
-                    <Typography variant="h6" component="h2" className="list-card-title">
-                      {getTitle(item, pageSection.kind)}
+                <CardContent className="list-card-content">
+                  <Typography variant="h6" component="h2" className="list-card-title">
+                    {getTitle(item, pageSection.kind)}
+                  </Typography>
+                  <Typography className="list-card-description">
+                    {getDescription(item, pageSection.kind)}
+                  </Typography>
+                  {pageSection.kind === "beautyHealth" && (
+                    <Typography variant="caption" sx={{ color: "var(--color-primary)", fontWeight: 800, mt: "auto" }}>
+                      {item.category} · {item.address}
                     </Typography>
-                    <Typography className="list-card-description">
-                      {getDescription(item, pageSection.kind)}
+                  )}
+                  {(pageSection.kind === "food" || pageSection.kind === "beautyHealth") && (
+                    <Box sx={{ display: "flex", alignItems: "center", mt: "auto" }}>
+                      <Rating value={item.rating || 0} precision={0.5} readOnly size="small" />
+                      <Typography variant="body2" sx={{ ml: 1, color: "var(--color-primary)", fontWeight: 800 }}>
+                        {item.rating || 0}
+                      </Typography>
+                    </Box>
+                  )}
+                  {pageSection.kind === "news" && (
+                    <Typography variant="caption" sx={{ color: "var(--color-text-subtle)", mt: "auto" }}>
+                      {new Date(item.date).toLocaleDateString("vi-VN")}
                     </Typography>
-                    {pageSection.kind === "beautyHealth" && (
-                      <Typography variant="caption" sx={{ color: "var(--color-primary)", fontWeight: 800, mt: "auto" }}>
-                        {item.category} · {item.address}
-                      </Typography>
-                    )}
-                    {(pageSection.kind === "food" || pageSection.kind === "beautyHealth") && (
-                      <Box sx={{ display: "flex", alignItems: "center", mt: "auto" }}>
-                        <Rating value={item.rating || 0} precision={0.5} readOnly size="small" />
-                        <Typography variant="body2" sx={{ ml: 1, color: "var(--color-primary)", fontWeight: 800 }}>
-                          {item.rating || 0}
-                        </Typography>
-                      </Box>
-                    )}
-                    {pageSection.kind === "news" && (
-                      <Typography variant="caption" sx={{ color: "var(--color-text-subtle)", mt: "auto" }}>
-                        {new Date(item.date).toLocaleDateString("vi-VN")}
-                      </Typography>
-                    )}
-                  </CardContent>
+                  )}
+                </CardContent>
               </Card>
             ))}
           </Box>

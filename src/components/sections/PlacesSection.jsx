@@ -47,7 +47,7 @@ const PlacesSection = () => {
           gutterBottom
           sx={{ fontFamily: "var(--font-body)", color: "var(--color-text-subtle)", mb: 4 }}
         >
-          Khám phá những địa danh đặc sắc của huyện Phú Tân, từ thiên nhiên hoang sơ tới di tích lịch sử.
+          Khám phá những địa danh đặc sắc của Phú Tân 67K1 AG, từ thiên nhiên hoang sơ tới di tích lịch sử.
         </Typography>
         {loading ? <CardSkeletonGrid count={4} /> : <Box
           sx={{
