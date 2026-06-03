@@ -7,14 +7,44 @@ import PlaceIcon from "@mui/icons-material/Place";
 import PlayCircleIcon from "@mui/icons-material/PlayCircle";
 import MapIcon from "@mui/icons-material/Map";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
-import { MapContainer, TileLayer, Polyline, CircleMarker, Popup, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Polyline, CircleMarker, Marker, Popup, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
+import L from "leaflet";
 import { getSectionItems, getVlogReviews } from "../lib/phuTanApi";
 
 const formatTime = (seconds) => {
   const minutes = Math.floor(seconds / 60).toString().padStart(2, "0");
   const secs = Math.floor(seconds % 60).toString().padStart(2, "0");
   return `${minutes}:${secs}`;
+};
+
+const createNumberedIcon = (number, isActive, isVisited) => {
+  const bgColor = isActive ? "#82f3cf" : isVisited ? "rgba(130,243,207,0.85)" : "rgba(130,243,207,0.15)";
+  const borderColor = isActive ? "#fff" : isVisited ? "#82f3cf" : "rgba(130,243,207,0.3)";
+  const size = isActive ? 24 : isVisited ? 20 : 16;
+  const fontSize = isActive ? 12 : isVisited ? 11 : 9;
+  const color = isActive ? "#1a1c24" : "#fff";
+
+  return L.divIcon({
+    html: `<div style="
+      background-color: ${bgColor};
+      border: ${isActive ? 3 : 2}px solid ${borderColor};
+      border-radius: 50%;
+      width: ${size}px;
+      height: ${size}px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: ${color};
+      font-size: ${fontSize}px;
+      font-weight: bold;
+      line-height: 1;
+      box-sizing: border-box;
+    ">${number}</div>`,
+    className: "",
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+  });
 };
 
 const Equalizer = ({ playing }) => (
@@ -182,9 +212,19 @@ const VlogFeed = () => {
   const currentVlog = vlogs[visibleVlogIdx] || null;
   const currentLocations = currentVlog?.locations || [];
   const locationsWithCoords = currentLocations.filter((l) => l.latitude && l.longitude);
-  const routePositions = locationsWithCoords.map((l) => [l.latitude, l.longitude]);
   const activeTime = currentVlog ? activeSpotByVlog[currentVlog.id] : undefined;
   const activeLocation = currentLocations.find((l) => l.time === activeTime);
+
+  // Split route into traversed (up to activeTime) and upcoming
+  const activeIdx = activeLocation
+    ? locationsWithCoords.findIndex((l) => l.time === activeTime)
+    : -1;
+  const traversedCoords = activeIdx >= 0
+    ? locationsWithCoords.slice(0, activeIdx + 1).map((l) => [l.latitude, l.longitude])
+    : [];
+  const upcomingCoords = activeIdx >= 0
+    ? locationsWithCoords.slice(activeIdx).map((l) => [l.latitude, l.longitude])
+    : locationsWithCoords.map((l) => [l.latitude, l.longitude]);
 
   return (
     <main className="vlog-scroll-root">
@@ -342,16 +382,30 @@ const VlogFeed = () => {
                   <FitBounds locations={locationsWithCoords} />
                   {activeLocation?.latitude && <ActiveMarkerHighlight location={activeLocation} />}
 
-                  {/* Route polyline */}
-                  {routePositions.length >= 2 && (
+                  {/* Upcoming route – faint dashed */}
+                  {upcomingCoords.length >= 2 && (
                     <Polyline
-                      positions={routePositions}
+                      positions={upcomingCoords}
                       pathOptions={{
                         color: "#82f3cf",
-                        weight: 3,
-                        opacity: 0.85,
-                        dashArray: "8, 6",
+                        weight: 2,
+                        opacity: 0.25,
+                        dashArray: "6, 8",
                         lineCap: "round",
+                      }}
+                    />
+                  )}
+
+                  {/* Traversed route – solid bright */}
+                  {traversedCoords.length >= 2 && (
+                    <Polyline
+                      positions={traversedCoords}
+                      pathOptions={{
+                        color: "#82f3cf",
+                        weight: 4,
+                        opacity: 0.9,
+                        lineCap: "round",
+                        lineJoin: "round",
                       }}
                     />
                   )}
@@ -359,27 +413,39 @@ const VlogFeed = () => {
                   {/* Location markers */}
                   {locationsWithCoords.map((loc, i) => {
                     const isActive = activeTime === loc.time;
+                    const isVisited = activeIdx >= 0 && i <= activeIdx;
                     return (
-                      <CircleMarker
+                      <Marker
                         key={`${loc.time}-${i}`}
-                        center={[loc.latitude, loc.longitude]}
-                        radius={isActive ? 10 : 6}
-                        pathOptions={{
-                          color: isActive ? "#fff" : "#82f3cf",
-                          fillColor: isActive ? "#82f3cf" : "rgba(130,243,207,0.4)",
-                          fillOpacity: isActive ? 1 : 0.7,
-                          weight: isActive ? 3 : 2,
-                        }}
+                        position={[loc.latitude, loc.longitude]}
+                        icon={createNumberedIcon(i + 1, isActive, isVisited)}
+                        zIndexOffset={isActive ? 1000 : isVisited ? 500 : 0}
                       >
                         <Popup>
                           <div style={{ textAlign: "center", minWidth: 100 }}>
                             <strong style={{ display: "block", marginBottom: 4 }}>{loc.name}</strong>
-                            <span style={{ fontSize: "0.8rem", color: "#666" }}>{formatTime(loc.time)}</span>
+                            <span style={{ fontSize: "0.8rem", color: "#aaa" }}>{formatTime(loc.time)}</span>
                           </div>
                         </Popup>
-                      </CircleMarker>
+                      </Marker>
                     );
                   })}
+
+                  {/* Pulsing current-position marker */}
+                  {activeLocation?.latitude && activeLocation?.longitude && (
+                    <CircleMarker
+                      center={[activeLocation.latitude, activeLocation.longitude]}
+                      radius={16}
+                      pathOptions={{
+                        color: "#82f3cf",
+                        fillColor: "#82f3cf",
+                        fillOpacity: 0.18,
+                        weight: 2,
+                        opacity: 0.5,
+                        className: "vlog-map-pulse",
+                      }}
+                    />
+                  )}
                 </MapContainer>
               </Box>
             )}

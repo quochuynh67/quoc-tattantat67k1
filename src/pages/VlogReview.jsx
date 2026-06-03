@@ -9,6 +9,9 @@ import PlaceIcon from "@mui/icons-material/Place";
 import PlayCircleIcon from "@mui/icons-material/PlayCircle";
 import LocationOnIcon from "@mui/icons-material/LocationOn";
 import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
+import { MapContainer, TileLayer, Polyline, CircleMarker, Marker, Popup, useMap } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+import L from "leaflet";
 import { getSectionItems, getVlogReviewForPost } from "../lib/phuTanApi";
 import { supabase } from "../lib/supabaseClient";
 import { DetailSkeleton } from "../components/CardSkeleton";
@@ -18,6 +21,138 @@ const formatTime = (seconds) => {
   const m = Math.floor(seconds / 60).toString().padStart(2, "0");
   const s = Math.floor(seconds % 60).toString().padStart(2, "0");
   return `${m}:${s}`;
+};
+
+const createNumberedIcon = (number, isActive, isVisited) => {
+  const bgColor = isActive ? "#82f3cf" : isVisited ? "rgba(130,243,207,0.85)" : "rgba(130,243,207,0.15)";
+  const borderColor = isActive ? "#fff" : isVisited ? "#82f3cf" : "rgba(130,243,207,0.3)";
+  const size = isActive ? 24 : isVisited ? 20 : 16;
+  const fontSize = isActive ? 12 : isVisited ? 11 : 9;
+  const color = isActive ? "#1a1c24" : "#fff";
+
+  return L.divIcon({
+    html: `<div style="
+      background-color: ${bgColor};
+      border: ${isActive ? 3 : 2}px solid ${borderColor};
+      border-radius: 50%;
+      width: ${size}px;
+      height: ${size}px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: ${color};
+      font-size: ${fontSize}px;
+      font-weight: bold;
+      line-height: 1;
+      box-sizing: border-box;
+    ">${number}</div>`,
+    className: "",
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+  });
+};
+
+const FitBounds = ({ locations }) => {
+  const map = useMap();
+  useEffect(() => {
+    const pts = locations.filter((l) => l.latitude && l.longitude);
+    if (pts.length === 0) return;
+    const bounds = pts.map((l) => [l.latitude, l.longitude]);
+    map.fitBounds(bounds, { padding: [32, 32], maxZoom: 15 });
+  }, [locations, map]);
+  return null;
+};
+
+const ActiveMarkerHighlight = ({ location }) => {
+  const map = useMap();
+  useEffect(() => {
+    if (!location?.latitude || !location?.longitude) return;
+    map.panTo([location.latitude, location.longitude], { animate: true, duration: 0.4 });
+  }, [location, map]);
+  return null;
+};
+
+const VlogMap = ({ vlog, activeTime }) => {
+  const locationsWithCoords = (vlog.locations || []).filter((l) => l.latitude && l.longitude);
+  if (locationsWithCoords.length === 0) return null;
+  
+  const activeLocation = (vlog.locations || []).find((l) => l.time === activeTime);
+  const activeIdx = activeLocation
+    ? locationsWithCoords.findIndex((l) => l.time === activeTime)
+    : -1;
+  const traversedCoords = activeIdx >= 0
+    ? locationsWithCoords.slice(0, activeIdx + 1).map((l) => [l.latitude, l.longitude])
+    : [];
+  const upcomingCoords = activeIdx >= 0
+    ? locationsWithCoords.slice(activeIdx).map((l) => [l.latitude, l.longitude])
+    : locationsWithCoords.map((l) => [l.latitude, l.longitude]);
+
+  return (
+    <Box sx={{ 
+      mt: 2, height: 240, zIndex: 0, position: "relative",
+      "& .leaflet-container": { background: "#1a1c24", border: "1px solid rgba(130, 243, 207, 0.12)", borderRadius: "12px" },
+      "& .leaflet-popup-content-wrapper": { background: "rgba(20, 22, 30, 0.92)", backdropFilter: "blur(12px)", border: "1px solid rgba(130, 243, 207, 0.2)", borderRadius: "10px", boxShadow: "0 8px 32px rgba(0, 0, 0, 0.6)", color: "#fff" },
+      "& .leaflet-popup-tip": { background: "rgba(20, 22, 30, 0.92)", border: "1px solid rgba(130, 243, 207, 0.2)" },
+      "& .leaflet-popup-close-button": { color: "rgba(255, 255, 255, 0.6)" },
+      "& .leaflet-popup-close-button:hover": { color: "#82f3cf" }
+    }}>
+      <MapContainer
+        center={[locationsWithCoords[0].latitude, locationsWithCoords[0].longitude]}
+        zoom={14}
+        scrollWheelZoom={false}
+        dragging={true}
+        zoomControl={false}
+        attributionControl={false}
+        style={{ width: "100%", height: "100%", borderRadius: "12px" }}
+      >
+        <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
+        <FitBounds locations={locationsWithCoords} />
+        {activeLocation?.latitude && <ActiveMarkerHighlight location={activeLocation} />}
+        
+        {upcomingCoords.length >= 2 && (
+          <Polyline positions={upcomingCoords} pathOptions={{ color: "#82f3cf", weight: 2, opacity: 0.25, dashArray: "6, 8", lineCap: "round" }} />
+        )}
+        {traversedCoords.length >= 2 && (
+          <Polyline positions={traversedCoords} pathOptions={{ color: "#82f3cf", weight: 4, opacity: 0.9, lineCap: "round", lineJoin: "round" }} />
+        )}
+        
+        {locationsWithCoords.map((loc, i) => {
+          const isActive = activeTime === loc.time;
+          const isVisited = activeIdx >= 0 && i <= activeIdx;
+          return (
+            <Marker
+              key={`${loc.time}-${i}`}
+              position={[loc.latitude, loc.longitude]}
+              icon={createNumberedIcon(i + 1, isActive, isVisited)}
+              zIndexOffset={isActive ? 1000 : isVisited ? 500 : 0}
+            >
+              <Popup>
+                <div style={{ textAlign: "center", minWidth: 100 }}>
+                  <strong style={{ display: "block", marginBottom: 4 }}>{loc.name}</strong>
+                  <span style={{ fontSize: "0.8rem", color: "#aaa" }}>{formatTime(loc.time)}</span>
+                </div>
+              </Popup>
+            </Marker>
+          );
+        })}
+        
+        {activeLocation?.latitude && activeLocation?.longitude && (
+          <CircleMarker
+            center={[activeLocation.latitude, activeLocation.longitude]}
+            radius={16}
+            pathOptions={{
+              color: "#82f3cf",
+              fillColor: "#82f3cf",
+              fillOpacity: 0.18,
+              weight: 2,
+              opacity: 0.5,
+              className: "vlog-map-pulse",
+            }}
+          />
+        )}
+      </MapContainer>
+    </Box>
+  );
 };
 
 const VlogReview = () => {
@@ -318,6 +453,7 @@ const VlogReview = () => {
                             </button>
                           ))}
                         </Box>
+                        <VlogMap vlog={vlog} activeTime={activeTime} />
                       </Box>
                     )}
                     <Box className="vlog-scroll-info">
@@ -486,6 +622,7 @@ const VlogReview = () => {
                     </button>
                   ))}
                 </Box>
+                <VlogMap vlog={activeVlog} activeTime={activeTime} />
               </>
             )}
             </Box>
