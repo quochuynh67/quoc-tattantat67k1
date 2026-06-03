@@ -4,6 +4,7 @@ import { Link as RouterLink } from "react-router-dom";
 import { Container, Button, Card, CardMedia, CardContent, Typography, Box } from "@mui/material";
 import { getSectionCount, getSectionItems, getSectionItemsSync } from "../../lib/phuTanApi";
 import { CardSkeletonGrid } from "../CardSkeleton";
+import AgentChat from "../AgentChat";
 
 const AgricultureSection = () => {
   const [displayedAgri, setDisplayedAgri] = useState(() => getSectionItemsSync("agriculture", 4) ?? []);
@@ -28,7 +29,7 @@ const AgricultureSection = () => {
   return (
     <section className="content-section">
       <Container maxWidth={false} className="section-container">
-        <Box display="flex" justifyContent="space-between" alignItems="baseline" mb={1}>
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
           <Typography
             variant="h4"
             component="h2"
@@ -36,11 +37,14 @@ const AgricultureSection = () => {
           >
             Nông nghiệp & Phát triển nông thôn
           </Typography>
-          {totalItems > 4 && (
-            <Button component={RouterLink} to="/agriculture" className="section-more-button">
-              Xem thêm
-            </Button>
-          )}
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <AgentChat section="agriculture" variant="inline" />
+            {totalItems > 4 && (
+              <Button component={RouterLink} to="/agriculture" className="section-more-button">
+                Xem thêm
+              </Button>
+            )}
+          </Box>
         </Box>
         <Typography
           variant="body1"

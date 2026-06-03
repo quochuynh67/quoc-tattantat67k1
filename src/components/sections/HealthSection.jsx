@@ -4,6 +4,7 @@ import { Link as RouterLink } from "react-router-dom";
 import { Container, Typography, Alert, AlertTitle, Stack, Box, Button } from "@mui/material";
 import { getSectionCount, getSectionItems, getSectionItemsSync } from "../../lib/phuTanApi";
 import { AlertSkeleton } from "../CardSkeleton";
+import AgentChat from "../AgentChat";
 
 const HealthSection = () => {
   const [displayedHealth, setDisplayedHealth] = useState(() => getSectionItemsSync("health", 4) ?? []);
@@ -28,7 +29,7 @@ const HealthSection = () => {
   return (
     <section className="content-section">
       <Container maxWidth={false} className="section-container">
-        <Box display="flex" justifyContent="space-between" alignItems="baseline" mb={1}>
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
           <Typography
             variant="h4"
             component="h2"
@@ -36,11 +37,14 @@ const HealthSection = () => {
           >
             Sức khỏe & Y tế
           </Typography>
-          {totalItems > 4 && (
-            <Button component={RouterLink} to="/health" className="section-more-button">
-              Xem thêm
-            </Button>
-          )}
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <AgentChat section="health" variant="inline" />
+            {totalItems > 4 && (
+              <Button component={RouterLink} to="/health" className="section-more-button">
+                Xem thêm
+              </Button>
+            )}
+          </Box>
         </Box>
         <Typography
           variant="body1"

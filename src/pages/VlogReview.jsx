@@ -12,6 +12,7 @@ import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
 import { getSectionItems, getVlogReviewForPost } from "../lib/phuTanApi";
 import { supabase } from "../lib/supabaseClient";
 import { DetailSkeleton } from "../components/CardSkeleton";
+import AgentChat from "../components/AgentChat";
 
 const formatTime = (seconds) => {
   const m = Math.floor(seconds / 60).toString().padStart(2, "0");
@@ -212,6 +213,7 @@ const VlogReview = () => {
             </Box>
           </Box>
         </Container>
+        <AgentChat section={post.section} />
       </main>
     );
   }

@@ -18,6 +18,7 @@ import {
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { getSectionItems, getSectionItemsSync } from "../lib/phuTanApi";
 import { CardSkeletonGrid, AlertSkeleton } from "../components/CardSkeleton";
+import AgentChat from "../components/AgentChat";
 
 const sectionConfig = {
   news: {
@@ -180,6 +181,7 @@ const SectionList = ({ sectionKey }) => {
           {toastMessage}
         </MuiAlert>
       </Snackbar>
+      <AgentChat section={key} />
     </main>
   );
 };

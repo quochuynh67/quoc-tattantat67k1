@@ -4,6 +4,7 @@ import { Link as RouterLink } from "react-router-dom";
 import { Container, Button, Card, CardActionArea, CardMedia, CardContent, Typography, Box } from "@mui/material";
 import { getSectionCount, getSectionItems, getSectionItemsSync } from "../../lib/phuTanApi";
 import { CardSkeletonGrid } from "../CardSkeleton";
+import AgentChat from "../AgentChat";
 
 const NewsSection = () => {
   const [displayedNews, setDisplayedNews] = useState(() => getSectionItemsSync("news", 4) ?? []);
@@ -28,7 +29,7 @@ const NewsSection = () => {
   return (
     <section className="content-section">
       <Container maxWidth={false} className="section-container">
-        <Box display="flex" justifyContent="space-between" alignItems="baseline" mb={3}>
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
           <Typography
             variant="h4"
             component="h2"
@@ -36,11 +37,14 @@ const NewsSection = () => {
           >
             Tin tức địa phương
           </Typography>
-          {totalItems > 4 && (
-            <Button component={RouterLink} to="/news" className="section-more-button">
-              Xem thêm
-            </Button>
-          )}
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <AgentChat section="news" variant="inline" />
+            {totalItems > 4 && (
+              <Button component={RouterLink} to="/news" className="section-more-button">
+                Xem thêm
+              </Button>
+            )}
+          </Box>
         </Box>
         <Typography
           variant="body1"
