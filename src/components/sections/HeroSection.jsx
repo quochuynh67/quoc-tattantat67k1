@@ -2,11 +2,10 @@
 import React, { useEffect, useState } from "react";
 import { Link as RouterLink } from "react-router-dom";
 import { Box, Typography, Button, Container } from "@mui/material";
-import { mockHero } from "../../mocks/data";
 import { getHero } from "../../lib/phuTanApi";
 
 const HeroSection = () => {
-  const [hero, setHero] = useState(mockHero);
+  const [hero, setHero] = useState(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -17,6 +16,8 @@ const HeroSection = () => {
       isMounted = false;
     };
   }, []);
+
+  if (!hero) return null;
 
   return (
     <Box

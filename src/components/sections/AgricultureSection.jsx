@@ -2,12 +2,13 @@
 import React, { useEffect, useState } from "react";
 import { Link as RouterLink } from "react-router-dom";
 import { Container, Button, Card, CardMedia, CardContent, Typography, Box } from "@mui/material";
-import { mockAgriculture } from "../../mocks/data";
-import { getSectionCount, getSectionItems } from "../../lib/phuTanApi";
+import { getSectionCount, getSectionItems, getSectionItemsSync } from "../../lib/phuTanApi";
+import { CardSkeletonGrid } from "../CardSkeleton";
 
 const AgricultureSection = () => {
-  const [displayedAgri, setDisplayedAgri] = useState(mockAgriculture.slice(0, 4));
-  const [totalItems, setTotalItems] = useState(mockAgriculture.length);
+  const [displayedAgri, setDisplayedAgri] = useState(() => getSectionItemsSync("agriculture", 4) ?? []);
+  const [totalItems, setTotalItems] = useState(0);
+  const [loading, setLoading] = useState(() => getSectionItemsSync("agriculture", 4) === null);
 
   useEffect(() => {
     let isMounted = true;
@@ -16,6 +17,7 @@ const AgricultureSection = () => {
       if (!isMounted) return;
       setDisplayedAgri(items);
       setTotalItems(count);
+      setLoading(false);
     });
 
     return () => {
@@ -47,7 +49,7 @@ const AgricultureSection = () => {
         >
           Cập nhật tin tức, dự án và sáng kiến nông nghiệp của huyện Phú Tân.
         </Typography>
-        <Box
+        {loading ? <CardSkeletonGrid count={4} /> : <Box
           sx={{
             display: "grid",
             gridTemplateColumns: { xs: "1fr", sm: "repeat(2, minmax(0, 1fr))", md: "repeat(4, minmax(0, 1fr))" },
@@ -113,7 +115,7 @@ const AgricultureSection = () => {
               </Card>
             </Box>
           ))}
-        </Box>
+        </Box>}
       </Container>
     </section>
   );

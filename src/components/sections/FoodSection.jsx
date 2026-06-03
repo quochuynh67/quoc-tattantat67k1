@@ -2,12 +2,13 @@
 import React, { useEffect, useState } from "react";
 import { Link as RouterLink } from "react-router-dom";
 import { Container, Button, Card, CardMedia, CardContent, Typography, Rating, Box } from "@mui/material";
-import { mockFood } from "../../mocks/data";
-import { getSectionCount, getSectionItems } from "../../lib/phuTanApi";
+import { getSectionCount, getSectionItems, getSectionItemsSync } from "../../lib/phuTanApi";
+import { CardSkeletonGrid } from "../CardSkeleton";
 
 const FoodSection = () => {
-  const [displayedFood, setDisplayedFood] = useState(mockFood.slice(0, 4));
-  const [totalItems, setTotalItems] = useState(mockFood.length);
+  const [displayedFood, setDisplayedFood] = useState(() => getSectionItemsSync("food", 4) ?? []);
+  const [totalItems, setTotalItems] = useState(0);
+  const [loading, setLoading] = useState(() => getSectionItemsSync("food", 4) === null);
 
   useEffect(() => {
     let isMounted = true;
@@ -16,6 +17,7 @@ const FoodSection = () => {
       if (!isMounted) return;
       setDisplayedFood(items);
       setTotalItems(count);
+      setLoading(false);
     });
 
     return () => {
@@ -47,7 +49,7 @@ const FoodSection = () => {
         >
           Thưởng thức những món ăn đặc sản đậm đà hương vị đồng quê của Phú Tân.
         </Typography>
-        <Box
+        {loading ? <CardSkeletonGrid count={4} hasRating /> : <Box
           sx={{
             display: "grid",
             gridTemplateColumns: { xs: "1fr", sm: "repeat(2, minmax(0, 1fr))", md: "repeat(4, minmax(0, 1fr))" },
@@ -119,7 +121,7 @@ const FoodSection = () => {
               </Card>
             </Box>
           ))}
-        </Box>
+        </Box>}
       </Container>
     </section>
   );

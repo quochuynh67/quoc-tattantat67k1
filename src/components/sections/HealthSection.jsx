@@ -2,12 +2,13 @@
 import React, { useEffect, useState } from "react";
 import { Link as RouterLink } from "react-router-dom";
 import { Container, Typography, Alert, AlertTitle, Stack, Box, Button } from "@mui/material";
-import { mockHealth } from "../../mocks/data";
-import { getSectionCount, getSectionItems } from "../../lib/phuTanApi";
+import { getSectionCount, getSectionItems, getSectionItemsSync } from "../../lib/phuTanApi";
+import { AlertSkeleton } from "../CardSkeleton";
 
 const HealthSection = () => {
-  const [displayedHealth, setDisplayedHealth] = useState(mockHealth.slice(0, 4));
-  const [totalItems, setTotalItems] = useState(mockHealth.length);
+  const [displayedHealth, setDisplayedHealth] = useState(() => getSectionItemsSync("health", 4) ?? []);
+  const [totalItems, setTotalItems] = useState(0);
+  const [loading, setLoading] = useState(() => getSectionItemsSync("health", 4) === null);
 
   useEffect(() => {
     let isMounted = true;
@@ -16,6 +17,7 @@ const HealthSection = () => {
       if (!isMounted) return;
       setDisplayedHealth(items);
       setTotalItems(count);
+      setLoading(false);
     });
 
     return () => {
@@ -47,7 +49,7 @@ const HealthSection = () => {
         >
           Thông báo y tế, cảnh báo dịch bệnh và các nguồn lực chăm sóc sức khỏe cộng đồng.
         </Typography>
-        <Stack spacing={3}>
+        {loading ? <AlertSkeleton count={4} /> : <Stack spacing={3}>
           {displayedHealth.map((item) => (
             <Alert key={item.id} component={RouterLink} to={`/post-detail/${item.id}`} severity={item.severity || "info"} sx={{ fontFamily: "var(--font-body)", borderRadius: 2, color: "var(--color-text)", cursor: "pointer", textDecoration: "none" }}>
               <AlertTitle sx={{ fontFamily: "var(--font-body)", fontWeight: 'bold' }}>
@@ -56,7 +58,7 @@ const HealthSection = () => {
               {item.content || item.description}
             </Alert>
           ))}
-        </Stack>
+        </Stack>}
       </Container>
     </section>
   );

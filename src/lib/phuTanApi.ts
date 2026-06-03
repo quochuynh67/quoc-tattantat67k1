@@ -1,15 +1,21 @@
 import supabase, { isSupabaseConfigured } from "./supabaseClient";
-import {
-  mockAgriculture,
-  mockBeautyHealth,
-  mockFood,
-  mockHealth,
-  mockHero,
-  mockNews,
-  mockNewsletter,
-  mockPlaces,
-  mockVlogReviews,
-} from "../mocks/data";
+
+const _sectionCache = new Map<string, { data: any[]; ts: number }>();
+const CACHE_TTL = 5 * 60 * 1000;
+
+function _getCached(key: string): any[] | null {
+  const entry = _sectionCache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.ts > CACHE_TTL) { _sectionCache.delete(key); return null; }
+  return entry.data;
+}
+function _setCache(key: string, data: any[]) {
+  _sectionCache.set(key, { data, ts: Date.now() });
+}
+
+export function getSectionItemsSync(section: string, limit?: number): any[] | null {
+  return _getCached(`${section}:${limit ?? "all"}`);
+}
 
 export const sectionRoutes = {
   news: "/news",
@@ -20,17 +26,8 @@ export const sectionRoutes = {
   health: "/health",
 } as const;
 
-export const fallbackSections = {
-  news: mockNews,
-  places: mockPlaces,
-  food: mockFood,
-  beautyHealth: mockBeautyHealth,
-  agriculture: mockAgriculture,
-  health: mockHealth,
-};
-
 const fromContentItem = (row: any) => ({
-  id: row.legacy_id || row.id,
+  id: row.id,
   title: row.title,
   name: row.title,
   excerpt: row.excerpt,
@@ -45,10 +42,8 @@ const fromContentItem = (row: any) => ({
   metadata: row.metadata || {},
 });
 
-const fallbackForSection = (section: keyof typeof fallbackSections) => fallbackSections[section] || [];
-
 export async function getHero() {
-  if (!isSupabaseConfigured) return mockHero;
+  if (!isSupabaseConfigured) return null;
 
   const { data, error } = await supabase
     .from("site_settings")
@@ -56,12 +51,12 @@ export async function getHero() {
     .eq("row_key", "hero")
     .maybeSingle();
 
-  if (error || !data?.value) return mockHero;
+  if (error || !data?.value) return null;
   return data.value;
 }
 
 export async function getNewsletterConfig() {
-  if (!isSupabaseConfigured) return mockNewsletter;
+  if (!isSupabaseConfigured) return null;
 
   const { data, error } = await supabase
     .from("site_settings")
@@ -69,15 +64,16 @@ export async function getNewsletterConfig() {
     .eq("row_key", "newsletter")
     .maybeSingle();
 
-  if (error || !data?.value) return mockNewsletter;
+  if (error || !data?.value) return null;
   return data.value;
 }
 
-export async function getSectionItems(section: keyof typeof fallbackSections, limit?: number) {
-  if (!isSupabaseConfigured) {
-    const fallback = fallbackForSection(section);
-    return limit ? fallback.slice(0, limit) : fallback;
-  }
+export async function getSectionItems(section: string, limit?: number) {
+  if (!isSupabaseConfigured) return [];
+
+  const cacheKey = `${section}:${limit ?? "all"}`;
+  const cached = _getCached(cacheKey);
+  if (cached) return cached;
 
   let query = supabase
     .from("content_items")
@@ -90,16 +86,15 @@ export async function getSectionItems(section: keyof typeof fallbackSections, li
   if (limit) query = query.limit(limit);
 
   const { data, error } = await query;
-  if (error || !data || data.length === 0) {
-    const fallback = fallbackForSection(section);
-    return limit ? fallback.slice(0, limit) : fallback;
-  }
+  if (error || !data || data.length === 0) return [];
 
-  return data.map(fromContentItem);
+  const result = data.map(fromContentItem);
+  _setCache(cacheKey, result);
+  return result;
 }
 
-export async function getSectionCount(section: keyof typeof fallbackSections) {
-  if (!isSupabaseConfigured) return fallbackForSection(section).length;
+export async function getSectionCount(section: string) {
+  if (!isSupabaseConfigured) return 0;
 
   const { count, error } = await supabase
     .from("content_items")
@@ -107,9 +102,7 @@ export async function getSectionCount(section: keyof typeof fallbackSections) {
     .eq("section_slug", section)
     .eq("is_published", true);
 
-  if (error || typeof count !== "number" || count === 0) {
-    return fallbackForSection(section).length;
-  }
+  if (error || typeof count !== "number" || count === 0) return 0;
 
   return count;
 }
@@ -133,8 +126,12 @@ const normalizeVlog = (row: any) => ({
   })),
 });
 
+let _vlogCache: { data: any[]; ts: number } | null = null;
+
 export async function getVlogReviews() {
-  if (!isSupabaseConfigured) return mockVlogReviews;
+  if (!isSupabaseConfigured) return [];
+
+  if (_vlogCache && Date.now() - _vlogCache.ts < CACHE_TTL) return _vlogCache.data;
 
   const { data, error } = await supabase
     .from("vlog_reviews")
@@ -143,13 +140,32 @@ export async function getVlogReviews() {
     .order("display_order", { ascending: true })
     .order("time_seconds", { referencedTable: "vlog_locations", ascending: true });
 
-  if (error || !data || data.length === 0) return mockVlogReviews;
-  return data.map(normalizeVlog);
+  if (error || !data || data.length === 0) return [];
+  const result = data.map(normalizeVlog);
+  _vlogCache = { data: result, ts: Date.now() };
+  return result;
 }
 
-export async function getVlogReview(id: string | number) {
+export async function getVlogReview(contentItemUuid: string) {
   const vlogs = await getVlogReviews();
-  return vlogs.find((vlog: any) => String(vlog.newsId) === String(id) || String(vlog.id) === String(id));
+  return vlogs.find((vlog: any) =>
+    String(vlog.newsId) === contentItemUuid || String(vlog.id) === contentItemUuid
+  ) ?? null;
+}
+
+export async function getVlogReviewForPost(contentItemId: string) {
+  if (!isSupabaseConfigured) return [];
+
+  const { data, error } = await supabase
+    .from("vlog_reviews")
+    .select("*, vlog_locations(*)")
+    .eq("content_item_id", contentItemId)
+    .eq("is_published", true)
+    .order("display_order", { ascending: true })
+    .order("time_seconds", { referencedTable: "vlog_locations", ascending: true });
+
+  if (error || !data) return [];
+  return data.map(normalizeVlog);
 }
 
 export async function subscribeNewsletter(email: string) {

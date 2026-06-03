@@ -2,12 +2,13 @@
 import React, { useEffect, useState } from "react";
 import { Link as RouterLink } from "react-router-dom";
 import { Box, Button, Card, CardContent, CardMedia, Chip, Container, Rating, Typography } from "@mui/material";
-import { mockBeautyHealth } from "../../mocks/data";
-import { getSectionCount, getSectionItems } from "../../lib/phuTanApi";
+import { getSectionCount, getSectionItems, getSectionItemsSync } from "../../lib/phuTanApi";
+import { CardSkeletonGrid } from "../CardSkeleton";
 
 const BeautyHealthSection = () => {
-  const [displayedServices, setDisplayedServices] = useState(mockBeautyHealth.slice(0, 4));
-  const [totalItems, setTotalItems] = useState(mockBeautyHealth.length);
+  const [displayedServices, setDisplayedServices] = useState(() => getSectionItemsSync("beautyHealth", 4) ?? []);
+  const [totalItems, setTotalItems] = useState(0);
+  const [loading, setLoading] = useState(() => getSectionItemsSync("beautyHealth", 4) === null);
 
   useEffect(() => {
     let isMounted = true;
@@ -16,6 +17,7 @@ const BeautyHealthSection = () => {
       if (!isMounted) return;
       setDisplayedServices(items);
       setTotalItems(count);
+      setLoading(false);
     });
 
     return () => {
@@ -47,7 +49,7 @@ const BeautyHealthSection = () => {
         >
           Gợi ý spa, hair salon và trị liệu thư giãn để chăm sóc vẻ ngoài lẫn sức khỏe tinh thần.
         </Typography>
-        <Box
+        {loading ? <CardSkeletonGrid count={4} hasRating hasChip /> : <Box
           sx={{
             display: "grid",
             gridTemplateColumns: { xs: "1fr", sm: "repeat(2, minmax(0, 1fr))", md: "repeat(4, minmax(0, 1fr))" },
@@ -125,7 +127,7 @@ const BeautyHealthSection = () => {
               </Card>
             </Box>
           ))}
-        </Box>
+        </Box>}
       </Container>
     </section>
   );

@@ -11,6 +11,7 @@ import VlogFeed from "./pages/VlogFeed";
 import VlogReview from "./pages/VlogReview";
 import NotFound from "./pages/NotFound";
 import DetailPage from "./pages/DetailPage";
+import ScrollRestoration from "./components/ScrollRestoration";
 // Admin UI imports
 import AdminLayout from "./components/admin/AdminLayout";
 import AdminSections from "./pages/admin/Sections";
@@ -23,6 +24,7 @@ const AppLayout = () => {
 
   return (
     <>
+      <ScrollRestoration />
       {!isVlogFeed && <Header />}
       <main style={{ minHeight: isVlogFeed ? "100vh" : "80vh" }}>
         <Routes>

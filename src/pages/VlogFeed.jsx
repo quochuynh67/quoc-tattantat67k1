@@ -6,7 +6,6 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import PlaceIcon from "@mui/icons-material/Place";
 import PlayCircleIcon from "@mui/icons-material/PlayCircle";
-import { mockNews, mockVlogReviews } from "../mocks/data";
 import { getSectionItems, getVlogReviews } from "../lib/phuTanApi";
 
 const formatTime = (seconds) => {
@@ -18,8 +17,8 @@ const formatTime = (seconds) => {
 const VlogFeed = () => {
   const videoRefs = useRef({});
   const [activeSpotByVlog, setActiveSpotByVlog] = useState({});
-  const [vlogs, setVlogs] = useState(mockVlogReviews);
-  const [newsItems, setNewsItems] = useState(mockNews);
+  const [vlogs, setVlogs] = useState([]);
+  const [newsItems, setNewsItems] = useState([]);
 
   useEffect(() => {
     let isMounted = true;

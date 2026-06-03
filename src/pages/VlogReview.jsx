@@ -1,59 +1,86 @@
 // src/pages/VlogReview.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Link as RouterLink, useParams } from "react-router-dom";
-import { Box, Button, Container, Typography } from "@mui/material";
+import { Link as RouterLink, useParams, useNavigate } from "react-router-dom";
+import { Alert, Box, Button, Container, Rating, Tab, Tabs, Typography } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import PlaceIcon from "@mui/icons-material/Place";
 import PlayCircleIcon from "@mui/icons-material/PlayCircle";
-import { mockNews, mockVlogReviews } from "../mocks/data";
-import { getSectionItems, getVlogReview } from "../lib/phuTanApi";
+import LocationOnIcon from "@mui/icons-material/LocationOn";
+import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
+import { getSectionItems, getVlogReviewForPost } from "../lib/phuTanApi";
+import { supabase } from "../lib/supabaseClient";
+import { DetailSkeleton } from "../components/CardSkeleton";
 
 const formatTime = (seconds) => {
-  const minutes = Math.floor(seconds / 60).toString().padStart(2, "0");
-  const secs = Math.floor(seconds % 60).toString().padStart(2, "0");
-  return `${minutes}:${secs}`;
+  const m = Math.floor(seconds / 60).toString().padStart(2, "0");
+  const s = Math.floor(seconds % 60).toString().padStart(2, "0");
+  return `${m}:${s}`;
 };
 
 const VlogReview = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const videoRef = useRef(null);
+
+  const [vlogs, setVlogs] = useState([]);
+  const [activeVlogIdx, setActiveVlogIdx] = useState(0);
   const [activeTime, setActiveTime] = useState(0);
-  const [vlog, setVlog] = useState(() =>
-    mockVlogReviews.find((item) => String(item.newsId) === String(id) || String(item.id) === String(id))
-  );
-  const [newsItems, setNewsItems] = useState(mockNews);
+  const [newsItems, setNewsItems] = useState([]);
+  const [post, setPost] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
 
-    Promise.all([getVlogReview(id), getSectionItems("news")]).then(([vlogData, newsData]) => {
-      if (!isMounted) return;
-      setVlog(vlogData);
-      setNewsItems(newsData);
-    });
-
-    return () => {
-      isMounted = false;
+    const fetchPost = async () => {
+      const { data, error } = await supabase
+        .from("content_items")
+        .select("*")
+        .eq("id", id)
+        .maybeSingle();
+      if (error) { console.error("fetchPost error:", error); return null; }
+      if (!data) return null;
+      return {
+        uuid: data.id,
+        title: data.title,
+        excerpt: data.excerpt,
+        description: data.description || data.excerpt,
+        content: data.content,
+        image: data.image_url,
+        category: data.category,
+        address: data.address,
+        rating: data.rating ? Number(data.rating) : undefined,
+        severity: data.severity,
+        date: data.published_date,
+        section: data.section_slug,
+      };
     };
+
+    Promise.all([fetchPost(), getSectionItems("news"), getVlogReviewForPost(id)]).then(
+      ([postData, newsData, vlogsData]) => {
+        if (!isMounted) return;
+        setPost(postData);
+        setNewsItems(newsData);
+        setVlogs(vlogsData);
+        setActiveVlogIdx(0);
+        setLoading(false);
+      }
+    );
+
+    return () => { isMounted = false; };
   }, [id]);
 
-  const news = useMemo(() => newsItems.find((item) => String(item.id) === String(vlog?.newsId)), [newsItems, vlog]);
+  const activeVlog = vlogs[activeVlogIdx] ?? null;
 
-  if (!vlog) {
-    return (
-      <Container maxWidth={false} className="section-container vlog-review-empty">
-        <Typography variant="h4" component="h1" sx={{ fontFamily: "var(--font-display)", color: "var(--color-text)", mb: 2 }}>
-          Chưa có review vlog
-        </Typography>
-        <Typography sx={{ color: "var(--color-text-subtle)", mb: 3 }}>
-          Bài viết này hiện chưa được gắn vlog review.
-        </Typography>
-        <Button component={RouterLink} to="/" startIcon={<ArrowBackIcon />} variant="contained">
-          Quay lại trang chủ
-        </Button>
-      </Container>
-    );
-  }
+  const news = useMemo(
+    () => newsItems.find((item) => String(item.id) === String(activeVlog?.newsId)),
+    [newsItems, activeVlog]
+  );
+
+  const handleSelectVlog = (_, idx) => {
+    setActiveVlogIdx(idx);
+    setActiveTime(0);
+  };
 
   const seekToLocation = (location) => {
     if (videoRef.current) {
@@ -65,54 +92,127 @@ const VlogReview = () => {
 
   const handleTimeUpdate = () => {
     const currentTime = videoRef.current?.currentTime || 0;
-    const activeLocation = [...(vlog.locations || [])]
+    const active = [...(activeVlog?.locations || [])]
       .reverse()
-      .find((location) => currentTime >= location.time);
-
-    if (activeLocation) {
-      setActiveTime(activeLocation.time);
-    }
+      .find((loc) => currentTime >= loc.time);
+    if (active) setActiveTime(active.time);
   };
 
+  if (loading) return <DetailSkeleton />;
+
+  if (!post && vlogs.length === 0) {
+    return (
+      <Container maxWidth={false} className="section-container vlog-review-empty">
+        <Typography variant="h4" component="h1" sx={{ fontFamily: "var(--font-display)", color: "var(--color-text)", mb: 2 }}>
+          Không tìm thấy nội dung
+        </Typography>
+        <Typography sx={{ color: "var(--color-text-subtle)", mb: 3 }}>
+          Nội dung bạn đang tìm kiếm không tồn tại hoặc đã bị xóa.
+        </Typography>
+        <Button component={RouterLink} to="/" startIcon={<ArrowBackIcon />} variant="contained">
+          Quay lại trang chủ
+        </Button>
+      </Container>
+    );
+  }
+
+  // No vlog — rich content-only view
+  if (vlogs.length === 0 && post) {
+    const isHealth = post.section === "health";
+    return (
+      <main className="vlog-review-page">
+        <Container maxWidth={false} className="section-container">
+          <Button onClick={() => navigate(-1)} startIcon={<ArrowBackIcon />} className="vlog-back-link">
+            Quay lại
+          </Button>
+          <Box className="vlog-review-layout">
+            <Box className="vlog-video-panel">
+              {isHealth ? (
+                <Alert severity={post.severity || "info"} sx={{ fontSize: "1rem", borderRadius: 2 }}>
+                  {post.title}
+                </Alert>
+              ) : post.image ? (
+                <img src={post.image} alt={post.title} style={{ width: "100%", borderRadius: "12px", objectFit: "cover", maxHeight: 420 }} />
+              ) : null}
+            </Box>
+            <Box className="vlog-info-panel">
+              <Typography variant="overline" className="vlog-kicker">{post.category || "Chi tiết"}</Typography>
+              <Typography variant="h3" component="h1" className="vlog-title">{post.title}</Typography>
+              {(post.description || post.excerpt) && (
+                <Typography className="vlog-subtitle">{post.description || post.excerpt}</Typography>
+              )}
+              {post.content && post.content !== post.description && (
+                <Typography className="vlog-subtitle" sx={{ mt: 2 }}>{post.content}</Typography>
+              )}
+              {post.address && (
+                <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mt: 2, color: "var(--color-text-subtle)" }}>
+                  <LocationOnIcon fontSize="small" />
+                  <Typography variant="body2">{post.address}</Typography>
+                </Box>
+              )}
+              {post.rating !== undefined && (
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 2 }}>
+                  <Rating value={post.rating} precision={0.5} readOnly size="small" />
+                  <Typography variant="body2" sx={{ color: "var(--color-primary)", fontWeight: 700 }}>{post.rating}</Typography>
+                </Box>
+              )}
+              {post.date && (
+                <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mt: 2, color: "var(--color-text-subtle)" }}>
+                  <CalendarTodayIcon fontSize="small" />
+                  <Typography variant="caption">{new Date(post.date).toLocaleDateString("vi-VN")}</Typography>
+                </Box>
+              )}
+            </Box>
+          </Box>
+        </Container>
+      </main>
+    );
+  }
+
+  // Vlog view (1 or multiple)
   return (
     <main className="vlog-review-page">
       <Container maxWidth={false} className="section-container">
-        <Button
-          component={RouterLink}
-          to="/"
-          startIcon={<ArrowBackIcon />}
-          className="vlog-back-link"
-        >
-          Quay lại tin tức
+        <Button onClick={() => navigate(-1)} startIcon={<ArrowBackIcon />} className="vlog-back-link">
+          Quay lại
         </Button>
+
+        {vlogs.length > 1 && (
+          <Tabs
+            value={activeVlogIdx}
+            onChange={handleSelectVlog}
+            variant="scrollable"
+            scrollButtons="auto"
+            sx={{ mb: 3, borderBottom: 1, borderColor: "divider" }}
+          >
+            {vlogs.map((v, idx) => (
+              <Tab key={v.id} label={v.title || `Vlog ${idx + 1}`} />
+            ))}
+          </Tabs>
+        )}
 
         <Box className="vlog-review-layout">
           <Box className="vlog-video-panel">
             <video
+              key={activeVlog.id}
               ref={videoRef}
               className="vlog-review-video"
               controls
               playsInline
-              poster={vlog.poster}
-              src={vlog.videoUrl}
+              poster={activeVlog.poster}
+              src={activeVlog.videoUrl}
               onTimeUpdate={handleTimeUpdate}
             />
             <Box className="vlog-video-caption">
-              <Typography className="vlog-host">{vlog.host}</Typography>
-              <Typography className="vlog-duration">{vlog.durationLabel}</Typography>
+              <Typography className="vlog-host">{activeVlog.host}</Typography>
+              <Typography className="vlog-duration">{activeVlog.durationLabel}</Typography>
             </Box>
           </Box>
 
           <Box className="vlog-info-panel">
-            <Typography variant="overline" className="vlog-kicker">
-              Review vlog
-            </Typography>
-            <Typography variant="h3" component="h1" className="vlog-title">
-              {vlog.title}
-            </Typography>
-            <Typography className="vlog-subtitle">
-              {vlog.subtitle}
-            </Typography>
+            <Typography variant="overline" className="vlog-kicker">Review vlog</Typography>
+            <Typography variant="h3" component="h1" className="vlog-title">{activeVlog.title}</Typography>
+            <Typography className="vlog-subtitle">{activeVlog.subtitle}</Typography>
 
             {news && (
               <Box className="vlog-linked-article">
@@ -122,31 +222,34 @@ const VlogReview = () => {
               </Box>
             )}
 
-            <Box className="vlog-location-header">
-              <PlaceIcon fontSize="small" />
-              <Typography component="h2">Vị trí theo từng giây</Typography>
-            </Box>
-
-            <Box className="vlog-location-list">
-              {(vlog.locations || []).map((location) => (
-                <button
-                  type="button"
-                  key={`${location.time}-${location.name}`}
-                  className={`vlog-location-item ${activeTime === location.time ? "active" : ""}`}
-                  onClick={() => seekToLocation(location)}
-                >
-                  <img src={location.image} alt={location.name} className="vlog-location-thumb" />
-                  <span className="vlog-location-content">
-                    <span className="vlog-location-name">{location.name}</span>
-                    <span className="vlog-location-note">{location.note}</span>
-                    <span className="vlog-location-time">
-                      <PlayCircleIcon fontSize="inherit" />
-                      Nhảy tới {formatTime(location.time)}
-                    </span>
-                  </span>
-                </button>
-              ))}
-            </Box>
+            {activeVlog.locations && activeVlog.locations.length > 0 && (
+              <>
+                <Box className="vlog-location-header">
+                  <PlaceIcon fontSize="small" />
+                  <Typography component="h2">Vị trí theo từng giây</Typography>
+                </Box>
+                <Box className="vlog-location-list">
+                  {activeVlog.locations.map((loc) => (
+                    <button
+                      type="button"
+                      key={`${loc.time}-${loc.name}`}
+                      className={`vlog-location-item ${activeTime === loc.time ? "active" : ""}`}
+                      onClick={() => seekToLocation(loc)}
+                    >
+                      <img src={loc.image} alt={loc.name} className="vlog-location-thumb" />
+                      <span className="vlog-location-content">
+                        <span className="vlog-location-name">{loc.name}</span>
+                        <span className="vlog-location-note">{loc.note}</span>
+                        <span className="vlog-location-time">
+                          <PlayCircleIcon fontSize="inherit" />
+                          Nhảy tới {formatTime(loc.time)}
+                        </span>
+                      </span>
+                    </button>
+                  ))}
+                </Box>
+              </>
+            )}
           </Box>
         </Box>
       </Container>

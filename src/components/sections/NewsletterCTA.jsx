@@ -1,11 +1,10 @@
 // src/components/sections/NewsletterCTA.jsx
 import React, { useEffect, useState } from "react";
 import { Container, Typography, TextField, Button, Box, Paper, Alert } from "@mui/material";
-import { mockNewsletter } from "../../mocks/data";
 import { getNewsletterConfig, subscribeNewsletter } from "../../lib/phuTanApi";
 
 const NewsletterCTA = () => {
-  const [config, setConfig] = useState(mockNewsletter);
+  const [config, setConfig] = useState(null);
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState("");
 
@@ -32,6 +31,8 @@ const NewsletterCTA = () => {
     setEmail("");
     setStatus("Đăng ký nhận tin thành công.");
   };
+
+  if (!config) return null;
 
   return (
     <section style={{ padding: "var(--spacing-xl) 0" }}>

@@ -2,12 +2,13 @@
 import React, { useEffect, useState } from "react";
 import { Link as RouterLink } from "react-router-dom";
 import { Container, Button, Card, CardActionArea, CardMedia, CardContent, Typography, Box } from "@mui/material";
-import { mockNews } from "../../mocks/data";
-import { getSectionCount, getSectionItems } from "../../lib/phuTanApi";
+import { getSectionCount, getSectionItems, getSectionItemsSync } from "../../lib/phuTanApi";
+import { CardSkeletonGrid } from "../CardSkeleton";
 
 const NewsSection = () => {
-  const [displayedNews, setDisplayedNews] = useState(mockNews.slice(0, 4));
-  const [totalItems, setTotalItems] = useState(mockNews.length);
+  const [displayedNews, setDisplayedNews] = useState(() => getSectionItemsSync("news", 4) ?? []);
+  const [totalItems, setTotalItems] = useState(0);
+  const [loading, setLoading] = useState(() => getSectionItemsSync("news", 4) === null);
 
   useEffect(() => {
     let isMounted = true;
@@ -16,6 +17,7 @@ const NewsSection = () => {
       if (!isMounted) return;
       setDisplayedNews(items);
       setTotalItems(count);
+      setLoading(false);
     });
 
     return () => {
@@ -47,7 +49,7 @@ const NewsSection = () => {
         >
           Cập nhật những sự kiện, hoạt động cộng đồng và thông tin mới nhất tại huyện Phú Tân.
         </Typography>
-        <Box
+        {loading ? <CardSkeletonGrid count={4} /> : <Box
           sx={{
             display: "grid",
             gridTemplateColumns: { xs: "1fr", sm: "repeat(2, minmax(0, 1fr))", md: "repeat(4, minmax(0, 1fr))" },
@@ -121,7 +123,7 @@ const NewsSection = () => {
               </Card>
             </Box>
           ))}
-        </Box>
+        </Box>}
       </Container>
     </section>
   );

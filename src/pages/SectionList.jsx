@@ -16,44 +16,38 @@ import {
   Typography,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import { mockAgriculture, mockBeautyHealth, mockFood, mockHealth, mockNews, mockPlaces } from "../mocks/data";
-import { getSectionItems } from "../lib/phuTanApi";
+import { getSectionItems, getSectionItemsSync } from "../lib/phuTanApi";
+import { CardSkeletonGrid, AlertSkeleton } from "../components/CardSkeleton";
 
 const sectionConfig = {
   news: {
     title: "Tin tức địa phương",
     description: "Toàn bộ sự kiện, hoạt động cộng đồng và thông tin mới nhất tại huyện Phú Tân.",
-    items: mockNews,
     kind: "news",
   },
   places: {
     title: "Địa điểm nổi bật",
-    description: "Khám phá đầy đủ các địa danh, điểm đến và không gian trải nghiệm tại Phú Tân.",
-    items: mockPlaces,
-    kind: "place",
+    description: "Những điểm đến không thể bỏ qua, từ di tích lịch sử đến cảnh quan thiên nhiên.",
+    kind: "places",
   },
   food: {
-    title: "Ẩm thực địa phương",
-    description: "Danh sách món ngon, đặc sản và trải nghiệm ẩm thực nên thử khi ghé Phú Tân.",
-    items: mockFood,
+    title: "Ẩm thực đặc sắc",
+    description: "Khám phá hương vị độc đáo và các món ăn truyền thống của người dân địa phương.",
     kind: "food",
   },
   beautyHealth: {
     title: "Làm đẹp & Sức khỏe",
-    description: "Danh sách spa, hair salon và dịch vụ trị liệu giúp chăm sóc vẻ ngoài, thư giãn và phục hồi năng lượng.",
-    items: mockBeautyHealth,
+    description: "Các dịch vụ spa, phòng khám và mẹo vặt chăm sóc cơ thể tốt nhất tại Phú Tân.",
     kind: "beautyHealth",
   },
   agriculture: {
     title: "Nông nghiệp & Phát triển nông thôn",
-    description: "Các mô hình, dự án và sáng kiến đang thúc đẩy nông nghiệp địa phương.",
-    items: mockAgriculture,
+    description: "Cập nhật kỹ thuật canh tác, thông tin mùa vụ và mô hình nông nghiệp hiệu quả.",
     kind: "agriculture",
   },
   health: {
-    title: "Sức khỏe & Y tế",
-    description: "Thông báo y tế, cảnh báo dịch bệnh và nguồn lực chăm sóc sức khỏe cộng đồng.",
-    items: mockHealth,
+    title: "Cảnh báo dịch bệnh",
+    description: "Thông báo y tế khẩn cấp, cập nhật tình hình dịch bệnh và các biện pháp phòng ngừa.",
     kind: "health",
   },
 };
@@ -74,7 +68,8 @@ const SectionList = ({ sectionKey }) => {
   const navigate = useNavigate();
   const key = sectionKey || params.section;
   const section = sectionConfig[key];
-  const [items, setItems] = useState(section?.items || []);
+  const [items, setItems] = useState(() => getSectionItemsSync(key) ?? []);
+  const [loading, setLoading] = useState(() => getSectionItemsSync(key) === null);
   const [toastOpen, setToastOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
 
@@ -83,7 +78,7 @@ const SectionList = ({ sectionKey }) => {
     let isMounted = true;
 
     getSectionItems(key).then((data) => {
-      if (isMounted) setItems(data);
+      if (isMounted) { setItems(data); setLoading(false); }
     });
 
     return () => {
@@ -109,7 +104,7 @@ const SectionList = ({ sectionKey }) => {
   return (
     <main className="list-page">
       <Container maxWidth={false} className="section-container">
-        <Button component={RouterLink} to="/" startIcon={<ArrowBackIcon />} className="list-back-link">
+        <Button onClick={() => navigate(-1)} startIcon={<ArrowBackIcon />} className="list-back-link">
           Trang chủ
         </Button>
         <Typography variant="h3" component="h1" className="list-page-title">
@@ -119,7 +114,11 @@ const SectionList = ({ sectionKey }) => {
           {pageSection.description}
         </Typography>
 
-        {pageSection.kind === "health" ? (
+        {loading ? (
+          pageSection.kind === "health"
+            ? <AlertSkeleton count={4} />
+            : <CardSkeletonGrid count={6} hasRating={pageSection.kind === "food" || pageSection.kind === "beautyHealth"} hasChip={pageSection.kind === "beautyHealth"} />
+        ) : pageSection.kind === "health" ? (
           <Box className="list-alert-grid">
             {pageSection.items.map((item) => (
               <Alert

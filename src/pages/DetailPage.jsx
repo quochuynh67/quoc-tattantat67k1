@@ -3,29 +3,12 @@ import React, { useEffect, useState } from "react";
 import { useParams, Link as RouterLink } from "react-router-dom";
 import { Box, Card, CardContent, CardMedia, Typography, Button } from "@mui/material";
 import { supabase } from "../lib/supabaseClient";
-import {
-  mockNews,
-  mockPlaces,
-  mockFood,
-  mockBeautyHealth,
-  mockAgriculture,
-  mockHealth,
-} from "../mocks/data";
-
-// Combine all mock items for fallback when no DB record is found
-const allMockItems = [
-  ...mockNews,
-  ...mockPlaces,
-  ...mockFood,
-  ...mockBeautyHealth,
-  ...mockAgriculture,
-  ...mockHealth,
-];
-
+import { DetailSkeleton } from "../components/CardSkeleton";
 
 export default function DetailPage() {
   const { id } = useParams();
   const [item, setItem] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchPost = async () => {
@@ -35,20 +18,17 @@ export default function DetailPage() {
         .eq('id', id)
         .maybeSingle();
       if (error || !data) {
-        // Fallback to mock data if not found in DB
-        const fallback = allMockItems.find((it) => String(it.id) === String(id));
-        if (fallback) {
-          setItem(fallback);
-        } else {
-          console.error(error || 'Item not found');
-          setItem(null);
-        }
+        console.error(error || 'Item not found');
+        setItem(null);
       } else {
         setItem(data);
       }
+      setLoading(false);
     };
     fetchPost();
   }, [id]);
+
+  if (loading) return <DetailSkeleton />;
 
   if (!item) {
     return (
@@ -63,12 +43,8 @@ export default function DetailPage() {
     );
   }
 
-  const getTitle = () => {
-    return item.title || item.name || "Chi tiết";
-  };
-  const getDescription = () => {
-    return item.excerpt || item.description || item.content || "";
-  };
+  const getTitle = () => item.title || item.name || "Chi tiết";
+  const getDescription = () => item.excerpt || item.description || item.content || "";
 
   return (
     <Box sx={{ p: 4, display: "flex", justifyContent: "center" }}>
