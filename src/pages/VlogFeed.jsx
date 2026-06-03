@@ -92,16 +92,6 @@ const VlogFeed = () => {
                   />
                 </Box>
 
-                <Box className="vlog-scroll-info">
-                  <Typography className="vlog-scroll-host">@{vlog.host}</Typography>
-                  <Typography component="h1" className="vlog-scroll-title">
-                    {vlog.title}
-                  </Typography>
-                  <Typography className="vlog-scroll-desc">
-                    {news?.excerpt || vlog.subtitle}
-                  </Typography>
-                </Box>
-
                 <Box className="vlog-scroll-actions" aria-label="Vlog actions">
                   <Button
                     component={RouterLink}
@@ -118,26 +108,39 @@ const VlogFeed = () => {
                   <span className="vlog-scroll-action-label">{120 + Number(vlog.id || 0) * 18}</span>
                 </Box>
 
-                <Box className="vlog-scroll-spots">
-                  <Box className="vlog-scroll-spots-title">
-                    <PlaceIcon fontSize="small" />
-                    <span>Vị trí theo giây</span>
-                  </Box>
-                  <Box className="vlog-scroll-spot-list">
-                    {(vlog.locations || []).map((location) => (
-                      <button
-                        key={`${vlog.id}-${location.time}`}
-                        type="button"
-                        className={`vlog-scroll-spot ${activeTime === location.time ? "active" : ""}`}
-                        onClick={() => seekToSpot(vlog.id, location)}
-                      >
-                        <img src={location.image} alt={location.name} />
-                        <span>
-                          <strong>{location.name}</strong>
-                          <small>{formatTime(location.time)}</small>
-                        </span>
-                      </button>
-                    ))}
+                <Box className="vlog-scroll-bottom-panel">
+                  {(vlog.locations || []).length > 0 && (
+                    <Box className="vlog-scroll-spots">
+                      <Box className="vlog-scroll-spots-title">
+                        <PlaceIcon fontSize="small" />
+                        <span>Vị trí theo giây</span>
+                      </Box>
+                      <Box className="vlog-scroll-spot-list">
+                        {(vlog.locations || []).map((location) => (
+                          <button
+                            key={`${vlog.id}-${location.time}`}
+                            type="button"
+                            className={`vlog-scroll-spot ${activeTime === location.time ? "active" : ""}`}
+                            onClick={() => seekToSpot(vlog.id, location)}
+                          >
+                            <img src={location.image} alt={location.name} />
+                            <span>
+                              <strong>{location.name}</strong>
+                              <small>{formatTime(location.time)}</small>
+                            </span>
+                          </button>
+                        ))}
+                      </Box>
+                    </Box>
+                  )}
+                  <Box className="vlog-scroll-info">
+                    <Typography className="vlog-scroll-host">@{vlog.host}</Typography>
+                    <Typography component="h1" className="vlog-scroll-title">
+                      {vlog.title}
+                    </Typography>
+                    <Typography className="vlog-scroll-desc">
+                      {news?.excerpt || vlog.subtitle}
+                    </Typography>
                   </Box>
                 </Box>
               </section>

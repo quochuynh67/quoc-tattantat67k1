@@ -615,23 +615,31 @@ html.dark .vlog-info-panel {
   text-transform: uppercase;
 }
 
-.vlog-scroll-info {
-  bottom: 30px;
-  left: 16px;
-  max-width: calc(100% - 106px);
+.vlog-scroll-bottom-panel {
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  left: 14px;
+  padding-bottom: 20px;
   position: absolute;
+  right: 80px;
   z-index: 5;
 }
 
+.vlog-scroll-info {
+  max-width: 100%;
+}
+
 .vlog-scroll-host {
-  color: #fff;
+  color: #fff !important;
   font-weight: 900 !important;
   margin-bottom: 8px !important;
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
 }
 
 .vlog-scroll-title {
-  color: #fff;
+  color: #fff !important;
   font-size: 1.04rem !important;
   font-weight: 900 !important;
   line-height: 1.35 !important;
@@ -640,7 +648,7 @@ html.dark .vlog-info-panel {
 }
 
 .vlog-scroll-desc {
-  color: rgba(255, 255, 255, 0.78);
+  color: rgba(255, 255, 255, 0.9) !important;
   display: -webkit-box;
   font-size: 0.88rem !important;
   line-height: 1.45 !important;
@@ -652,7 +660,7 @@ html.dark .vlog-info-panel {
 
 .vlog-scroll-actions {
   align-items: center;
-  bottom: 126px;
+  bottom: 20px;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -691,12 +699,8 @@ html.dark .vlog-info-panel {
   background: rgba(10, 12, 16, 0.74);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 12px;
-  bottom: 124px;
-  left: 14px;
-  max-width: calc(100% - 104px);
+  max-width: 100%;
   padding: 10px;
-  position: absolute;
-  z-index: 5;
 }
 
 .vlog-scroll-spots-title {

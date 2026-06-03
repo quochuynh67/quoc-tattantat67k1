@@ -68,6 +68,24 @@ export async function getNewsletterConfig() {
   return data.value;
 }
 
+export async function getSiteSetting(rowKey: string) {
+  if (!isSupabaseConfigured) return null;
+  const { data, error } = await supabase
+    .from("site_settings")
+    .select("value")
+    .eq("row_key", rowKey)
+    .maybeSingle();
+  if (error || !data) return null;
+  return data.value;
+}
+
+export async function upsertSiteSetting(rowKey: string, value: Record<string, any>) {
+  if (!isSupabaseConfigured) return { error: { message: "Supabase not configured" } };
+  return supabase
+    .from("site_settings")
+    .upsert({ row_key: rowKey, value }, { onConflict: "row_key" });
+}
+
 export async function getSectionItems(section: string, limit?: number) {
   if (!isSupabaseConfigured) return [];
 
