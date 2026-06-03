@@ -1,17 +1,37 @@
 // src/components/layout/Header.jsx
-import React from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { NavLink } from "react-router-dom";
 import ThemeToggle from "../ui/ThemeToggle";
 
+const TOOLS = [
+  { id: "relax", label: "Relax", icon: "🧘", url: "https://quoc-research-retrogame.web.app/?feature=vlog" },
+  { id: "retro", label: "Chơi game thùng", icon: "🕹️", url: "https://quoc-research-retrogame.web.app/?feature=retro" },
+  { id: "wish", label: "Tạo văn lời chúc hay", icon: "🎉", url: "#" },
+  { id: "scale", label: "Tính toán cân lúa", icon: "🧮", url: "#" },
+];
+
 const Header = () => {
+  const [toolsOpen, setToolsOpen] = useState(false);
+  const toolsRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (toolsRef.current && !toolsRef.current.contains(e.target)) {
+        setToolsOpen(false);
+      }
+    };
+    if (toolsOpen) document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [toolsOpen]);
+
   return (
     <header className="header container">
       <div className="logo" style={{ display: "flex", alignItems: "center" }}>
         <span style={{ marginLeft: 8, fontFamily: "var(--font-display)", fontSize: "1.5rem", color: "var(--color-primary)" }}>
-          Tất tần tật – Phú Tân 67K1
+          Tất tần tật – Phú Tân 67K1
         </span>
       </div>
-      <nav className="nav" style={{ display: "flex", gap: "var(--spacing-md)" }}>
+      <nav className="nav" style={{ display: "flex", gap: "var(--spacing-md)", alignItems: "center" }}>
         <NavLink to="/" end className={({ isActive }) => (isActive ? "active" : "")}>Trang chủ</NavLink>
         <NavLink to="/news" className={({ isActive }) => (isActive ? "active" : "")}>Tin tức</NavLink>
         <NavLink to="/places" className={({ isActive }) => (isActive ? "active" : "")}>Địa điểm</NavLink>
@@ -19,6 +39,75 @@ const Header = () => {
         <NavLink to="/beauty-health" className={({ isActive }) => (isActive ? "active" : "")}>Làm đẹp</NavLink>
         <NavLink to="/agriculture" className={({ isActive }) => (isActive ? "active" : "")}>Nông nghiệp</NavLink>
         <NavLink to="/health" className={({ isActive }) => (isActive ? "active" : "")}>Sức khỏe</NavLink>
+
+        {/* Other Menu */}
+        <div ref={toolsRef} style={{ position: "relative" }}>
+          <button
+            onClick={() => setToolsOpen(!toolsOpen)}
+            style={{
+              background: "none",
+              border: "none",
+              color: "inherit",
+              cursor: "pointer",
+              fontSize: "inherit",
+              fontWeight: "inherit",
+              padding: "0",
+              textDecoration: "none",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.4rem",
+            }}
+            className={toolsOpen ? "active" : ""}
+          >
+            <span>⚙️</span>
+            <span>Tiện ích</span>
+          </button>
+          {toolsOpen && (
+            <div
+              style={{
+                position: "absolute",
+                top: "100%",
+                left: 0,
+                background: "var(--color-surface)",
+                border: "1px solid var(--color-border)",
+                borderRadius: "6px",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                minWidth: "150px",
+                marginTop: "8px",
+                zIndex: 1000,
+              }}
+            >
+              {TOOLS.map((tool) => (
+                <button
+                  key={tool.id}
+                  onClick={() => {
+                    window.open(tool.url, "_blank");
+                    setToolsOpen(false);
+                  }}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    width: "100%",
+                    padding: "12px 16px",
+                    background: "none",
+                    border: "none",
+                    color: "var(--color-text)",
+                    cursor: "pointer",
+                    fontSize: "0.95rem",
+                    textAlign: "left",
+                    transition: "background-color 0.2s",
+                  }}
+                  onMouseEnter={(e) => e.target.style.backgroundColor = "var(--color-background)"}
+                  onMouseLeave={(e) => e.target.style.backgroundColor = "transparent"}
+                >
+                  <span>{tool.icon}</span>
+                  <span>{tool.label}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </nav>
       <ThemeToggle />
     </header>
