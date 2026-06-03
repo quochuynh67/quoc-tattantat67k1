@@ -7,6 +7,7 @@ import FoodSection from "../components/sections/FoodSection";
 import BeautyHealthSection from "../components/sections/BeautyHealthSection";
 import AgricultureSection from "../components/sections/AgricultureSection";
 import HealthSection from "../components/sections/HealthSection";
+import VlogsMapSection from "../components/sections/VlogsMapSection";
 import NewsletterCTA from "../components/sections/NewsletterCTA";
 import AgentChatDashboard from "../components/AgentChatDashboard";
 
@@ -20,6 +21,7 @@ const Home = () => {
       <BeautyHealthSection />
       <AgricultureSection />
       <HealthSection />
+      <VlogsMapSection />
       <NewsletterCTA />
       <AgentChatDashboard />
     </div>
