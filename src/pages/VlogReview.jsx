@@ -26,11 +26,14 @@ const VlogReview = () => {
   // Tab mode: single video ref; scroll mode: ref map keyed by vlog id
   const tabVideoRef = useRef(null);
   const scrollVideoRefs = useRef({});
+  const scrollSlideRefs = useRef([]);
+  const hasInteractedRef = useRef(false);
 
   const [vlogs, setVlogs] = useState([]);
   const [activeVlogIdx, setActiveVlogIdx] = useState(0);
   const [activeSpotByVlog, setActiveSpotByVlog] = useState({});
   const [playingByVlog, setPlayingByVlog] = useState({});
+  const [hasInteracted, setHasInteracted] = useState(false);
   const [newsItems, setNewsItems] = useState([]);
   const [post, setPost] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -76,6 +79,40 @@ const VlogReview = () => {
 
     return () => { isMounted = false; };
   }, [id]);
+
+  // Auto-play/pause scroll slides after first user interaction
+  useEffect(() => {
+    if (!hasInteracted || vlogs.length === 0 || viewMode !== "scroll") return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const idx = Number(entry.target.dataset.idx);
+          const vlog = vlogs[idx];
+          if (!vlog) return;
+          const video = scrollVideoRefs.current[vlog.id];
+          if (!video) return;
+          if (entry.isIntersecting && video.paused) {
+            video.play().catch(() => {});
+          } else if (!entry.isIntersecting && !video.paused) {
+            video.pause();
+          }
+        });
+      },
+      { threshold: 0.75 }
+    );
+
+    scrollSlideRefs.current.forEach((el) => { if (el) observer.observe(el); });
+    return () => observer.disconnect();
+  }, [hasInteracted, vlogs, viewMode]);
+
+  const handlePlayEvent = (vlogId, isScroll) => {
+    setPlayingByVlog((s) => ({ ...s, [vlogId]: true }));
+    if (isScroll && !hasInteractedRef.current) {
+      hasInteractedRef.current = true;
+      setHasInteracted(true);
+    }
+  };
 
   const activeVlog = vlogs[activeVlogIdx] ?? null;
 
@@ -142,7 +179,7 @@ const VlogReview = () => {
               {isHealth ? (
                 <Alert severity={post.severity || "info"} sx={{ fontSize: "1rem", borderRadius: 2 }}>{post.title}</Alert>
               ) : post.image ? (
-                <img src={post.image} alt={post.title} style={{ width: "100%", borderRadius: "12px", objectFit: "cover", maxHeight: 420 }} />
+                <img src={post.image} alt={post.title} style={{ width: "100%", height: "auto", display: "block" }} />
               ) : null}
             </Box>
             <Box className="vlog-info-panel">
@@ -216,12 +253,18 @@ const VlogReview = () => {
           </Box>
 
           <Box className="vlog-scroll-feed">
-            {vlogs.map((vlog) => {
+            {vlogs.map((vlog, idx) => {
               const news = newsForVlog(vlog);
               const activeTime = activeSpotByVlog[vlog.id] ?? vlog.locations?.[0]?.time;
+              const isPlaying = !!playingByVlog[vlog.id];
 
               return (
-                <section className="vlog-scroll-slide" key={vlog.id}>
+                <section
+                  className="vlog-scroll-slide"
+                  key={vlog.id}
+                  data-idx={idx}
+                  ref={(el) => { scrollSlideRefs.current[idx] = el; }}
+                >
                   <Box className="vlog-scroll-video-wrap">
                     <video
                       ref={(node) => { if (node) scrollVideoRefs.current[vlog.id] = node; }}
@@ -232,16 +275,18 @@ const VlogReview = () => {
                       controls
                       preload="metadata"
                       onTimeUpdate={() => handleTimeUpdate(vlog, true)}
-                      onPlay={() => setPlayingByVlog((s) => ({ ...s, [vlog.id]: true }))}
+                      onPlay={() => handlePlayEvent(vlog.id, true)}
                       onPause={() => setPlayingByVlog((s) => ({ ...s, [vlog.id]: false }))}
                       onEnded={() => setPlayingByVlog((s) => ({ ...s, [vlog.id]: false }))}
                     />
-                    <div className={`vlog-play-hint${playingByVlog[vlog.id] ? " hidden" : ""}`}>
-                      <div className="vlog-play-hint-btn">
-                        <PlayCircleIcon sx={{ fontSize: 36 }} />
+                    {!hasInteracted && (
+                      <div className={`vlog-play-hint${isPlaying ? " hidden" : ""}`}>
+                        <div className="vlog-play-hint-btn">
+                          <PlayCircleIcon sx={{ fontSize: 36 }} />
+                        </div>
+                        <span className="vlog-play-hint-label">Chạm để phát</span>
                       </div>
-                      <span className="vlog-play-hint-label">Chạm để phát</span>
-                    </div>
+                    )}
                   </Box>
 
                   <Box className="vlog-scroll-bottom-panel" sx={{ right: "14px" }}>
@@ -270,7 +315,15 @@ const VlogReview = () => {
                       </Box>
                     )}
                     <Box className="vlog-scroll-info">
-                      <Typography className="vlog-scroll-host">@{vlog.host}</Typography>
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                        <Typography className="vlog-scroll-host">@{vlog.host}</Typography>
+                        <div className={`vlog-equalizer${isPlaying ? " playing" : ""}`}>
+                          <div className="vlog-equalizer-bar" />
+                          <div className="vlog-equalizer-bar" />
+                          <div className="vlog-equalizer-bar" />
+                          <div className="vlog-equalizer-bar" />
+                        </div>
+                      </Box>
                       <Typography component="h2" className="vlog-scroll-title">{vlog.title}</Typography>
                       <Typography className="vlog-scroll-desc">{news?.excerpt || vlog.subtitle}</Typography>
                     </Box>
@@ -329,7 +382,15 @@ const VlogReview = () => {
             </div>
             <Box className="vlog-video-caption">
               <Typography className="vlog-host">{activeVlog.host}</Typography>
-              <Typography className="vlog-duration">{activeVlog.durationLabel}</Typography>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <div className={`vlog-equalizer${playingByVlog[activeVlog.id] ? " playing" : ""}`}>
+                  <div className="vlog-equalizer-bar" />
+                  <div className="vlog-equalizer-bar" />
+                  <div className="vlog-equalizer-bar" />
+                  <div className="vlog-equalizer-bar" />
+                </div>
+                <Typography className="vlog-duration">{activeVlog.durationLabel}</Typography>
+              </Box>
             </Box>
           </Box>
 

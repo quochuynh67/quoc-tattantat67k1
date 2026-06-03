@@ -304,7 +304,6 @@ html.dark .theme-toggle-button {
   background: #070807;
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-medium);
-  min-height: 620px;
   overflow: hidden;
   position: relative;
 }
@@ -581,6 +580,46 @@ html.dark .vlog-info-panel {
   width: 100%;
 }
 
+.vlog-equalizer {
+  align-items: flex-end;
+  display: flex;
+  gap: 3px;
+  height: 22px;
+  justify-content: center;
+  width: 22px;
+}
+
+.vlog-equalizer-bar {
+  background: #fff;
+  border-radius: 2px;
+  transform-origin: bottom;
+  transform: scaleY(0.2);
+  width: 4px;
+}
+
+.vlog-equalizer-bar:nth-child(1) { height: 14px; }
+.vlog-equalizer-bar:nth-child(2) { height: 22px; }
+.vlog-equalizer-bar:nth-child(3) { height: 10px; }
+.vlog-equalizer-bar:nth-child(4) { height: 18px; }
+
+.vlog-equalizer.playing .vlog-equalizer-bar:nth-child(1) {
+  animation: vlog-eq 0.55s ease-in-out 0s    infinite alternate;
+}
+.vlog-equalizer.playing .vlog-equalizer-bar:nth-child(2) {
+  animation: vlog-eq 0.80s ease-in-out 0.18s infinite alternate;
+}
+.vlog-equalizer.playing .vlog-equalizer-bar:nth-child(3) {
+  animation: vlog-eq 0.45s ease-in-out 0.07s infinite alternate;
+}
+.vlog-equalizer.playing .vlog-equalizer-bar:nth-child(4) {
+  animation: vlog-eq 0.70s ease-in-out 0.25s infinite alternate;
+}
+
+@keyframes vlog-eq {
+  from { transform: scaleY(0.15); }
+  to   { transform: scaleY(1); }
+}
+
 .vlog-play-hint {
   align-items: center;
   display: flex;
@@ -739,7 +778,18 @@ html.dark .vlog-info-panel {
 }
 
 .vlog-scroll-action.static {
-  color: #ff6b92 !important;
+  color: #fff !important;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.vlog-scroll-action.is-playing {
+  animation: vlog-action-glow 2s ease-in-out infinite;
+  border-color: rgba(130, 243, 207, 0.8) !important;
+}
+
+@keyframes vlog-action-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(130, 243, 207, 0.5); }
+  50%       { box-shadow: 0 0 0 10px rgba(130, 243, 207, 0); }
 }
 
 .vlog-scroll-action-label {
