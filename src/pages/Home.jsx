@@ -8,6 +8,7 @@ import BeautyHealthSection from "../components/sections/BeautyHealthSection";
 import AgricultureSection from "../components/sections/AgricultureSection";
 import HealthSection from "../components/sections/HealthSection";
 import NewsletterCTA from "../components/sections/NewsletterCTA";
+import AgentChatDashboard from "../components/AgentChatDashboard";
 
 const Home = () => {
   return (
@@ -20,6 +21,7 @@ const Home = () => {
       <AgricultureSection />
       <HealthSection />
       <NewsletterCTA />
+      <AgentChatDashboard />
     </div>
   );
 };
