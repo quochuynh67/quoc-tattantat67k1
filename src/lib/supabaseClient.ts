@@ -219,3 +219,43 @@ export const uploadVideoForVlog = async (file) => {
   const { data: publicUrlData } = supabase.storage.from('vlogs-posts').getPublicUrl(filePath);
   return publicUrlData.publicUrl;
 };
+
+// Upload entire HLS folder
+export const uploadHlsFolder = async (files, onProgress) => {
+  try {
+    await supabase.storage.createBucket('vlogs-posts', { public: true });
+  } catch (e) {
+    // ignore
+  }
+
+  const folderName = `hls-${Date.now()}`;
+  let m3u8Url = '';
+  let uploaded = 0;
+  const total = files.length;
+  const fileArray = Array.from(files);
+  const chunkSize = 5;
+
+  for (let i = 0; i < fileArray.length; i += chunkSize) {
+    const chunk = fileArray.slice(i, i + chunkSize);
+    await Promise.all(chunk.map(async (file) => {
+      const relativePath = file.webkitRelativePath || file.name;
+      const filePath = `videos/${folderName}/${relativePath}`;
+      const { error } = await supabase.storage.from('vlogs-posts').upload(filePath, file);
+      if (error) throw error;
+      
+      uploaded++;
+      if (onProgress) onProgress(uploaded, total);
+      
+      if (file.name.endsWith('.m3u8')) {
+        const { data: publicUrlData } = supabase.storage.from('vlogs-posts').getPublicUrl(filePath);
+        m3u8Url = publicUrlData.publicUrl;
+      }
+    }));
+  }
+
+  if (!m3u8Url) {
+    throw new Error('Không tìm thấy file .m3u8 trong thư mục!');
+  }
+
+  return m3u8Url;
+};

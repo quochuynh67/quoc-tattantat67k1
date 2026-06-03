@@ -5,7 +5,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import AddIcon from "@mui/icons-material/Add";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
-import { getVlogs, createVlog, updateVlog, deleteVlog, getSections, uploadVlogFile, supabase } from "../../lib/supabaseClient";
+import { getVlogs, createVlog, updateVlog, deleteVlog, getSections, uploadVlogFile, uploadHlsFolder, supabase } from "../../lib/supabaseClient";
 
 export default function AdminVlogs() {
   const [vlogs, setVlogs] = useState([]);
@@ -17,6 +17,7 @@ export default function AdminVlogs() {
   const [videoSourceMode, setVideoSourceMode] = useState("url");
   const [posterSourceMode, setPosterSourceMode] = useState("url");
   const [uploadingVideo, setUploadingVideo] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadingPoster, setUploadingPoster] = useState(false);
 
   // Vlog Form State
@@ -361,6 +362,9 @@ export default function AdminVlogs() {
                     <Button size="small" variant={videoSourceMode === "file" ? "contained" : "outlined"} onClick={() => setVideoSourceMode("file")} sx={{ textTransform: "none", borderRadius: 1.5 }}>
                       Tải File .mp4 Lên
                     </Button>
+                    <Button size="small" variant={videoSourceMode === "folder" ? "contained" : "outlined"} onClick={() => setVideoSourceMode("folder")} sx={{ textTransform: "none", borderRadius: 1.5 }}>
+                      Tải Thư Mục HLS (.m3u8)
+                    </Button>
                   </Box>
 
                   {videoSourceMode === "url" ? (
@@ -372,7 +376,7 @@ export default function AdminVlogs() {
                       variant="outlined" 
                       size="small" 
                     />
-                  ) : (
+                  ) : videoSourceMode === "file" ? (
                     <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
                       <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
                         <Button component="label" variant="contained" startIcon={<CloudUploadIcon />} size="small" disabled={uploadingVideo} sx={{ textTransform: "none", borderRadius: 1.5 }}>
@@ -404,6 +408,46 @@ export default function AdminVlogs() {
                         </Button>
                         <Typography variant="caption" sx={{ color: form.video_url ? "success.main" : "text.secondary", fontWeight: 600 }}>
                           {form.video_url ? "Đã tối ưu sang HLS!" : "Chưa chọn file"}
+                        </Typography>
+                      </Box>
+                      {form.video_url && (
+                        <TextField 
+                          value={form.video_url} 
+                          disabled 
+                          size="small" 
+                          variant="filled" 
+                          fullWidth 
+                          label="Target HLS Playback URL" 
+                          inputProps={{ style: { fontSize: "0.75rem", fontFamily: "monospace" } }} 
+                        />
+                      )}
+                    </Box>
+                  ) : (
+                    <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                        <Button component="label" variant="contained" startIcon={<CloudUploadIcon />} size="small" disabled={uploadingVideo} sx={{ textTransform: "none", borderRadius: 1.5 }}>
+                          {uploadingVideo ? `Đang xử lý... ${uploadProgress}%` : "Chọn Thư Mục"}
+                          <input type="file" webkitdirectory="" directory="" hidden onChange={async (e) => {
+                            const files = e.target.files;
+                            if (!files || files.length === 0) return;
+                            setUploadingVideo(true);
+                            setUploadProgress(0);
+                            try {
+                              const publicUrl = await uploadHlsFolder(files, (uploaded, total) => {
+                                setUploadProgress(Math.round((uploaded / total) * 100));
+                              });
+                              setForm((prev) => ({ ...prev, video_url: publicUrl }));
+                              alert("Đã upload thư mục HLS thành công!");
+                            } catch (err) {
+                              console.error(err);
+                              alert("Lỗi tải thư mục lên: " + err.message);
+                            } finally {
+                              setUploadingVideo(false);
+                            }
+                          }} />
+                        </Button>
+                        <Typography variant="caption" sx={{ color: form.video_url ? "success.main" : "text.secondary", fontWeight: 600 }}>
+                          {form.video_url ? "Đã upload HLS!" : "Chưa chọn thư mục"}
                         </Typography>
                       </Box>
                       {form.video_url && (
