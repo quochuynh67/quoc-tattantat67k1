@@ -175,15 +175,17 @@ const VlogReview = () => {
           <Button onClick={() => navigate(-1)} startIcon={<ArrowBackIcon />} className="vlog-back-link">
             Quay lại
           </Button>
-          <Box className="vlog-review-layout">
-            <Box className="vlog-video-panel">
-              {isHealth ? (
+          <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, mt: 2 }}>
+            {isHealth ? (
+              <Box sx={{ width: "66.666%" }}>
                 <Alert severity={post.severity || "info"} sx={{ fontSize: "1rem", borderRadius: 2 }}>{post.title}</Alert>
-              ) : post.image ? (
-                <img src={post.image} alt={post.title} style={{ width: "100%", height: "auto", display: "block" }} />
-              ) : null}
-            </Box>
-            <Box className="vlog-info-panel">
+              </Box>
+            ) : post.image ? (
+              <Box sx={{ width: "66.666%" }}>
+                <img src={post.image} alt={post.title} style={{ width: "100%", height: "auto", objectFit: "contain", display: "block", borderRadius: 8 }} />
+              </Box>
+            ) : null}
+            <Box sx={{ width: "100%", maxWidth: "800px" }}>
               <Typography variant="overline" className="vlog-kicker">{post.category || "Chi tiết"}</Typography>
               <Typography variant="h3" component="h1" className="vlog-title">{post.title}</Typography>
               {post.description ? (
