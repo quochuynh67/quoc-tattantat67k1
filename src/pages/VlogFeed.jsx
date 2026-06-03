@@ -17,6 +17,7 @@ const formatTime = (seconds) => {
 const VlogFeed = () => {
   const videoRefs = useRef({});
   const [activeSpotByVlog, setActiveSpotByVlog] = useState({});
+  const [playingByVlog, setPlayingByVlog] = useState({});
   const [vlogs, setVlogs] = useState([]);
   const [newsItems, setNewsItems] = useState([]);
 
@@ -89,7 +90,16 @@ const VlogFeed = () => {
                     controls
                     preload="metadata"
                     onTimeUpdate={() => handleTimeUpdate(vlog)}
+                    onPlay={() => setPlayingByVlog((s) => ({ ...s, [vlog.id]: true }))}
+                    onPause={() => setPlayingByVlog((s) => ({ ...s, [vlog.id]: false }))}
+                    onEnded={() => setPlayingByVlog((s) => ({ ...s, [vlog.id]: false }))}
                   />
+                  <div className={`vlog-play-hint${playingByVlog[vlog.id] ? " hidden" : ""}`}>
+                    <div className="vlog-play-hint-btn">
+                      <PlayCircleIcon sx={{ fontSize: 36 }} />
+                    </div>
+                    <span className="vlog-play-hint-label">Chạm để phát</span>
+                  </div>
                 </Box>
 
                 <Box className="vlog-scroll-actions" aria-label="Vlog actions">

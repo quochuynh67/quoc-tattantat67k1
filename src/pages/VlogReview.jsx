@@ -30,6 +30,7 @@ const VlogReview = () => {
   const [vlogs, setVlogs] = useState([]);
   const [activeVlogIdx, setActiveVlogIdx] = useState(0);
   const [activeSpotByVlog, setActiveSpotByVlog] = useState({});
+  const [playingByVlog, setPlayingByVlog] = useState({});
   const [newsItems, setNewsItems] = useState([]);
   const [post, setPost] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -231,7 +232,16 @@ const VlogReview = () => {
                       controls
                       preload="metadata"
                       onTimeUpdate={() => handleTimeUpdate(vlog, true)}
+                      onPlay={() => setPlayingByVlog((s) => ({ ...s, [vlog.id]: true }))}
+                      onPause={() => setPlayingByVlog((s) => ({ ...s, [vlog.id]: false }))}
+                      onEnded={() => setPlayingByVlog((s) => ({ ...s, [vlog.id]: false }))}
                     />
+                    <div className={`vlog-play-hint${playingByVlog[vlog.id] ? " hidden" : ""}`}>
+                      <div className="vlog-play-hint-btn">
+                        <PlayCircleIcon sx={{ fontSize: 36 }} />
+                      </div>
+                      <span className="vlog-play-hint-label">Chạm để phát</span>
+                    </div>
                   </Box>
 
                   <Box className="vlog-scroll-bottom-panel" sx={{ right: "14px" }}>
@@ -307,7 +317,16 @@ const VlogReview = () => {
               poster={activeVlog.poster}
               src={activeVlog.videoUrl}
               onTimeUpdate={() => handleTimeUpdate(activeVlog, false)}
+              onPlay={() => setPlayingByVlog((s) => ({ ...s, [activeVlog.id]: true }))}
+              onPause={() => setPlayingByVlog((s) => ({ ...s, [activeVlog.id]: false }))}
+              onEnded={() => setPlayingByVlog((s) => ({ ...s, [activeVlog.id]: false }))}
             />
+            <div className={`vlog-play-hint${playingByVlog[activeVlog.id] ? " hidden" : ""}`}>
+              <div className="vlog-play-hint-btn">
+                <PlayCircleIcon sx={{ fontSize: 36 }} />
+              </div>
+              <span className="vlog-play-hint-label">Chạm để phát</span>
+            </div>
             <Box className="vlog-video-caption">
               <Typography className="vlog-host">{activeVlog.host}</Typography>
               <Typography className="vlog-duration">{activeVlog.durationLabel}</Typography>
