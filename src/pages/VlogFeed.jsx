@@ -237,6 +237,16 @@ const VlogFeed = () => {
   }, [vlogs]);
 
   const currentVlog = vlogs[visibleVlogIdx] || null;
+
+  useEffect(() => {
+    if (isExpanded && currentVlog) {
+      const video = videoRefs.current[currentVlog.id];
+      if (video && video.paused) {
+        video.play().catch(() => {});
+      }
+    }
+  }, [isExpanded, currentVlog]);
+
   const currentLocations = currentVlog?.locations || [];
   const locationsWithCoords = currentLocations.filter((l) => l.latitude && l.longitude);
   const activeTime = currentVlog ? activeSpotByVlog[currentVlog.id] : undefined;
