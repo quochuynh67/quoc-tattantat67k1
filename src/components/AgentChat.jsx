@@ -128,7 +128,7 @@ export default function AgentChat({ section, variant = "float" }) {
         right: 24,
         zIndex: 1400,
         width: { xs: "calc(100vw - 32px)", sm: 350 },
-        height: { xs: "calc(100vh - 120px)", sm: "560px" },
+        height: 480,
         display: "flex",
         flexDirection: "column",
         borderRadius: 3,
