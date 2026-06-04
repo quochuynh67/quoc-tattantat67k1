@@ -54,6 +54,7 @@ export default function AdminVlogs() {
 
   // Filtering states
   const [searchTerm, setSearchTerm] = useState("");
+  const [filterPostId, setFilterPostId] = useState("");
 
   const fetchVlogs = async () => {
     try {
@@ -273,10 +274,12 @@ export default function AdminVlogs() {
   };
 
   // Filtered Vlogs List
-  const filteredVlogs = vlogs.filter((vlog) =>
-    (vlog.title || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (vlog.subtitle || "").toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredVlogs = vlogs.filter((vlog) => {
+    const matchesSearch = (vlog.title || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          (vlog.subtitle || "").toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesPost = filterPostId ? vlog.content_item_id === filterPostId : true;
+    return matchesSearch && matchesPost;
+  });
 
   return (
     <Box sx={{ p: 3 }}>
@@ -295,6 +298,24 @@ export default function AdminVlogs() {
           onChange={(e) => setSearchTerm(e.target.value)}
           sx={{ flexGrow: 1, minWidth: "220px" }}
         />
+        
+        <FormControl size="small" sx={{ minWidth: "200px" }}>
+          <InputLabel id="filter-post-label">Lọc theo bài viết</InputLabel>
+          <Select
+            labelId="filter-post-label"
+            label="Lọc theo bài viết"
+            value={filterPostId}
+            onChange={(e) => setFilterPostId(e.target.value)}
+          >
+            <MenuItem value=""><em>Tất cả</em></MenuItem>
+            {posts.map((p) => (
+              <MenuItem key={p.id} value={p.id}>
+                {p.title}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
         <Button
           variant="contained"
           onClick={() => { setEditing(null); resetForm(); setOpen(true); }}
