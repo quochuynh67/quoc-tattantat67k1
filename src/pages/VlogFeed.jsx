@@ -146,6 +146,9 @@ const VlogFeed = () => {
   const hasInteractedRef = useRef(hasInteracted);
   const feedRef = useRef(null);
   const manuallyPausedRef = useRef({});
+  // Resets every mount — gates ALL programmatic play() calls.
+  // Prevents autoplay triggered by cached context state on re-enter.
+  const sessionInteractedRef = useRef(false);
   const isDraggingRef = useRef(false);
   const dragStartRef = useRef({ y: 0, h: 0 });
   const location = useLocation();
@@ -182,6 +185,8 @@ const VlogFeed = () => {
   }, [scrollTopRef]);
 
   const playVideo = useCallback((vlogId) => {
+    // Block programmatic autoplay until user has interacted in this mount cycle
+    if (!sessionInteractedRef.current) return;
     const video = videoRefs.current[vlogId];
     if (!video) return;
     video.play().catch(() => {});
@@ -218,6 +223,7 @@ const VlogFeed = () => {
   }, [isActive, pauseVideo, playVideo, vlogs]);
 
   const handlePlay = useCallback((vlogId) => {
+    sessionInteractedRef.current = true; // Unlock autoplay for scroll/transitions
     setPlayingByVlog((s) => ({ ...s, [vlogId]: true }));
     if (!hasInteractedRef.current) {
       hasInteractedRef.current = true;
@@ -231,6 +237,7 @@ const VlogFeed = () => {
 
   const handleVideoToggle = useCallback((vlogId, action) => {
     if (action === "play") {
+      sessionInteractedRef.current = true; // User explicitly tapped play
       manuallyPausedRef.current[vlogId] = false;
       playVideo(vlogId);
       handlePlay(vlogId);
@@ -402,10 +409,10 @@ const VlogFeed = () => {
                         className="vlog-scroll-video"
                         src={vlog.videoUrl}
                         poster={vlog.poster}
-                        autoPlay={isVisible}
                         playsInline
                         preload={preloadMode}
                         onCanPlay={() => {
+                          // Only autoplay after user has interacted in this mount
                           if (isVisible && !manuallyPausedRef.current[vlog.id]) playVideo(vlog.id);
                         }}
                         onTimeUpdate={() => handleTimeUpdate(vlog)}

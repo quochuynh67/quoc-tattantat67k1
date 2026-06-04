@@ -175,6 +175,7 @@ export async function getVlogReviews() {
     .from("vlog_reviews")
     .select("*, vlog_locations(*)")
     .eq("is_published", true)
+    .order("created_at", { ascending: false })
     .order("display_order", { ascending: true })
     .order("time_seconds", { referencedTable: "vlog_locations", ascending: true });
 
@@ -199,6 +200,7 @@ export async function getVlogReviewForPost(contentItemId: string) {
     .select("*, vlog_locations(*)")
     .eq("content_item_id", contentItemId)
     .eq("is_published", true)
+    .order("created_at", { ascending: false })
     .order("display_order", { ascending: true })
     .order("time_seconds", { referencedTable: "vlog_locations", ascending: true });
 

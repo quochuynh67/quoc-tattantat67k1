@@ -109,7 +109,8 @@ export const getVlogByPost = async (postId) => {
 export const getVlogs = async () => {
   const { data, error } = await supabase
     .from('vlog_reviews')
-    .select('*, vlog_locations(*)');
+    .select('*, vlog_locations(*)')
+    .order('updated_at', { ascending: false });
   if (error) throw error;
   return data || [];
 };
