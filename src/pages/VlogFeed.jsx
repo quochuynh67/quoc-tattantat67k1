@@ -1,12 +1,17 @@
 // src/pages/VlogFeed.jsx
-import React, { useCallback, useEffect, useMemo, useRef } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Link as RouterLink, useLocation } from "react-router-dom";
 import { Box, Button, Typography } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import PlaceIcon from "@mui/icons-material/Place";
-import PlayCircleIcon from "@mui/icons-material/PlayCircle";
+import PlayArrowIcon from "@mui/icons-material/PlayArrow";
+import PauseIcon from "@mui/icons-material/Pause";
+import VolumeUpIcon from "@mui/icons-material/VolumeUp";
+import VolumeOffIcon from "@mui/icons-material/VolumeOff";
+import FullscreenIcon from "@mui/icons-material/Fullscreen";
+import ArticleIcon from "@mui/icons-material/Article";
 import MapIcon from "@mui/icons-material/Map";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
+import PlayCircleIcon from "@mui/icons-material/PlayCircle";
 import { MapContainer, TileLayer, Polyline, CircleMarker, Marker, Popup, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
@@ -27,36 +32,16 @@ const createPreviewIcon = (number, imageUrl, isActive, isVisited) => {
   const size = isActive ? 24 : isVisited ? 20 : 16;
   const fontSize = isActive ? 12 : isVisited ? 11 : 9;
   const color = "#fff";
-
   const imgSize = isActive ? 48 : 36;
   const width = Math.max(imgSize, size);
   const height = imgSize + 6 + size;
 
   return L.divIcon({
-    html: `<div style="display: flex; flex-direction: column; align-items: center; justify-content: flex-end; width: ${width}px; height: ${height}px;">
-      <div style="
-        width: ${imgSize}px; height: ${imgSize}px; border-radius: 8px; overflow: hidden; 
-        border: 2px solid ${borderColor}; margin-bottom: 6px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.4); background: #1a1c24;
-      ">
-        <img src="${imageUrl}" style="width: 100%; height: 100%; object-fit: cover; display: block;" />
+    html: `<div style="display:flex;flex-direction:column;align-items:center;justify-content:flex-end;width:${width}px;height:${height}px;">
+      <div style="width:${imgSize}px;height:${imgSize}px;border-radius:8px;overflow:hidden;border:2px solid ${borderColor};margin-bottom:6px;box-shadow:0 4px 12px rgba(0,0,0,0.4);background:#1a1c24;">
+        <img src="${imageUrl}" style="width:100%;height:100%;object-fit:cover;display:block;" />
       </div>
-      <div style="
-        background-color: ${bgColor};
-        border: ${isActive ? 3 : 2}px solid ${borderColor};
-        border-radius: 50%;
-        width: ${size}px;
-        height: ${size}px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: ${color};
-        font-size: ${fontSize}px;
-        font-weight: bold;
-        line-height: 1;
-        box-sizing: border-box;
-        flex-shrink: 0;
-      ">${number}</div>
+      <div style="background-color:${bgColor};border:${isActive ? 3 : 2}px solid ${borderColor};border-radius:50%;width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;color:${color};font-size:${fontSize}px;font-weight:bold;line-height:1;box-sizing:border-box;flex-shrink:0;">${number}</div>
     </div>`,
     className: "",
     iconSize: [width, height],
@@ -73,19 +58,16 @@ const Equalizer = ({ playing }) => (
   </div>
 );
 
-/* ── Map auto-fit helper ─────────────────────────────────────────────── */
 const FitBounds = ({ locations }) => {
   const map = useMap();
   useEffect(() => {
     const pts = locations.filter((l) => l.latitude && l.longitude);
     if (pts.length === 0) return;
-    const bounds = pts.map((l) => [l.latitude, l.longitude]);
-    map.fitBounds(bounds, { padding: [32, 32], maxZoom: 15 });
+    map.fitBounds(pts.map((l) => [l.latitude, l.longitude]), { padding: [32, 32], maxZoom: 15 });
   }, [locations, map]);
   return null;
 };
 
-/* ── Highlight active marker ─────────────────────────────────────────── */
 const ActiveMarkerHighlight = ({ location }) => {
   const map = useMap();
   useEffect(() => {
@@ -95,18 +77,164 @@ const ActiveMarkerHighlight = ({ location }) => {
   return null;
 };
 
-/* ── Map resizer for bottom sheet ─────────────────────────────────────── */
 const MapResizer = () => {
   const map = useMap();
   useEffect(() => {
-    const observer = new ResizeObserver(() => {
-      map.invalidateSize();
-    });
+    const observer = new ResizeObserver(() => map.invalidateSize());
     observer.observe(map.getContainer());
     return () => observer.disconnect();
   }, [map]);
   return null;
 };
+
+/* ── Custom video controls overlay ────────────────────────────────────── */
+const VideoControls = ({ vlogId, videoRefs, isPlaying, onPlay, onPause, sheetHeight }) => {
+  const [progress, setProgress] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [muted, setMuted] = useState(false);
+  const [showControls, setShowControls] = useState(false);
+  const hideTimer = useRef(null);
+  const progressRef = useRef(null);
+
+  const video = videoRefs.current[vlogId];
+
+  // Sync muted state from video element
+  useEffect(() => {
+    const v = videoRefs.current[vlogId];
+    if (!v) return;
+    setMuted(v.muted);
+    const handleMute = () => setMuted(v.muted);
+    v.addEventListener("volumechange", handleMute);
+    return () => v.removeEventListener("volumechange", handleMute);
+  }, [vlogId, videoRefs]);
+
+  // Track progress
+  useEffect(() => {
+    const v = videoRefs.current[vlogId];
+    if (!v) return;
+    const onTime = () => {
+      setProgress(v.duration ? v.currentTime / v.duration : 0);
+    };
+    const onMeta = () => setDuration(v.duration || 0);
+    v.addEventListener("timeupdate", onTime);
+    v.addEventListener("loadedmetadata", onMeta);
+    if (v.duration) setDuration(v.duration);
+    return () => {
+      v.removeEventListener("timeupdate", onTime);
+      v.removeEventListener("loadedmetadata", onMeta);
+    };
+  }, [vlogId, videoRefs]);
+
+  const showThenHide = () => {
+    setShowControls(true);
+    clearTimeout(hideTimer.current);
+    hideTimer.current = setTimeout(() => setShowControls(false), 3000);
+  };
+
+  const handleTap = () => {
+    const v = videoRefs.current[vlogId];
+    if (!v) return;
+    if (v.paused) {
+      v.play().catch(() => {});
+      onPlay(vlogId);
+    } else {
+      v.pause();
+      onPause(vlogId);
+    }
+    showThenHide();
+  };
+
+  const handleMute = (e) => {
+    e.stopPropagation();
+    const v = videoRefs.current[vlogId];
+    if (!v) return;
+    v.muted = !v.muted;
+    setMuted(v.muted);
+    showThenHide();
+  };
+
+  const handleFullscreen = (e) => {
+    e.stopPropagation();
+    const v = videoRefs.current[vlogId];
+    if (!v) return;
+    if (v.requestFullscreen) v.requestFullscreen();
+    else if (v.webkitEnterFullscreen) v.webkitEnterFullscreen(); // iOS Safari
+    showThenHide();
+  };
+
+  const handleScrub = (e) => {
+    e.stopPropagation();
+    const v = videoRefs.current[vlogId];
+    const bar = progressRef.current;
+    if (!v || !bar) return;
+    const rect = bar.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    v.currentTime = pct * v.duration;
+    setProgress(pct);
+    showThenHide();
+  };
+
+  const currentSec = Math.floor(progress * duration);
+
+  return (
+    <div
+      className="vlog-custom-controls-overlay"
+      onClick={handleTap}
+    >
+      {/* Big center play/pause flash */}
+      <div className={`vlog-center-flash ${showControls ? (isPlaying ? "show-pause" : "show-play") : ""}`}>
+        {isPlaying ? <PauseIcon sx={{ fontSize: 56 }} /> : <PlayArrowIcon sx={{ fontSize: 56 }} />}
+      </div>
+
+      {/* Bottom controls bar */}
+      <div className={`vlog-controls-bar ${showControls ? "visible" : ""}`} style={{ bottom: `${sheetHeight + 12}px` }}>
+        {/* Progress scrubber */}
+        <div
+          ref={progressRef}
+          className="vlog-progress-track"
+          onMouseDown={handleScrub}
+          onTouchStart={handleScrub}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="vlog-progress-fill" style={{ width: `${progress * 100}%` }} />
+          <div className="vlog-progress-thumb" style={{ left: `${progress * 100}%` }} />
+        </div>
+
+        {/* Controls row */}
+        <div className="vlog-controls-row" onClick={(e) => e.stopPropagation()}>
+          {/* Play/pause */}
+          <button
+            className="vlog-ctrl-btn"
+            onClick={handleTap}
+            aria-label={isPlaying ? "Tạm dừng" : "Phát"}
+          >
+            {isPlaying ? <PauseIcon sx={{ fontSize: 22 }} /> : <PlayArrowIcon sx={{ fontSize: 22 }} />}
+          </button>
+
+          {/* Time */}
+          <span className="vlog-ctrl-time">
+            {formatTime(currentSec)} / {formatTime(Math.floor(duration))}
+          </span>
+
+          <span style={{ flex: 1 }} />
+
+          {/* Mute */}
+          <button className="vlog-ctrl-btn" onClick={handleMute} aria-label={muted ? "Bật tiếng" : "Tắt tiếng"}>
+            {muted ? <VolumeOffIcon sx={{ fontSize: 20 }} /> : <VolumeUpIcon sx={{ fontSize: 20 }} />}
+          </button>
+
+          {/* Fullscreen */}
+          <button className="vlog-ctrl-btn" onClick={handleFullscreen} aria-label="Toàn màn hình">
+            <FullscreenIcon sx={{ fontSize: 22 }} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ─────────────────────────────────────────────────────────────────────── */
 
 const VlogFeed = () => {
   const {
@@ -127,7 +255,6 @@ const VlogFeed = () => {
     scrollTopRef,
   } = useVlogCache();
 
-  // Derive actual sheet height, defaulting to collapsed
   const sheetHeight = cachedSheetHeight ?? SHEET_COLLAPSED;
   const setSheetHeight = setCachedSheetHeight;
 
@@ -140,36 +267,29 @@ const VlogFeed = () => {
   const location = useLocation();
   const isActive = location.pathname === "/vlogs";
 
-  // Load data once (no-op if already cached)
-  useEffect(() => {
-    ensureLoaded();
-  }, []);
+  useEffect(() => { ensureLoaded(); }, []);
 
-  // Pause all videos when navigating away (VlogFeed stays mounted but hidden)
+  // Pause all videos when navigating away
   useEffect(() => {
     if (!isActive) {
-      Object.values(videoRefs.current).forEach((video) => {
-        if (video && !video.paused) video.pause();
-      });
+      Object.values(videoRefs.current).forEach((v) => { if (v && !v.paused) v.pause(); });
     }
   }, [isActive]);
 
-  // Restore scroll position on mount
+  // Restore scroll position
   useEffect(() => {
     if (feedRef.current && scrollTopRef.current > 0) {
       feedRef.current.scrollTop = scrollTopRef.current;
     }
-  }, [vlogs]); // run after vlogs render
+  }, [vlogs]);
 
-  // Persist scroll position on scroll
   const handleFeedScroll = useCallback((e) => {
     scrollTopRef.current = e.currentTarget.scrollTop;
   }, [scrollTopRef]);
 
-  // Auto-play/pause via IntersectionObserver after first user interaction
+  // Auto-play/pause via IntersectionObserver
   useEffect(() => {
     if (!hasInteracted || !vlogs || vlogs.length === 0) return;
-
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -187,44 +307,38 @@ const VlogFeed = () => {
       },
       { threshold: 0.75 }
     );
-
     slideRefs.current.forEach((el) => { if (el) observer.observe(el); });
     return () => observer.disconnect();
   }, [hasInteracted, vlogs]);
 
-  const handlePlay = (vlogId) => {
+  const handlePlay = useCallback((vlogId) => {
     setPlayingByVlog((s) => ({ ...s, [vlogId]: true }));
     if (!hasInteractedRef.current) {
       hasInteractedRef.current = true;
       setHasInteracted(true);
     }
-  };
+  }, [setPlayingByVlog, setHasInteracted]);
 
-  const handlePauseOrEnd = (vlogId) => {
+  const handlePauseOrEnd = useCallback((vlogId) => {
     setPlayingByVlog((s) => ({ ...s, [vlogId]: false }));
-  };
+  }, [setPlayingByVlog]);
 
   const seekToSpot = (vlogId, location) => {
     const video = videoRefs.current[vlogId];
-    if (video) {
-      video.currentTime = location.time;
-      video.play().catch(() => {});
-    }
+    if (video) { video.currentTime = location.time; video.play().catch(() => {}); }
     setActiveSpotByVlog((current) => ({ ...current, [vlogId]: location.time }));
   };
 
   const handleTimeUpdate = (vlog) => {
     const video = videoRefs.current[vlog.id];
     const currentTime = video?.currentTime || 0;
-    const activeLocation = [...vlog.locations]
-      .reverse()
-      .find((location) => currentTime >= location.time);
+    const activeLocation = [...vlog.locations].reverse().find((loc) => currentTime >= loc.time);
     if (activeLocation && activeSpotByVlog[vlog.id] !== activeLocation.time) {
       setActiveSpotByVlog((current) => ({ ...current, [vlog.id]: activeLocation.time }));
     }
   };
 
-  /* ── Bottom-sheet drag logic ──────────────────────────────────────── */
+  /* ── Bottom-sheet drag ────────────────────────────────── */
   const handleDragStart = useCallback((clientY) => {
     isDraggingRef.current = true;
     dragStartRef.current = { y: clientY, h: sheetHeight };
@@ -249,15 +363,13 @@ const VlogFeed = () => {
 
   const isExpanded = sheetHeight >= SHEET_EXPANDED;
 
-  /* ── Derive current visible vlog ──── */
+  /* ── Visible vlog tracker ────────────────────────────── */
   useEffect(() => {
     if (!vlogs || vlogs.length === 0) return;
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            setVisibleVlogIdx(Number(entry.target.dataset.idx));
-          }
+          if (entry.isIntersecting) setVisibleVlogIdx(Number(entry.target.dataset.idx));
         });
       },
       { threshold: 0.6 }
@@ -271,9 +383,7 @@ const VlogFeed = () => {
   useEffect(() => {
     if (isExpanded && currentVlog) {
       const video = videoRefs.current[currentVlog.id];
-      if (video && video.paused) {
-        video.play().catch(() => {});
-      }
+      if (video && video.paused) video.play().catch(() => {});
     }
   }, [isExpanded, currentVlog]);
 
@@ -282,12 +392,9 @@ const VlogFeed = () => {
   const activeTime = currentVlog ? activeSpotByVlog[currentVlog.id] : undefined;
   const activeLocation = currentLocations.find((l) => l.time === activeTime);
 
-  const activeIdx = activeLocation
-    ? locationsWithCoords.findIndex((l) => l.time === activeTime)
-    : -1;
+  const activeIdx = activeLocation ? locationsWithCoords.findIndex((l) => l.time === activeTime) : -1;
   const traversedCoords = activeIdx >= 0
-    ? locationsWithCoords.slice(0, activeIdx + 1).map((l) => [l.latitude, l.longitude])
-    : [];
+    ? locationsWithCoords.slice(0, activeIdx + 1).map((l) => [l.latitude, l.longitude]) : [];
   const upcomingCoords = activeIdx >= 0
     ? locationsWithCoords.slice(activeIdx).map((l) => [l.latitude, l.longitude])
     : locationsWithCoords.map((l) => [l.latitude, l.longitude]);
@@ -330,21 +437,33 @@ const VlogFeed = () => {
                 ref={(el) => { slideRefs.current[idx] = el; }}
               >
                 <Box className="vlog-scroll-video-wrap">
+                  {/* Video — NO native controls */}
                   <video
                     ref={(node) => { if (node) videoRefs.current[vlog.id] = node; }}
                     className="vlog-scroll-video"
                     src={vlog.videoUrl}
                     poster={vlog.poster}
                     playsInline
-                    controls
                     preload="metadata"
                     onTimeUpdate={() => handleTimeUpdate(vlog)}
                     onPlay={() => handlePlay(vlog.id)}
                     onPause={() => handlePauseOrEnd(vlog.id)}
                     onEnded={() => handlePauseOrEnd(vlog.id)}
                   />
+
+                  {/* Custom controls overlay */}
+                  <VideoControls
+                    vlogId={vlog.id}
+                    videoRefs={videoRefs}
+                    isPlaying={isPlaying}
+                    onPlay={handlePlay}
+                    onPause={handlePauseOrEnd}
+                    sheetHeight={sheetHeight}
+                  />
+
+                  {/* First-time tap hint */}
                   {!hasInteracted && (
-                    <div className={`vlog-play-hint${isPlaying ? " hidden" : ""}`}>
+                    <div className={`vlog-play-hint${isPlaying ? " hidden" : ""}`} style={{ pointerEvents: "none" }}>
                       <div className="vlog-play-hint-btn">
                         <PlayCircleIcon sx={{ fontSize: 36 }} />
                       </div>
@@ -359,11 +478,11 @@ const VlogFeed = () => {
                     component={RouterLink}
                     to={`/post-detail/${vlog.newsId}`}
                     className="vlog-scroll-action"
-                    aria-label="Xem chi tiết review"
+                    aria-label="Xem chi tiết"
                   >
-                    <PlayCircleIcon />
+                    <ArticleIcon />
                   </Button>
-                  <span className="vlog-scroll-action-label">Review</span>
+                  <span className="vlog-scroll-action-label">Chi tiết</span>
                   <span className={`vlog-scroll-action static${isPlaying ? " is-playing" : ""}`}>
                     <Equalizer playing={isPlaying} />
                   </span>
@@ -373,12 +492,8 @@ const VlogFeed = () => {
                 <Box className="vlog-scroll-bottom-panel" sx={{ bottom: `${sheetHeight + 8}px` }}>
                   <Box className="vlog-scroll-info">
                     <Typography className="vlog-scroll-host">@{vlog.host}</Typography>
-                    <Typography component="h1" className="vlog-scroll-title">
-                      {vlog.title}
-                    </Typography>
-                    <Typography className="vlog-scroll-desc">
-                      {news?.excerpt || vlog.subtitle}
-                    </Typography>
+                    <Typography component="h1" className="vlog-scroll-title">{vlog.title}</Typography>
+                    <Typography className="vlog-scroll-desc">{news?.excerpt || vlog.subtitle}</Typography>
                   </Box>
                 </Box>
               </section>
@@ -386,7 +501,7 @@ const VlogFeed = () => {
           })}
         </Box>
 
-        {/* ── BOTTOM SHEET ────────────────────────────────────────── */}
+        {/* ── BOTTOM SHEET ──────────────────────────────────────── */}
         {currentVlog && (
           <Box
             className="vlog-bottom-sheet"
@@ -395,7 +510,6 @@ const VlogFeed = () => {
               transition: isDraggingRef.current ? "none" : "height 0.3s cubic-bezier(.4,0,.2,1)",
             }}
           >
-            {/* Drag handle */}
             <Box
               className="vlog-sheet-handle"
               onTouchStart={(e) => handleDragStart(e.touches[0].clientY)}
@@ -413,19 +527,13 @@ const VlogFeed = () => {
                 <Typography sx={{ fontSize: "0.72rem", fontWeight: 900, color: "#82f3cf", textTransform: "uppercase", letterSpacing: "0.06em" }}>
                   Lộ trình
                 </Typography>
-                <KeyboardArrowDownIcon
-                  sx={{
-                    fontSize: 18,
-                    color: "rgba(255,255,255,0.6)",
-                    transition: "transform 0.3s",
-                    transform: isExpanded ? "rotate(0deg)" : "rotate(180deg)",
-                    ml: "auto",
-                  }}
-                />
+                <KeyboardArrowDownIcon sx={{
+                  fontSize: 18, color: "rgba(255,255,255,0.6)", transition: "transform 0.3s",
+                  transform: isExpanded ? "rotate(0deg)" : "rotate(180deg)", ml: "auto",
+                }} />
               </Box>
             </Box>
 
-            {/* Timeline spots row */}
             {currentLocations.length > 0 && (
               <Box className="vlog-sheet-timeline">
                 <Box className="vlog-sheet-timeline-row">
@@ -447,16 +555,12 @@ const VlogFeed = () => {
               </Box>
             )}
 
-            {/* Map */}
             {isExpanded && locationsWithCoords.length > 0 && (
               <Box className="vlog-sheet-map">
                 <MapContainer
                   center={[locationsWithCoords[0].latitude, locationsWithCoords[0].longitude]}
-                  zoom={14}
-                  scrollWheelZoom={false}
-                  dragging={true}
-                  zoomControl={false}
-                  attributionControl={false}
+                  zoom={14} scrollWheelZoom={false} dragging={true}
+                  zoomControl={false} attributionControl={false}
                   style={{ width: "100%", height: "100%", borderRadius: "12px" }}
                 >
                   <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
@@ -465,40 +569,19 @@ const VlogFeed = () => {
                   {activeLocation?.latitude && <ActiveMarkerHighlight location={activeLocation} />}
 
                   {upcomingCoords.length >= 2 && (
-                    <Polyline
-                      positions={upcomingCoords}
-                      pathOptions={{
-                        color: "#1976d2",
-                        weight: 3,
-                        opacity: 0.5,
-                        dashArray: "6, 8",
-                        lineCap: "round",
-                      }}
-                    />
+                    <Polyline positions={upcomingCoords} pathOptions={{ color: "#1976d2", weight: 3, opacity: 0.5, dashArray: "6, 8", lineCap: "round" }} />
                   )}
-
                   {traversedCoords.length >= 2 && (
-                    <Polyline
-                      positions={traversedCoords}
-                      pathOptions={{
-                        color: "#1976d2",
-                        weight: 4,
-                        opacity: 0.9,
-                        lineCap: "round",
-                        lineJoin: "round",
-                      }}
-                    />
+                    <Polyline positions={traversedCoords} pathOptions={{ color: "#1976d2", weight: 4, opacity: 0.9, lineCap: "round", lineJoin: "round" }} />
                   )}
 
                   {locationsWithCoords.map((loc, i) => {
-                    const isActive = activeTime === loc.time;
+                    const isActiveMarker = activeTime === loc.time;
                     const isVisited = activeIdx >= 0 && i <= activeIdx;
                     return (
-                      <Marker
-                        key={`${loc.time}-${i}`}
-                        position={[loc.latitude, loc.longitude]}
-                        icon={createPreviewIcon(i + 1, loc.image, isActive, isVisited)}
-                        zIndexOffset={isActive ? 1000 : isVisited ? 500 : 0}
+                      <Marker key={`${loc.time}-${i}`} position={[loc.latitude, loc.longitude]}
+                        icon={createPreviewIcon(i + 1, loc.image, isActiveMarker, isVisited)}
+                        zIndexOffset={isActiveMarker ? 1000 : isVisited ? 500 : 0}
                       >
                         <Popup>
                           <div style={{ textAlign: "center", minWidth: 140 }}>
@@ -512,17 +595,8 @@ const VlogFeed = () => {
                   })}
 
                   {activeLocation?.latitude && activeLocation?.longitude && (
-                    <CircleMarker
-                      center={[activeLocation.latitude, activeLocation.longitude]}
-                      radius={20}
-                      pathOptions={{
-                        color: "#1976d2",
-                        fillColor: "#1976d2",
-                        fillOpacity: 0.18,
-                        weight: 2,
-                        opacity: 0.5,
-                        className: "vlog-map-pulse",
-                      }}
+                    <CircleMarker center={[activeLocation.latitude, activeLocation.longitude]} radius={20}
+                      pathOptions={{ color: "#1976d2", fillColor: "#1976d2", fillOpacity: 0.18, weight: 2, opacity: 0.5, className: "vlog-map-pulse" }}
                     />
                   )}
                 </MapContainer>
