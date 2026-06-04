@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /admin-login
+
+Sitemap: https://tattantat67k1.web.app/sitemap.xml

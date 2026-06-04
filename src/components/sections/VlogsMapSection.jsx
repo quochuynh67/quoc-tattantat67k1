@@ -24,10 +24,10 @@ const getVlogDistance = (vlog, centerLat, centerLon) => {
   return Math.min(...coords.map((l) => getDistance(centerLat, centerLon, l.latitude, l.longitude)));
 };
 
-const createThumbIcon = (imageUrl) => {
+const createThumbIcon = (imageUrl, altText = "") => {
   return L.divIcon({
     html: `<div style="width: 36px; height: 36px; border-radius: 8px; overflow: hidden; border: 2px solid #fff; box-shadow: 0 4px 8px rgba(0,0,0,0.4); background: #1a1c24;">
-      <img src="${imageUrl}" style="width: 100%; height: 100%; object-fit: cover; display: block;" />
+      <img src="${imageUrl}" alt="${altText.replace(/"/g, "&quot;")}" style="width: 100%; height: 100%; object-fit: cover; display: block;" />
     </div>`,
     className: "",
     iconSize: [36, 36],
@@ -185,7 +185,7 @@ const VlogsMapSection = () => {
                 <Marker
                   key={`${vlog.id}-${loc.time}-${i}`}
                   position={[loc.latitude, loc.longitude]}
-                  icon={createThumbIcon(loc.image || vlog.poster)}
+                  icon={createThumbIcon(loc.image || vlog.poster, loc.name || vlog.title)}
                 >
                   <Popup>
                     <div style={{ textAlign: "center", minWidth: 140 }}>

@@ -25,7 +25,7 @@ const formatTime = (seconds) => {
   return `${minutes}:${secs}`;
 };
 
-const createPreviewIcon = (number, imageUrl, isActive, isVisited) => {
+const createPreviewIcon = (number, imageUrl, isActive, isVisited, altText = "") => {
   const bgColor = isActive ? "#1976d2" : isVisited ? "rgba(25,118,210,0.85)" : "rgba(25,118,210,0.2)";
   const borderColor = isActive ? "#fff" : isVisited ? "#1976d2" : "rgba(25,118,210,0.4)";
   const size = isActive ? 24 : isVisited ? 20 : 16;
@@ -38,7 +38,7 @@ const createPreviewIcon = (number, imageUrl, isActive, isVisited) => {
   return L.divIcon({
     html: `<div style="display:flex;flex-direction:column;align-items:center;justify-content:flex-end;width:${width}px;height:${height}px;">
       <div style="width:${imgSize}px;height:${imgSize}px;border-radius:8px;overflow:hidden;border:2px solid ${borderColor};margin-bottom:6px;box-shadow:0 4px 12px rgba(0,0,0,0.4);background:#1a1c24;">
-        <img src="${imageUrl}" style="width:100%;height:100%;object-fit:cover;display:block;" />
+        <img src="${imageUrl}" alt="${altText.replace(/"/g, "&quot;")}" style="width:100%;height:100%;object-fit:cover;display:block;" />
       </div>
       <div style="background-color:${bgColor};border:${isActive ? 3 : 2}px solid ${borderColor};border-radius:50%;width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;color:${color};font-size:${fontSize}px;font-weight:bold;line-height:1;box-sizing:border-box;flex-shrink:0;">${number}</div>
     </div>`,
@@ -545,7 +545,7 @@ const VlogFeed = () => {
                     const isVisited = activeIdx >= 0 && i <= activeIdx;
                     return (
                       <Marker key={`${loc.time}-${i}`} position={[loc.latitude, loc.longitude]}
-                        icon={createPreviewIcon(i + 1, loc.image, isActiveMarker, isVisited)}
+                        icon={createPreviewIcon(i + 1, loc.image, isActiveMarker, isVisited, loc.name)}
                         zIndexOffset={isActiveMarker ? 1000 : isVisited ? 500 : 0}
                       >
                         <Popup>

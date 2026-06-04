@@ -23,7 +23,7 @@ const formatTime = (seconds) => {
   return `${m}:${s}`;
 };
 
-const createPreviewIcon = (number, imageUrl, isActive, isVisited) => {
+const createPreviewIcon = (number, imageUrl, isActive, isVisited, altText = "") => {
   const bgColor = isActive ? "#1976d2" : isVisited ? "rgba(25,118,210,0.85)" : "rgba(25,118,210,0.2)";
   const borderColor = isActive ? "#fff" : isVisited ? "#1976d2" : "rgba(25,118,210,0.4)";
   const size = isActive ? 24 : isVisited ? 20 : 16;
@@ -41,7 +41,7 @@ const createPreviewIcon = (number, imageUrl, isActive, isVisited) => {
         border: 2px solid ${borderColor}; margin-bottom: 6px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.4); background: #1a1c24;
       ">
-        <img src="${imageUrl}" style="width: 100%; height: 100%; object-fit: cover; display: block;" />
+        <img src="${imageUrl}" alt="${altText.replace(/"/g, "&quot;")}" style="width: 100%; height: 100%; object-fit: cover; display: block;" />
       </div>
       <div style="
         background-color: ${bgColor};
@@ -150,7 +150,7 @@ const VlogMap = ({ vlog, activeTime }) => {
             <Marker
               key={`${loc.time}-${i}`}
               position={[loc.latitude, loc.longitude]}
-              icon={createPreviewIcon(i + 1, loc.image, isActive, isVisited)}
+              icon={createPreviewIcon(i + 1, loc.image, isActive, isVisited, loc.name)}
               zIndexOffset={isActive ? 1000 : isVisited ? 500 : 0}
             >
               <Popup>
