@@ -4,17 +4,18 @@ import { BrowserRouter as Router, Routes, Route, useLocation } from "react-route
 import { HelmetProvider } from "react-helmet-async";
 import { ThemeProvider } from "./hooks/useTheme";
 import { AdminAuthProvider } from "./contexts/AdminAuthContext";
+import { VlogCacheProvider } from "./contexts/VlogCacheContext";
 import Header from "./components/layout/Header";
 import Footer from "./components/layout/Footer";
 import ScrollRestoration from "./components/ScrollRestoration";
 import ProtectedAdminRoute from "./components/ProtectedAdminRoute";
 
-// Eagerly loaded — rendered on every page
+// Eagerly loaded — rendered on every page (must stay mounted for state preservation)
 import Home from "./pages/Home";
+import VlogFeed from "./pages/VlogFeed";
 
 // Route-level lazy chunks
 const SectionList   = lazy(() => import("./pages/SectionList"));
-const VlogFeed      = lazy(() => import("./pages/VlogFeed"));
 const VlogReview    = lazy(() => import("./pages/VlogReview"));
 const DetailPage    = lazy(() => import("./pages/DetailPage"));
 const NotFound      = lazy(() => import("./pages/NotFound"));
@@ -37,9 +38,16 @@ const AppLayout = () => {
       <ScrollRestoration />
       {!isVlogFeed && <Header />}
       <main style={{ minHeight: isVlogFeed ? "100vh" : "80vh" }}>
+        {/* Home: always mounted, hidden when not active */}
         <div style={{ display: isHome ? "block" : "none" }}>
           <Home />
         </div>
+
+        {/* VlogFeed: always mounted to preserve video DOM state, hidden when not active */}
+        <div style={{ display: isVlogFeed ? "block" : "none", position: isVlogFeed ? undefined : "fixed", top: isVlogFeed ? undefined : "-9999px", visibility: isVlogFeed ? undefined : "hidden" }}>
+          <VlogFeed />
+        </div>
+
         <Suspense fallback={null}>
           <Routes>
             <Route path="/" element={null} />
@@ -49,7 +57,8 @@ const AppLayout = () => {
             <Route path="/beauty-health" element={<SectionList sectionKey="beautyHealth" />} />
             <Route path="/agriculture"   element={<SectionList sectionKey="agriculture" />} />
             <Route path="/health"        element={<SectionList sectionKey="health" />} />
-            <Route path="/vlogs"         element={<VlogFeed />} />
+            {/* /vlogs is handled by always-mounted VlogFeed above — no Route needed */}
+            <Route path="/vlogs"         element={null} />
             <Route path="/post-detail/:id" element={<VlogReview />} />
             <Route path="/admin-login" element={<AdminLogin />} />
             <Route path="/admin/*" element={<ProtectedAdminRoute><AdminLayout /></ProtectedAdminRoute>}>
@@ -73,9 +82,11 @@ export default function App() {
     <HelmetProvider>
       <ThemeProvider>
         <AdminAuthProvider>
-          <Router>
-            <AppLayout />
-          </Router>
+          <VlogCacheProvider>
+            <Router>
+              <AppLayout />
+            </Router>
+          </VlogCacheProvider>
         </AdminAuthProvider>
       </ThemeProvider>
     </HelmetProvider>

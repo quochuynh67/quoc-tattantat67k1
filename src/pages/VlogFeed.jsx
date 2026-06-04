@@ -1,6 +1,6 @@
 // src/pages/VlogFeed.jsx
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link as RouterLink } from "react-router-dom";
+import React, { useCallback, useEffect, useMemo, useRef } from "react";
+import { Link as RouterLink, useLocation } from "react-router-dom";
 import { Box, Button, Typography } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import PlaceIcon from "@mui/icons-material/Place";
@@ -10,7 +10,10 @@ import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import { MapContainer, TileLayer, Polyline, CircleMarker, Marker, Popup, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
-import { getSectionItems, getVlogReviews } from "../lib/phuTanApi";
+import { useVlogCache } from "../contexts/VlogCacheContext";
+
+const SHEET_COLLAPSED = 120;
+const SHEET_EXPANDED = 380;
 
 const formatTime = (seconds) => {
   const minutes = Math.floor(seconds / 60).toString().padStart(2, "0");
@@ -105,37 +108,67 @@ const MapResizer = () => {
   return null;
 };
 
-/* ── Bottom-sheet snap heights ────────────────────────────────────────── */
-const SHEET_COLLAPSED = 120;  // just the handle + timeline row
-const SHEET_EXPANDED = 380;   // timeline row + map
-
 const VlogFeed = () => {
+  const {
+    vlogs,
+    newsItems,
+    loading,
+    ensureLoaded,
+    activeSpotByVlog,
+    setActiveSpotByVlog,
+    playingByVlog,
+    setPlayingByVlog,
+    visibleVlogIdx,
+    setVisibleVlogIdx,
+    sheetHeight: cachedSheetHeight,
+    setSheetHeight: setCachedSheetHeight,
+    hasInteracted,
+    setHasInteracted,
+    scrollTopRef,
+  } = useVlogCache();
+
+  // Derive actual sheet height, defaulting to collapsed
+  const sheetHeight = cachedSheetHeight ?? SHEET_COLLAPSED;
+  const setSheetHeight = setCachedSheetHeight;
+
   const videoRefs = useRef({});
   const slideRefs = useRef([]);
-  const hasInteractedRef = useRef(false);
-
-  const [activeSpotByVlog, setActiveSpotByVlog] = useState({});
-  const [playingByVlog, setPlayingByVlog] = useState({});
-  const [hasInteracted, setHasInteracted] = useState(false);
-  const [vlogs, setVlogs] = useState([]);
-  const [newsItems, setNewsItems] = useState([]);
-  const [sheetHeight, setSheetHeight] = useState(SHEET_COLLAPSED);
-  const [isDragging, setIsDragging] = useState(false);
+  const hasInteractedRef = useRef(hasInteracted);
+  const feedRef = useRef(null);
+  const isDraggingRef = useRef(false);
   const dragStartRef = useRef({ y: 0, h: 0 });
+  const location = useLocation();
+  const isActive = location.pathname === "/vlogs";
 
+  // Load data once (no-op if already cached)
   useEffect(() => {
-    let isMounted = true;
-    Promise.all([getVlogReviews(), getSectionItems("news")]).then(([vlogData, newsData]) => {
-      if (!isMounted) return;
-      setVlogs(vlogData);
-      setNewsItems(newsData);
-    });
-    return () => { isMounted = false; };
+    ensureLoaded();
   }, []);
+
+  // Pause all videos when navigating away (VlogFeed stays mounted but hidden)
+  useEffect(() => {
+    if (!isActive) {
+      Object.values(videoRefs.current).forEach((video) => {
+        if (video && !video.paused) video.pause();
+      });
+    }
+  }, [isActive]);
+
+  // Restore scroll position on mount
+  useEffect(() => {
+    if (feedRef.current && scrollTopRef.current > 0) {
+      feedRef.current.scrollTop = scrollTopRef.current;
+    }
+  }, [vlogs]); // run after vlogs render
+
+  // Persist scroll position on scroll
+  const handleFeedScroll = useCallback((e) => {
+    scrollTopRef.current = e.currentTarget.scrollTop;
+  }, [scrollTopRef]);
 
   // Auto-play/pause via IntersectionObserver after first user interaction
   useEffect(() => {
-    if (!hasInteracted || vlogs.length === 0) return;
+    if (!hasInteracted || !vlogs || vlogs.length === 0) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -193,35 +226,32 @@ const VlogFeed = () => {
 
   /* ── Bottom-sheet drag logic ──────────────────────────────────────── */
   const handleDragStart = useCallback((clientY) => {
-    setIsDragging(true);
+    isDraggingRef.current = true;
     dragStartRef.current = { y: clientY, h: sheetHeight };
   }, [sheetHeight]);
 
   const handleDragMove = useCallback((clientY) => {
-    if (!isDragging) return;
+    if (!isDraggingRef.current) return;
     const delta = dragStartRef.current.y - clientY;
     const next = Math.max(SHEET_COLLAPSED, Math.min(SHEET_EXPANDED, dragStartRef.current.h + delta));
     setSheetHeight(next);
-  }, [isDragging]);
+  }, [setSheetHeight]);
 
   const handleDragEnd = useCallback(() => {
-    setIsDragging(false);
-    // Snap to nearest position
+    isDraggingRef.current = false;
     const mid = (SHEET_COLLAPSED + SHEET_EXPANDED) / 2;
-    setSheetHeight((h) => (h > mid ? SHEET_EXPANDED : SHEET_COLLAPSED));
-  }, []);
+    setSheetHeight((h) => ((h ?? SHEET_COLLAPSED) > mid ? SHEET_EXPANDED : SHEET_COLLAPSED));
+  }, [setSheetHeight]);
 
   const toggleSheet = useCallback(() => {
-    setSheetHeight((h) => (h >= SHEET_EXPANDED ? SHEET_COLLAPSED : SHEET_EXPANDED));
-  }, []);
+    setSheetHeight((h) => ((h ?? SHEET_COLLAPSED) >= SHEET_EXPANDED ? SHEET_COLLAPSED : SHEET_EXPANDED));
+  }, [setSheetHeight]);
 
   const isExpanded = sheetHeight >= SHEET_EXPANDED;
 
-  /* ── Derive current visible vlog (first in viewport or index 0) ──── */
-  const [visibleVlogIdx, setVisibleVlogIdx] = useState(0);
-
+  /* ── Derive current visible vlog ──── */
   useEffect(() => {
-    if (vlogs.length === 0) return;
+    if (!vlogs || vlogs.length === 0) return;
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -236,7 +266,7 @@ const VlogFeed = () => {
     return () => observer.disconnect();
   }, [vlogs]);
 
-  const currentVlog = vlogs[visibleVlogIdx] || null;
+  const currentVlog = vlogs?.[visibleVlogIdx] || null;
 
   useEffect(() => {
     if (isExpanded && currentVlog) {
@@ -252,7 +282,6 @@ const VlogFeed = () => {
   const activeTime = currentVlog ? activeSpotByVlog[currentVlog.id] : undefined;
   const activeLocation = currentLocations.find((l) => l.time === activeTime);
 
-  // Split route into traversed (up to activeTime) and upcoming
   const activeIdx = activeLocation
     ? locationsWithCoords.findIndex((l) => l.time === activeTime)
     : -1;
@@ -262,6 +291,16 @@ const VlogFeed = () => {
   const upcomingCoords = activeIdx >= 0
     ? locationsWithCoords.slice(activeIdx).map((l) => [l.latitude, l.longitude])
     : locationsWithCoords.map((l) => [l.latitude, l.longitude]);
+
+  if (loading || !vlogs) {
+    return (
+      <main className="vlog-scroll-root">
+        <Box className="vlog-scroll-shell" sx={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <Typography sx={{ color: "rgba(255,255,255,0.5)" }}>Đang tải...</Typography>
+        </Box>
+      </main>
+    );
+  }
 
   return (
     <main className="vlog-scroll-root">
@@ -273,9 +312,14 @@ const VlogFeed = () => {
           <span className="vlog-scroll-badge">Phú Tân vlog</span>
         </Box>
 
-        <Box className="vlog-scroll-feed" sx={{ pb: `${sheetHeight}px` }}>
+        <Box
+          ref={feedRef}
+          className="vlog-scroll-feed"
+          sx={{ pb: `${sheetHeight}px` }}
+          onScroll={handleFeedScroll}
+        >
           {vlogs.map((vlog, idx) => {
-            const news = newsItems.find((item) => String(item.id) === String(vlog.newsId));
+            const news = newsItems?.find((item) => String(item.id) === String(vlog.newsId));
             const isPlaying = !!playingByVlog[vlog.id];
 
             return (
@@ -325,7 +369,7 @@ const VlogFeed = () => {
                   </span>
                 </Box>
 
-                {/* Simplified bottom info (no spots – they moved to bottom sheet) */}
+                {/* Bottom info panel */}
                 <Box className="vlog-scroll-bottom-panel" sx={{ bottom: `${sheetHeight + 8}px` }}>
                   <Box className="vlog-scroll-info">
                     <Typography className="vlog-scroll-host">@{vlog.host}</Typography>
@@ -348,7 +392,7 @@ const VlogFeed = () => {
             className="vlog-bottom-sheet"
             sx={{
               height: `${sheetHeight}px`,
-              transition: isDragging ? "none" : "height 0.3s cubic-bezier(.4,0,.2,1)",
+              transition: isDraggingRef.current ? "none" : "height 0.3s cubic-bezier(.4,0,.2,1)",
             }}
           >
             {/* Drag handle */}
@@ -360,7 +404,7 @@ const VlogFeed = () => {
               onMouseDown={(e) => { handleDragStart(e.clientY); e.preventDefault(); }}
               onMouseMove={(e) => handleDragMove(e.clientY)}
               onMouseUp={handleDragEnd}
-              onMouseLeave={() => { if (isDragging) handleDragEnd(); }}
+              onMouseLeave={() => { if (isDraggingRef.current) handleDragEnd(); }}
               onClick={toggleSheet}
             >
               <div className="vlog-sheet-handle-bar" />
@@ -420,7 +464,6 @@ const VlogFeed = () => {
                   <FitBounds locations={locationsWithCoords} />
                   {activeLocation?.latitude && <ActiveMarkerHighlight location={activeLocation} />}
 
-                  {/* Upcoming route – faint dashed */}
                   {upcomingCoords.length >= 2 && (
                     <Polyline
                       positions={upcomingCoords}
@@ -434,7 +477,6 @@ const VlogFeed = () => {
                     />
                   )}
 
-                  {/* Traversed route – solid bright */}
                   {traversedCoords.length >= 2 && (
                     <Polyline
                       positions={traversedCoords}
@@ -448,7 +490,6 @@ const VlogFeed = () => {
                     />
                   )}
 
-                  {/* Location markers */}
                   {locationsWithCoords.map((loc, i) => {
                     const isActive = activeTime === loc.time;
                     const isVisited = activeIdx >= 0 && i <= activeIdx;
@@ -470,7 +511,6 @@ const VlogFeed = () => {
                     );
                   })}
 
-                  {/* Pulsing current-position marker */}
                   {activeLocation?.latitude && activeLocation?.longitude && (
                     <CircleMarker
                       center={[activeLocation.latitude, activeLocation.longitude]}
