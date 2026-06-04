@@ -318,15 +318,17 @@ export default function AdminPosts() {
                   />
                 </Box>
                 
-                <Box sx={{ mt: 1, mb: 1 }}>
-                  <Typography variant="body2" sx={{ mb: 1, color: "text.secondary" }}>Nội dung đầy đủ (Content)</Typography>
-                  <ReactQuill 
-                    theme="snow" 
-                    value={form.content} 
-                    onChange={(value) => setForm({ ...form, content: value })} 
-                    style={{ height: "300px", marginBottom: "50px" }} 
-                  />
-                </Box>
+                <TextField
+                  label="Nội dung đầy đủ (Content HTML)"
+                  placeholder="<p>Nhập HTML trực tiếp tại đây...</p>"
+                  value={form.content || ""}
+                  onChange={(e) => setForm({ ...form, content: e.target.value })}
+                  multiline
+                  rows={12}
+                  fullWidth
+                  variant="outlined"
+                  inputProps={{ style: { fontFamily: "monospace", fontSize: "0.85rem" } }}
+                />
               </Box>
             </Grid>
 
