@@ -31,8 +31,12 @@ const AdminLayout = () => {
     <div>
       <Toolbar />
       <List>
-        <ListItemButton component={NavLink} to="/admin/sections" selected={location.pathname.startsWith('/admin/sections')}>
+        <ListItemButton component={NavLink} to="/admin/dashboard" selected={location.pathname === '/admin' || location.pathname.startsWith('/admin/dashboard')}>
           <ListItemIcon><DashboardIcon /></ListItemIcon>
+          <ListItemText primary="Dashboard" />
+        </ListItemButton>
+        <ListItemButton component={NavLink} to="/admin/sections" selected={location.pathname.startsWith('/admin/sections')}>
+          <ListItemIcon><ArticleIcon /></ListItemIcon>
           <ListItemText primary="Sections" />
         </ListItemButton>
         <ListItemButton component={NavLink} to="/admin/posts" selected={location.pathname.startsWith('/admin/posts')}>

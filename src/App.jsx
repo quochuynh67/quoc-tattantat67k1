@@ -21,12 +21,13 @@ const DetailPage    = lazy(() => import("./pages/DetailPage"));
 const NotFound      = lazy(() => import("./pages/NotFound"));
 
 // Admin — separate chunk, rarely visited
-const AdminLogin    = lazy(() => import("./pages/AdminLogin"));
-const AdminLayout   = lazy(() => import("./components/admin/AdminLayout"));
-const AdminSections = lazy(() => import("./pages/admin/Sections"));
-const AdminPosts    = lazy(() => import("./pages/admin/Posts"));
-const AdminVlogs    = lazy(() => import("./pages/admin/Vlogs"));
-const AdminSettings = lazy(() => import("./pages/admin/Settings"));
+const AdminLogin      = lazy(() => import("./pages/AdminLogin"));
+const AdminLayout     = lazy(() => import("./components/admin/AdminLayout"));
+const AdminDashboard  = lazy(() => import("./pages/admin/AdminDashboard"));
+const AdminSections   = lazy(() => import("./pages/admin/Sections"));
+const AdminPosts      = lazy(() => import("./pages/admin/Posts"));
+const AdminVlogs      = lazy(() => import("./pages/admin/Vlogs"));
+const AdminSettings   = lazy(() => import("./pages/admin/Settings"));
 
 const AppLayout = () => {
   const location = useLocation();
@@ -62,10 +63,12 @@ const AppLayout = () => {
             <Route path="/post-detail/:id" element={<VlogReview />} />
             <Route path="/admin-login" element={<AdminLogin />} />
             <Route path="/admin/*" element={<ProtectedAdminRoute><AdminLayout /></ProtectedAdminRoute>}>
-              <Route path="sections" element={<AdminSections />} />
-              <Route path="posts"    element={<AdminPosts />} />
-              <Route path="vlogs"    element={<AdminVlogs />} />
-              <Route path="settings" element={<AdminSettings />} />
+              <Route index element={<AdminDashboard />} />
+              <Route path="dashboard" element={<AdminDashboard />} />
+              <Route path="sections"  element={<AdminSections />} />
+              <Route path="posts"     element={<AdminPosts />} />
+              <Route path="vlogs"     element={<AdminVlogs />} />
+              <Route path="settings"  element={<AdminSettings />} />
             </Route>
             <Route path="/detail/:id" element={<DetailPage />} />
             <Route path="*"           element={<NotFound />} />
