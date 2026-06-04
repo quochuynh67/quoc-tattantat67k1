@@ -1,13 +1,10 @@
 // src/pages/VlogFeed.jsx
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Link as RouterLink, useLocation } from "react-router-dom";
-import { Box, Button, Typography } from "@mui/material";
+import { Box, Button, Switch, Typography } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import PauseIcon from "@mui/icons-material/Pause";
-import VolumeUpIcon from "@mui/icons-material/VolumeUp";
-import VolumeOffIcon from "@mui/icons-material/VolumeOff";
-import FullscreenIcon from "@mui/icons-material/Fullscreen";
 import ArticleIcon from "@mui/icons-material/Article";
 import MapIcon from "@mui/icons-material/Map";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
@@ -87,150 +84,34 @@ const MapResizer = () => {
   return null;
 };
 
-/* ── Custom video controls overlay ────────────────────────────────────── */
-const VideoControls = ({ vlogId, videoRefs, isPlaying, onPlay, onPause, sheetHeight }) => {
-  const [progress, setProgress] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [muted, setMuted] = useState(false);
-  const [showControls, setShowControls] = useState(false);
-  const hideTimer = useRef(null);
-  const progressRef = useRef(null);
+/* ── Tap-only video overlay ───────────────────────────────────────────── */
+const TapVideoOverlay = ({ vlogId, videoRefs, isPlaying, onToggle }) => {
+  const [flash, setFlash] = useState(null);
+  const flashTimer = useRef(null);
 
-  const video = videoRefs.current[vlogId];
-
-  // Sync muted state from video element
-  useEffect(() => {
-    const v = videoRefs.current[vlogId];
-    if (!v) return;
-    setMuted(v.muted);
-    const handleMute = () => setMuted(v.muted);
-    v.addEventListener("volumechange", handleMute);
-    return () => v.removeEventListener("volumechange", handleMute);
-  }, [vlogId, videoRefs]);
-
-  // Track progress
-  useEffect(() => {
-    const v = videoRefs.current[vlogId];
-    if (!v) return;
-    const onTime = () => {
-      setProgress(v.duration ? v.currentTime / v.duration : 0);
-    };
-    const onMeta = () => setDuration(v.duration || 0);
-    v.addEventListener("timeupdate", onTime);
-    v.addEventListener("loadedmetadata", onMeta);
-    if (v.duration) setDuration(v.duration);
-    return () => {
-      v.removeEventListener("timeupdate", onTime);
-      v.removeEventListener("loadedmetadata", onMeta);
-    };
-  }, [vlogId, videoRefs]);
-
-  const showThenHide = () => {
-    setShowControls(true);
-    clearTimeout(hideTimer.current);
-    hideTimer.current = setTimeout(() => setShowControls(false), 3000);
-  };
+  useEffect(() => () => clearTimeout(flashTimer.current), []);
 
   const handleTap = () => {
-    const v = videoRefs.current[vlogId];
-    if (!v) return;
-    if (v.paused) {
-      v.play().catch(() => {});
-      onPlay(vlogId);
-    } else {
-      v.pause();
-      onPause(vlogId);
-    }
-    showThenHide();
+    const video = videoRefs.current[vlogId];
+    if (!video) return;
+    const nextAction = video.paused ? "play" : "pause";
+    onToggle(vlogId, nextAction);
+    setFlash(nextAction);
+    clearTimeout(flashTimer.current);
+    flashTimer.current = setTimeout(() => setFlash(null), 620);
   };
-
-  const handleMute = (e) => {
-    e.stopPropagation();
-    const v = videoRefs.current[vlogId];
-    if (!v) return;
-    v.muted = !v.muted;
-    setMuted(v.muted);
-    showThenHide();
-  };
-
-  const handleFullscreen = (e) => {
-    e.stopPropagation();
-    const v = videoRefs.current[vlogId];
-    if (!v) return;
-    if (v.requestFullscreen) v.requestFullscreen();
-    else if (v.webkitEnterFullscreen) v.webkitEnterFullscreen(); // iOS Safari
-    showThenHide();
-  };
-
-  const handleScrub = (e) => {
-    e.stopPropagation();
-    const v = videoRefs.current[vlogId];
-    const bar = progressRef.current;
-    if (!v || !bar) return;
-    const rect = bar.getBoundingClientRect();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-    v.currentTime = pct * v.duration;
-    setProgress(pct);
-    showThenHide();
-  };
-
-  const currentSec = Math.floor(progress * duration);
 
   return (
-    <div
-      className="vlog-custom-controls-overlay"
+    <button
+      type="button"
+      className="vlog-tap-overlay"
       onClick={handleTap}
+      aria-label={isPlaying ? "Chạm để tạm dừng" : "Chạm để phát"}
     >
-      {/* Big center play/pause flash */}
-      <div className={`vlog-center-flash ${showControls ? (isPlaying ? "show-pause" : "show-play") : ""}`}>
-        {isPlaying ? <PauseIcon sx={{ fontSize: 56 }} /> : <PlayArrowIcon sx={{ fontSize: 56 }} />}
-      </div>
-
-      {/* Bottom controls bar */}
-      <div className={`vlog-controls-bar ${showControls ? "visible" : ""}`} style={{ bottom: `${sheetHeight + 12}px` }}>
-        {/* Progress scrubber */}
-        <div
-          ref={progressRef}
-          className="vlog-progress-track"
-          onMouseDown={handleScrub}
-          onTouchStart={handleScrub}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="vlog-progress-fill" style={{ width: `${progress * 100}%` }} />
-          <div className="vlog-progress-thumb" style={{ left: `${progress * 100}%` }} />
-        </div>
-
-        {/* Controls row */}
-        <div className="vlog-controls-row" onClick={(e) => e.stopPropagation()}>
-          {/* Play/pause */}
-          <button
-            className="vlog-ctrl-btn"
-            onClick={handleTap}
-            aria-label={isPlaying ? "Tạm dừng" : "Phát"}
-          >
-            {isPlaying ? <PauseIcon sx={{ fontSize: 22 }} /> : <PlayArrowIcon sx={{ fontSize: 22 }} />}
-          </button>
-
-          {/* Time */}
-          <span className="vlog-ctrl-time">
-            {formatTime(currentSec)} / {formatTime(Math.floor(duration))}
-          </span>
-
-          <span style={{ flex: 1 }} />
-
-          {/* Mute */}
-          <button className="vlog-ctrl-btn" onClick={handleMute} aria-label={muted ? "Bật tiếng" : "Tắt tiếng"}>
-            {muted ? <VolumeOffIcon sx={{ fontSize: 20 }} /> : <VolumeUpIcon sx={{ fontSize: 20 }} />}
-          </button>
-
-          {/* Fullscreen */}
-          <button className="vlog-ctrl-btn" onClick={handleFullscreen} aria-label="Toàn màn hình">
-            <FullscreenIcon sx={{ fontSize: 22 }} />
-          </button>
-        </div>
-      </div>
-    </div>
+      <span className={`vlog-center-flash ${flash ? "is-visible" : ""}`}>
+        {flash === "pause" ? <PauseIcon sx={{ fontSize: 58 }} /> : <PlayArrowIcon sx={{ fontSize: 58 }} />}
+      </span>
+    </button>
   );
 };
 
@@ -262,10 +143,12 @@ const VlogFeed = () => {
   const slideRefs = useRef([]);
   const hasInteractedRef = useRef(hasInteracted);
   const feedRef = useRef(null);
+  const manuallyPausedRef = useRef({});
   const isDraggingRef = useRef(false);
   const dragStartRef = useRef({ y: 0, h: 0 });
   const location = useLocation();
   const isActive = location.pathname === "/vlogs";
+  const [autoNext, setAutoNext] = useState(true);
 
   useEffect(() => { ensureLoaded(); }, []);
 
@@ -287,9 +170,21 @@ const VlogFeed = () => {
     scrollTopRef.current = e.currentTarget.scrollTop;
   }, [scrollTopRef]);
 
+  const playVideo = useCallback((vlogId) => {
+    const video = videoRefs.current[vlogId];
+    if (!video) return;
+    video.play().catch(() => {});
+  }, []);
+
+  const pauseVideo = useCallback((vlogId) => {
+    const video = videoRefs.current[vlogId];
+    if (!video) return;
+    video.pause();
+  }, []);
+
   // Auto-play/pause via IntersectionObserver
   useEffect(() => {
-    if (!hasInteracted || !vlogs || vlogs.length === 0) return;
+    if (!isActive || !vlogs || vlogs.length === 0) return;
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -298,10 +193,10 @@ const VlogFeed = () => {
           if (!vlog) return;
           const video = videoRefs.current[vlog.id];
           if (!video) return;
-          if (entry.isIntersecting && video.paused) {
-            video.play().catch(() => {});
+          if (entry.isIntersecting && video.paused && !manuallyPausedRef.current[vlog.id]) {
+            playVideo(vlog.id);
           } else if (!entry.isIntersecting && !video.paused) {
-            video.pause();
+            pauseVideo(vlog.id);
           }
         });
       },
@@ -309,7 +204,7 @@ const VlogFeed = () => {
     );
     slideRefs.current.forEach((el) => { if (el) observer.observe(el); });
     return () => observer.disconnect();
-  }, [hasInteracted, vlogs]);
+  }, [isActive, pauseVideo, playVideo, vlogs]);
 
   const handlePlay = useCallback((vlogId) => {
     setPlayingByVlog((s) => ({ ...s, [vlogId]: true }));
@@ -323,8 +218,35 @@ const VlogFeed = () => {
     setPlayingByVlog((s) => ({ ...s, [vlogId]: false }));
   }, [setPlayingByVlog]);
 
+  const handleVideoToggle = useCallback((vlogId, action) => {
+    if (action === "play") {
+      manuallyPausedRef.current[vlogId] = false;
+      playVideo(vlogId);
+      handlePlay(vlogId);
+      return;
+    }
+
+    manuallyPausedRef.current[vlogId] = true;
+    pauseVideo(vlogId);
+    handlePauseOrEnd(vlogId);
+  }, [handlePauseOrEnd, handlePlay, pauseVideo, playVideo]);
+
+  const handleVideoEnded = useCallback((vlog, idx) => {
+    manuallyPausedRef.current[vlog.id] = false;
+    handlePauseOrEnd(vlog.id);
+
+    if (!autoNext || idx >= vlogs.length - 1) return;
+
+    const nextVlog = vlogs[idx + 1];
+    manuallyPausedRef.current[nextVlog.id] = false;
+    slideRefs.current[idx + 1]?.scrollIntoView({ behavior: "smooth", block: "start" });
+    setVisibleVlogIdx(idx + 1);
+    window.setTimeout(() => playVideo(nextVlog.id), 360);
+  }, [autoNext, handlePauseOrEnd, playVideo, setVisibleVlogIdx, vlogs]);
+
   const seekToSpot = (vlogId, location) => {
     const video = videoRefs.current[vlogId];
+    manuallyPausedRef.current[vlogId] = false;
     if (video) { video.currentTime = location.time; video.play().catch(() => {}); }
     setActiveSpotByVlog((current) => ({ ...current, [vlogId]: location.time }));
   };
@@ -383,9 +305,9 @@ const VlogFeed = () => {
   useEffect(() => {
     if (isExpanded && currentVlog) {
       const video = videoRefs.current[currentVlog.id];
-      if (video && video.paused) video.play().catch(() => {});
+      if (video && video.paused && !manuallyPausedRef.current[currentVlog.id]) playVideo(currentVlog.id);
     }
-  }, [isExpanded, currentVlog]);
+  }, [isExpanded, currentVlog, playVideo]);
 
   const currentLocations = currentVlog?.locations || [];
   const locationsWithCoords = currentLocations.filter((l) => l.latitude && l.longitude);
@@ -416,7 +338,15 @@ const VlogFeed = () => {
           <Button component={RouterLink} to="/" startIcon={<ArrowBackIcon />} className="vlog-scroll-back">
             Trang chủ
           </Button>
-          <span className="vlog-scroll-badge">Phú Tân vlog</span>
+          <Box className="vlog-auto-next-toggle" component="label">
+            <span>Tự chuyển</span>
+            <Switch
+              size="small"
+              checked={autoNext}
+              onChange={(e) => setAutoNext(e.target.checked)}
+              slotProps={{ input: { "aria-label": "Tự chuyển video" } }}
+            />
+          </Box>
         </Box>
 
         <Box
@@ -443,22 +373,21 @@ const VlogFeed = () => {
                     className="vlog-scroll-video"
                     src={vlog.videoUrl}
                     poster={vlog.poster}
+                    autoPlay={idx === visibleVlogIdx}
                     playsInline
                     preload="metadata"
                     onTimeUpdate={() => handleTimeUpdate(vlog)}
                     onPlay={() => handlePlay(vlog.id)}
                     onPause={() => handlePauseOrEnd(vlog.id)}
-                    onEnded={() => handlePauseOrEnd(vlog.id)}
+                    onEnded={() => handleVideoEnded(vlog, idx)}
                   />
 
-                  {/* Custom controls overlay */}
-                  <VideoControls
+                  {/* Tap-only play/pause overlay */}
+                  <TapVideoOverlay
                     vlogId={vlog.id}
                     videoRefs={videoRefs}
                     isPlaying={isPlaying}
-                    onPlay={handlePlay}
-                    onPause={handlePauseOrEnd}
-                    sheetHeight={sheetHeight}
+                    onToggle={handleVideoToggle}
                   />
 
                   {/* First-time tap hint */}
