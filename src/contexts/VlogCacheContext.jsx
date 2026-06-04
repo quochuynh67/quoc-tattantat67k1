@@ -6,6 +6,16 @@ import { getVlogReviews, getSectionItems } from "../lib/phuTanApi";
 
 const VlogCacheContext = createContext(null);
 
+/** Fisher-Yates shuffle — returns a new shuffled array. */
+const shuffleArray = (arr) => {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+};
+
 export const VlogCacheProvider = ({ children }) => {
   // Cached data — set once, never cleared
   const [vlogs, setVlogs] = useState(null);          // null = not yet loaded
@@ -30,7 +40,8 @@ export const VlogCacheProvider = ({ children }) => {
         getVlogReviews(),
         getSectionItems("news"),
       ]);
-      setVlogs(vlogData);
+      // Shuffle once on load — order is random each session but stable across navigation
+      setVlogs(shuffleArray(vlogData));
       setNewsItems(newsData);
     } finally {
       setLoading(false);
