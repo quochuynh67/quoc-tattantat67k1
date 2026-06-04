@@ -128,7 +128,7 @@ export default function AgentChat({ section, variant = "float" }) {
         right: 24,
         zIndex: 1400,
         width: { xs: "calc(100vw - 32px)", sm: 350 },
-        maxHeight: 480,
+        height: { xs: "calc(100vh - 120px)", sm: "560px" },
         display: "flex",
         flexDirection: "column",
         borderRadius: 3,
@@ -230,8 +230,10 @@ export default function AgentChat({ section, variant = "float" }) {
           background: `${agent.color}18`,
           color: agent.color,
           transition: "background 0.2s, color 0.2s",
-          "&:hover": { background: agent.color, color: "#fff",
-            "& .agent-inline-text": { color: "#fff !important" } },
+          "&:hover": {
+            background: agent.color, color: "#fff",
+            "& .agent-inline-text": { color: "#fff !important" }
+          },
           userSelect: "none",
           flexShrink: 0,
         }}

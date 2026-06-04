@@ -184,7 +184,7 @@ export default function AgentChatDashboard() {
       <Box sx={{
         position: "absolute", bottom: "calc(100% + 12px)", right: 0,
         width: { xs: "calc(100vw - 32px)", sm: 350 },
-        maxHeight: 480,
+        height: "560px",
         display: chatOpen && agent ? "flex" : "none",
         flexDirection: "column",
         borderRadius: 3,
