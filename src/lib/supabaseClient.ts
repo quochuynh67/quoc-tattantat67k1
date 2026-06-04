@@ -236,6 +236,25 @@ export const uploadTimelineImage = async (file) => {
 };
 
 // Upload entire HLS folder
+// Visitor counter
+export const getVisitorCount = async (): Promise<number> => {
+  const { data } = await supabase
+    .from('site_settings')
+    .select('value')
+    .eq('row_key', 'visitor_count')
+    .maybeSingle();
+  return data ? Number(data.value) : 0;
+};
+
+export const incrementVisitorCount = async (): Promise<number> => {
+  const { data, error } = await supabase.rpc('increment_visitor_count');
+  if (error) {
+    // Fall back to just reading if RPC not deployed yet
+    return getVisitorCount();
+  }
+  return Number(data) || 0;
+};
+
 export const uploadHlsFolder = async (files, onProgress) => {
   try {
     await supabase.storage.createBucket('vlogs-posts', { public: true });
