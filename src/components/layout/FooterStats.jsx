@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import {
   getSections,
   getPostsBySection,
@@ -56,7 +57,10 @@ const CARDS = [
 ];
 
 export default function FooterStats() {
+  const location = useLocation();
   const [stats, setStats] = useState({ visitors: null, vlogs: null, posts: null, sections: null });
+
+  if (location.pathname.startsWith("/admin")) return null;
 
   useEffect(() => {
     const alreadyCounted = sessionStorage.getItem("_phuTanVisited");
