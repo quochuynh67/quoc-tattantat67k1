@@ -1,5 +1,5 @@
 // src/pages/VlogFeed.jsx
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link as RouterLink, useLocation } from "react-router-dom";
 import { Box, Button, Switch, Typography } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
@@ -16,6 +16,8 @@ import { useVlogCache } from "../contexts/VlogCacheContext";
 
 const SHEET_COLLAPSED = 120;
 const SHEET_EXPANDED = 380;
+const VIDEO_PRELOAD_BEHIND = 1;
+const VIDEO_PRELOAD_AHEAD = 3;
 
 const formatTime = (seconds) => {
   const minutes = Math.floor(seconds / 60).toString().padStart(2, "0");
@@ -149,6 +151,15 @@ const VlogFeed = () => {
   const location = useLocation();
   const isActive = location.pathname === "/vlogs";
   const [autoNext, setAutoNext] = useState(true);
+
+  const newsById = useMemo(() => {
+    const map = new Map();
+    newsItems?.forEach((item) => map.set(String(item.id), item));
+    return map;
+  }, [newsItems]);
+
+  const hydratedVideoStart = Math.max(0, visibleVlogIdx - VIDEO_PRELOAD_BEHIND);
+  const hydratedVideoEnd = Math.min((vlogs?.length ?? 0) - 1, visibleVlogIdx + VIDEO_PRELOAD_AHEAD);
 
   useEffect(() => { ensureLoaded(); }, []);
 
@@ -303,6 +314,20 @@ const VlogFeed = () => {
   const currentVlog = vlogs?.[visibleVlogIdx] || null;
 
   useEffect(() => {
+    if (!isActive || !currentVlog) return;
+
+    Object.entries(videoRefs.current).forEach(([id, video]) => {
+      if (String(id) !== String(currentVlog.id) && video && !video.paused) {
+        video.pause();
+      }
+    });
+
+    if (!manuallyPausedRef.current[currentVlog.id]) {
+      playVideo(currentVlog.id);
+    }
+  }, [currentVlog, isActive, playVideo]);
+
+  useEffect(() => {
     if (isExpanded && currentVlog) {
       const video = videoRefs.current[currentVlog.id];
       if (video && video.paused && !manuallyPausedRef.current[currentVlog.id]) playVideo(currentVlog.id);
@@ -344,7 +369,6 @@ const VlogFeed = () => {
               size="small"
               checked={autoNext}
               onChange={(e) => setAutoNext(e.target.checked)}
-              slotProps={{ input: { "aria-label": "Tự chuyển video" } }}
             />
           </Box>
         </Box>
@@ -356,8 +380,11 @@ const VlogFeed = () => {
           onScroll={handleFeedScroll}
         >
           {vlogs.map((vlog, idx) => {
-            const news = newsItems?.find((item) => String(item.id) === String(vlog.newsId));
+            const news = newsById.get(String(vlog.newsId));
             const isPlaying = !!playingByVlog[vlog.id];
+            const isVisible = idx === visibleVlogIdx;
+            const shouldHydrateVideo = idx >= hydratedVideoStart && idx <= hydratedVideoEnd;
+            const preloadMode = isVisible || idx === visibleVlogIdx + 1 ? "auto" : "metadata";
 
             return (
               <section
@@ -367,31 +394,40 @@ const VlogFeed = () => {
                 ref={(el) => { slideRefs.current[idx] = el; }}
               >
                 <Box className="vlog-scroll-video-wrap">
-                  {/* Video — NO native controls */}
-                  <video
-                    ref={(node) => { if (node) videoRefs.current[vlog.id] = node; }}
-                    className="vlog-scroll-video"
-                    src={vlog.videoUrl}
-                    poster={vlog.poster}
-                    autoPlay={idx === visibleVlogIdx}
-                    playsInline
-                    preload="metadata"
-                    onTimeUpdate={() => handleTimeUpdate(vlog)}
-                    onPlay={() => handlePlay(vlog.id)}
-                    onPause={() => handlePauseOrEnd(vlog.id)}
-                    onEnded={() => handleVideoEnded(vlog, idx)}
-                  />
+                  {shouldHydrateVideo ? (
+                    <>
+                      {/* Video — NO native controls */}
+                      <video
+                        ref={(node) => { if (node) videoRefs.current[vlog.id] = node; }}
+                        className="vlog-scroll-video"
+                        src={vlog.videoUrl}
+                        poster={vlog.poster}
+                        autoPlay={isVisible}
+                        playsInline
+                        preload={preloadMode}
+                        onCanPlay={() => {
+                          if (isVisible && !manuallyPausedRef.current[vlog.id]) playVideo(vlog.id);
+                        }}
+                        onTimeUpdate={() => handleTimeUpdate(vlog)}
+                        onPlay={() => handlePlay(vlog.id)}
+                        onPause={() => handlePauseOrEnd(vlog.id)}
+                        onEnded={() => handleVideoEnded(vlog, idx)}
+                      />
 
-                  {/* Tap-only play/pause overlay */}
-                  <TapVideoOverlay
-                    vlogId={vlog.id}
-                    videoRefs={videoRefs}
-                    isPlaying={isPlaying}
-                    onToggle={handleVideoToggle}
-                  />
+                      {/* Tap-only play/pause overlay */}
+                      <TapVideoOverlay
+                        vlogId={vlog.id}
+                        videoRefs={videoRefs}
+                        isPlaying={isPlaying}
+                        onToggle={handleVideoToggle}
+                      />
+                    </>
+                  ) : (
+                    <div className="vlog-scroll-video vlog-scroll-video-placeholder" aria-hidden="true" />
+                  )}
 
-                  {/* First-time tap hint */}
-                  {!hasInteracted && (
+                  {/* Tap hint when autoplay cannot start or the user pauses */}
+                  {isVisible && !isPlaying && (
                     <div className={`vlog-play-hint${isPlaying ? " hidden" : ""}`} style={{ pointerEvents: "none" }}>
                       <div className="vlog-play-hint-btn">
                         <PlayCircleIcon sx={{ fontSize: 36 }} />
