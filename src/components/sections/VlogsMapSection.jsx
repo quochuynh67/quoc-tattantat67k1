@@ -85,16 +85,19 @@ const MapResizer = () => {
   return null;
 };
 
-const LocationButton = ({ userLocation }) => {
+const LocationButton = ({ userLocation, onRequestLocation }) => {
   const map = useMap();
-  if (!userLocation) return null;
   return (
     <Box sx={{ position: "absolute", bottom: 16, right: 16, zIndex: 1000 }}>
       <Button
         variant="contained"
         onClick={(e) => {
           e.stopPropagation();
-          map.flyTo(userLocation, 14, { duration: 1.5 });
+          if (userLocation) {
+            map.flyTo(userLocation, 14, { duration: 1.5 });
+          } else {
+            onRequestLocation();
+          }
         }}
         sx={{ minWidth: 0, width: 48, height: 48, borderRadius: "50%", bgcolor: "#fff", color: "#1976d2", "&:hover": { bgcolor: "#f5f5f5" }, p: 0, boxShadow: 4 }}
       >
@@ -119,7 +122,7 @@ const VlogsMapSection = () => {
     return () => { isMounted = false; };
   }, []);
 
-  useEffect(() => {
+  const handleRequestLocation = useCallback(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => setUserLocation([pos.coords.latitude, pos.coords.longitude]),
@@ -169,7 +172,7 @@ const VlogsMapSection = () => {
             <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
             <MapTracker onBoundsChange={handleBoundsChange} />
             <UserTracker userLocation={userLocation} />
-            <LocationButton userLocation={userLocation} />
+            <LocationButton userLocation={userLocation} onRequestLocation={handleRequestLocation} />
             
             {userLocation && (
               <Marker position={userLocation} icon={userIcon} zIndexOffset={2000}>
