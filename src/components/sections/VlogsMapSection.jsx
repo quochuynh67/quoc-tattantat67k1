@@ -91,6 +91,7 @@ const LocationButton = ({ userLocation, onRequestLocation }) => {
     <Box sx={{ position: "absolute", bottom: 16, right: 16, zIndex: 1000 }}>
       <Button
         variant="contained"
+        aria-label={userLocation ? "Về vị trí của tôi" : "Xác định vị trí của tôi"}
         onClick={(e) => {
           e.stopPropagation();
           if (userLocation) {

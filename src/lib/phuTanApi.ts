@@ -42,6 +42,21 @@ const fromContentItem = (row: any) => ({
   metadata: row.metadata || {},
 });
 
+const HERO_LS_KEY = "phutan_hero_v1";
+const HERO_LS_TTL = 30 * 60 * 1000; // 30 min
+
+export function getHeroSync(): any | null {
+  try {
+    const raw = localStorage.getItem(HERO_LS_KEY);
+    if (!raw) return null;
+    const { data, ts } = JSON.parse(raw);
+    if (Date.now() - ts > HERO_LS_TTL) return null;
+    return data;
+  } catch {
+    return null;
+  }
+}
+
 export async function getHero() {
   if (!isSupabaseConfigured) return null;
 
@@ -52,6 +67,11 @@ export async function getHero() {
     .maybeSingle();
 
   if (error || !data?.value) return null;
+
+  try {
+    localStorage.setItem(HERO_LS_KEY, JSON.stringify({ data: data.value, ts: Date.now() }));
+  } catch {}
+
   return data.value;
 }
 
