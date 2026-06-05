@@ -186,6 +186,7 @@ html.dark .theme-toggle-button {
 .vlog-review-page {
   background: var(--color-background);
   min-height: 80vh;
+  overflow-x: hidden;
   padding: var(--spacing-lg) 0 var(--spacing-xxl);
 }
 
@@ -981,6 +982,9 @@ html.dark .vlog-info-panel {
 /* Quill Content Styles */
 .quill-content {
   line-height: 1.6;
+  max-width: 100%;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 .quill-content p {
   margin-bottom: 1rem;
@@ -1012,6 +1016,24 @@ html.dark .vlog-info-panel {
 .quill-content a {
   color: var(--color-primary);
   text-decoration: underline;
+  word-break: break-all;
+}
+.quill-content table {
+  width: 100%;
+  border-collapse: collapse;
+  display: block;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.quill-content pre,
+.quill-content code {
+  white-space: pre-wrap;
+  word-break: break-all;
+  overflow-wrap: break-word;
+  max-width: 100%;
+}
+.quill-content iframe {
+  max-width: 100%;
 }
 
 /* ── Vlog Bottom Sheet ──────────────────────────────────────────────── */

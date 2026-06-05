@@ -363,11 +363,11 @@ const VlogReview = () => {
           </Button>
           <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, mt: 2 }}>
             {isHealth ? (
-              <Box sx={{ width: "66.666%" }}>
+              <Box sx={{ width: { xs: "100%", md: "66.666%" } }}>
                 <Alert severity={post.severity || "info"} sx={{ fontSize: "1rem", borderRadius: 2 }}>{post.title}</Alert>
               </Box>
             ) : post.image ? (
-              <Box sx={{ width: "66.666%" }}>
+              <Box sx={{ width: { xs: "100%", md: "66.666%" } }}>
                 <img src={post.image} alt={post.title} style={{ width: "100%", height: "auto", objectFit: "contain", display: "block", borderRadius: 8 }} />
               </Box>
             ) : null}
@@ -594,7 +594,7 @@ const VlogReview = () => {
                 <Typography variant="h5">{post.title}</Typography>
               </Alert>
             ) : post.image ? (
-              <img src={post.image} alt={post.title} style={{ width: "50%", height: "auto", borderRadius: 8, marginBottom: 16 }} />
+              <img src={post.image} alt={post.title} style={{ width: "min(50%, 100%)", maxWidth: "100%", height: "auto", borderRadius: 8, marginBottom: 16 }} />
             ) : null}
             <Typography variant="overline" sx={{ color: "var(--color-text-subtle)" }}>{post.category || "Chi tiết"}</Typography>
             <Typography variant="h4" sx={{ mt: 1, mb: 2, fontFamily: "var(--font-display)" }}>{post.title}</Typography>
