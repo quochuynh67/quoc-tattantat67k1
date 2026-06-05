@@ -200,7 +200,7 @@ export default function SEOIntroSection() {
         </Paper>
 
         {/* Semantic keyword tags */}
-        <Stack direction="row" flexWrap="wrap" gap={1} justifyContent="center" sx={{ mb: 6 }}>
+        <Stack direction="row" flexWrap="wrap" gap={1} justifyContent="center" sx={{ mb: 6, overflow: "hidden" }}>
           {TAGS.map((tag) => (
             <Chip
               key={tag}

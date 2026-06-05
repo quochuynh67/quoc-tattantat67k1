@@ -22,6 +22,19 @@ const muiTheme = createTheme({
     button: { textTransform: 'none' },
   },
   spacing: 8, // 8px grid spacing
+  components: {
+    MuiChip: {
+      styleOverrides: {
+        root: {
+          maxWidth: '100%',
+        },
+        label: {
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+        },
+      },
+    },
+  },
 });
 
 export default muiTheme;

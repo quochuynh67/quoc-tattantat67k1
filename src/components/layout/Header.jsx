@@ -42,7 +42,7 @@ const Header = () => {
 
         {/* Other Menu */}
         <div ref={toolsRef} style={{ position: "relative" }}>
-          {/* <button
+          <button
             onClick={() => setToolsOpen(!toolsOpen)}
             style={{
               background: "none",
@@ -61,7 +61,7 @@ const Header = () => {
           >
             <span>⚙️</span>
             <span>Tiện ích</span>
-          </button> */}
+          </button>
           {toolsOpen && (
             <div
               style={{
