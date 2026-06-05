@@ -17,7 +17,35 @@ const HeroSection = () => {
     };
   }, []);
 
-  if (!hero) return null;
+  if (!hero) return (
+    <Box
+      sx={{
+        position: 'relative',
+        bgcolor: 'primary.dark',
+        color: '#fff',
+        mb: 4,
+        minHeight: '40vh',
+        display: 'flex',
+        alignItems: 'center',
+      }}
+    >
+      <Container maxWidth="md" sx={{ textAlign: 'center', py: 8 }}>
+        <Typography
+          component="h1"
+          variant="h2"
+          sx={{ fontFamily: "var(--font-display)", fontWeight: 'bold', color: '#fff' }}
+        >
+          Tất tần tật Phú Tân 67K1 – An Giang
+        </Typography>
+        <Typography variant="h5" component="p" sx={{ mt: 2, color: 'rgba(255,255,255,0.82)', fontFamily: "var(--font-body)" }}>
+          Cổng thông tin địa phương An Giang – Phú Tân 67K1
+        </Typography>
+        <Typography variant="body1" sx={{ mt: 2, color: 'rgba(255,255,255,0.7)', fontFamily: "var(--font-body)" }}>
+          Khám phá di tích lịch sử, hệ sinh thái, văn hóa và ẩm thực Phú Tân 67K1 - An Giang
+        </Typography>
+      </Container>
+    </Box>
+  );
 
   return (
     <Box

@@ -1,5 +1,6 @@
 // src/pages/VlogReview.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Helmet } from "react-helmet-async";
 import { Link as RouterLink, useParams, useNavigate } from "react-router-dom";
 import { Alert, Box, Button, Container, Rating, Tab, Tabs, Tooltip, Typography } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
@@ -332,8 +333,30 @@ const VlogReview = () => {
   // No vlogs — content-only detail
   if (vlogs.length === 0 && post) {
     const isHealth = post.section === "health";
+    const contentSchema = {
+      "@context": "https://schema.org",
+      "@type": "Article",
+      "headline": post.title,
+      "description": post.excerpt || post.description,
+      "image": post.image ? [post.image] : undefined,
+      "datePublished": post.date,
+      "inLanguage": "vi",
+      "publisher": { "@id": "https://tattantat67k1.web.app/#organization" },
+      ...(post.rating !== undefined ? {
+        "aggregateRating": {
+          "@type": "AggregateRating",
+          "ratingValue": post.rating,
+          "bestRating": "5",
+          "worstRating": "1",
+          "reviewCount": "1",
+        },
+      } : {}),
+    };
     return (
       <main className="vlog-review-page">
+        <Helmet>
+          <script type="application/ld+json">{JSON.stringify(contentSchema)}</script>
+        </Helmet>
         <Container maxWidth={false} className="section-container">
           <Button onClick={() => navigate(-1)} startIcon={<ArrowBackIcon />} className="vlog-back-link">
             Quay lại
@@ -384,6 +407,46 @@ const VlogReview = () => {
       </main>
     );
   }
+
+  // ── Structured data ────────────────────────────────────────────────────────
+  const structuredDataGraph = [];
+
+  if (post) {
+    const articleEntry = {
+      "@type": "Article",
+      "@id": `https://tattantat67k1.web.app/post-detail/${id}#article`,
+      "headline": post.title,
+      "description": post.excerpt || post.description,
+      "image": post.image ? [post.image] : undefined,
+      "datePublished": post.date,
+      "inLanguage": "vi",
+      "publisher": { "@id": "https://tattantat67k1.web.app/#organization" },
+    };
+    if (post.rating !== undefined) {
+      articleEntry.aggregateRating = {
+        "@type": "AggregateRating",
+        "ratingValue": post.rating,
+        "bestRating": "5",
+        "worstRating": "1",
+        "reviewCount": "1",
+      };
+    }
+    structuredDataGraph.push(articleEntry);
+  }
+
+  vlogs.forEach((vlog) => {
+    if (!vlog.videoUrl) return;
+    structuredDataGraph.push({
+      "@type": "VideoObject",
+      "name": vlog.title,
+      "description": vlog.subtitle || vlog.title,
+      "thumbnailUrl": vlog.poster,
+      "contentUrl": vlog.videoUrl,
+      "duration": vlog.durationLabel || undefined,
+      "inLanguage": "vi",
+      "publisher": { "@id": "https://tattantat67k1.web.app/#organization" },
+    });
+  });
 
   // ── Shared header (back + toggle) ─────────────────────────────────────────
   const PageHeader = () => (
@@ -513,6 +576,13 @@ const VlogReview = () => {
 
   return (
     <main className="vlog-review-page">
+      {structuredDataGraph.length > 0 && (
+        <Helmet>
+          <script type="application/ld+json">
+            {JSON.stringify({ "@context": "https://schema.org", "@graph": structuredDataGraph })}
+          </script>
+        </Helmet>
+      )}
       <Container maxWidth={false} className="section-container">
         <PageHeader />
 

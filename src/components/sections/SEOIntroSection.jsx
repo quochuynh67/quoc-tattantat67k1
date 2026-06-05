@@ -1,10 +1,12 @@
 import React from "react";
+import { Helmet } from "react-helmet-async";
 import { Link as RouterLink } from "react-router-dom";
-import { Container, Typography, Box, Grid, Paper, Chip, Stack } from "@mui/material";
+import { Container, Typography, Box, Grid, Paper, Chip, Stack, Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
 import PlaceIcon from "@mui/icons-material/Place";
 import ForestIcon from "@mui/icons-material/Forest";
 import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 import ExploreIcon from "@mui/icons-material/Explore";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 
 const HIGHLIGHTS = [
   {
@@ -46,6 +48,39 @@ const TAGS = [
   "Di tích lịch sử", "Khu vực", "Hoạt động", "Văn hóa và",
 ];
 
+const FAQS = [
+  {
+    question: "An Giang có những địa điểm du lịch nổi tiếng nào?",
+    answer: "An Giang nổi tiếng với miếu bà chúa xứ núi sam tại Châu Đốc, rừng tràm trà sư – khu sinh thái ngập nước độc đáo, lăng thoại ngọc hầu, tây an cổ tự, và nhà mồ ba chúc. Ngoài ra, thành phố Long Xuyên – tỉnh lỵ của An Giang – là trung tâm kinh tế và văn hóa của cả vùng.",
+  },
+  {
+    question: "Rừng tràm trà sư ở đâu và có gì đặc biệt?",
+    answer: "Rừng tràm trà sư nằm ở huyện Tịnh Biên, tỉnh An Giang. Đây là khu bảo tồn thiên nhiên ngập nước rộng hàng nghìn héc-ta, nổi tiếng với hệ sinh thái phong phú, hàng trăm loài chim quý hiếm, và vẻ đẹp huyền ảo vào mùa nước nổi. Du khách có thể tham quan bằng xuồng ba lá để ngắm sen, súng và đàn chim cò trắng.",
+  },
+  {
+    question: "Phú Tân – An Giang có gì đặc sắc?",
+    answer: "Phú Tân là huyện nằm ven sông Tiền thuộc tỉnh An Giang, nổi bật với hoạt động nông nghiệp và nuôi trồng thủy sản phát triển. Đây là vùng đất gắn liền với đạo Tứ Ân Hiếu Nghĩa và nhiều di tích văn hóa – tôn giáo đặc trưng của miền Tây Nam Bộ. Trang tin 67K1 tổng hợp đầy đủ tin tức, ẩm thực, địa điểm và hoạt động tại Phú Tân – An Giang.",
+  },
+  {
+    question: "Ẩm thực đặc sản nổi tiếng của An Giang là gì?",
+    answer: "An Giang sở hữu nhiều đặc sản ẩm thực độc đáo như: bún cá lóc, mắm thái, bánh bò thốt nốt, cháo bò Châu Đốc, khô cá tra một nắng, và các món chế biến từ cá linh mùa nước nổi. Ẩm thực An Giang mang đậm phong vị miền Tây với nguyên liệu tươi ngon từ sông nước.",
+  },
+  {
+    question: "An Giang còn có gì nổi bật ngoài du lịch?",
+    answer: "Ngoài du lịch, An Giang còn có nền nông nghiệp phát triển – đặc biệt là sản xuất lúa gạo và nuôi trồng thủy sản, được mệnh danh là vựa lúa của đồng bằng sông Cửu Long. Tỉnh còn nổi tiếng với nghề chế biến mắm, dệt vải thổ cẩm của đồng bào Chăm, và hoạt động thương mại biên giới sầm uất tại Châu Đốc.",
+  },
+];
+
+const FAQ_SCHEMA = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": FAQS.map(({ question, answer }) => ({
+    "@type": "Question",
+    "name": question,
+    "acceptedAnswer": { "@type": "Answer", "text": answer },
+  })),
+};
+
 export default function SEOIntroSection() {
   return (
     <Box
@@ -53,6 +88,9 @@ export default function SEOIntroSection() {
       aria-label="Giới thiệu An Giang"
       sx={{ py: { xs: 5, md: 8 }, bgcolor: "background.default" }}
     >
+      <Helmet>
+        <script type="application/ld+json">{JSON.stringify(FAQ_SCHEMA)}</script>
+      </Helmet>
       <Container maxWidth="lg">
         {/* Section heading – contains target keyword for h2 */}
         <Box sx={{ textAlign: "center", mb: 5 }}>
@@ -162,7 +200,7 @@ export default function SEOIntroSection() {
         </Paper>
 
         {/* Semantic keyword tags */}
-        <Stack direction="row" flexWrap="wrap" gap={1} justifyContent="center">
+        <Stack direction="row" flexWrap="wrap" gap={1} justifyContent="center" sx={{ mb: 6 }}>
           {TAGS.map((tag) => (
             <Chip
               key={tag}
@@ -173,6 +211,47 @@ export default function SEOIntroSection() {
             />
           ))}
         </Stack>
+
+        {/* FAQ section */}
+        <Box sx={{ mb: 2 }}>
+          <Typography
+            component="h2"
+            variant="h5"
+            sx={{ fontFamily: "var(--font-display)", fontWeight: 800, mb: 3, textAlign: "center" }}
+          >
+            Câu hỏi thường gặp về An Giang
+          </Typography>
+          {FAQS.map(({ question, answer }) => (
+            <Accordion
+              key={question}
+              elevation={0}
+              disableGutters
+              sx={{
+                mb: 1.5,
+                borderRadius: "12px !important",
+                border: "1px solid",
+                borderColor: "divider",
+                "&:before": { display: "none" },
+                bgcolor: "var(--color-surface)",
+              }}
+            >
+              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                <Typography
+                  component="h3"
+                  variant="subtitle1"
+                  sx={{ fontWeight: 600, fontFamily: "var(--font-display)" }}
+                >
+                  {question}
+                </Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.8 }}>
+                  {answer}
+                </Typography>
+              </AccordionDetails>
+            </Accordion>
+          ))}
+        </Box>
       </Container>
     </Box>
   );
