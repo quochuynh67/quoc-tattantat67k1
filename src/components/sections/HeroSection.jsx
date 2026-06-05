@@ -59,6 +59,24 @@ const HeroSection = () => {
         }}
       />
       <Container maxWidth="md" sx={{ position: 'relative', zIndex: 1, textAlign: 'center' }}>
+        <Typography
+          variant="overline"
+          sx={{
+            display: 'inline-block',
+            mb: 1.5,
+            px: 2,
+            py: 0.5,
+            borderRadius: 99,
+            bgcolor: 'rgba(255,255,255,0.18)',
+            color: '#fff',
+            fontWeight: 700,
+            letterSpacing: '0.1em',
+            fontSize: '0.78rem',
+            backdropFilter: 'blur(4px)',
+          }}
+        >
+          Phú Tân · An Giang · 67K1
+        </Typography>
         <Typography component="h1" variant="h2" gutterBottom sx={{ fontFamily: "var(--font-display)", fontWeight: 'bold', color: '#fff', textShadow: '0 2px 12px rgba(0,0,0,0.65)' }}>
           {hero.title}
         </Typography>

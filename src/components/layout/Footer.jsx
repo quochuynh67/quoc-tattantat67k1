@@ -17,16 +17,22 @@ const Footer = () => (
         gap: "12px",
       }}
     >
-      <Link
-        to="/"
-        style={{
-          fontFamily: "var(--font-display)",
-          fontSize: "1.2rem",
-          color: "var(--color-primary)",
-        }}
-      >
-        Tất tần tật – Phú Tân 67K1
-      </Link>
+      <div>
+        <Link
+          to="/"
+          style={{
+            fontFamily: "var(--font-display)",
+            fontSize: "1.2rem",
+            color: "var(--color-primary)",
+            display: "block",
+          }}
+        >
+          Tất tần tật – Phú Tân 67K1
+        </Link>
+        <span style={{ fontSize: "0.75rem", color: "var(--color-subtle)", display: "block", marginTop: "2px" }}>
+          Cổng thông tin địa phương Phú Tân 67K1 (An Giang)
+        </span>
+      </div>
       <nav style={{ display: "flex", flexWrap: "wrap", gap: "4px 0" }}>
         <Link to="/" style={{ marginRight: "1rem" }}>Trang chủ</Link>
         <Link to="/news" style={{ marginRight: "1rem" }}>Tin tức</Link>
