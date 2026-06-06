@@ -218,11 +218,13 @@ const VlogFeed = () => {
   const sessionInteractedRef = useRef(false);
   const isDraggingRef = useRef(false);
   const dragStartRef = useRef({ y: 0, h: 0 });
+  const mapPlayerVideoRef = useRef(null);
   const location = useLocation();
   const isActive = location.pathname === "/vlogs";
   const [autoNext, setAutoNext] = useState(true);
   const [mapView, setMapView] = useState(false);
   const [userLocation, setUserLocation] = useState(null);
+  const [mapPlayerVlog, setMapPlayerVlog] = useState(null);
 
   const handleRequestLocation = useCallback(() => {
     if (!navigator.geolocation) return;
@@ -243,10 +245,11 @@ const VlogFeed = () => {
 
   useEffect(() => { ensureLoaded(); }, []);
 
-  // Pause all videos when navigating away
+  // Pause all videos when navigating away (scroll feed + map player overlay)
   useEffect(() => {
     if (!isActive) {
       Object.values(videoRefs.current).forEach((v) => { if (v && !v.paused) v.pause(); });
+      mapPlayerVideoRef.current?.pause();
     }
   }, [isActive]);
 
@@ -460,6 +463,7 @@ const VlogFeed = () => {
                 } else {
                   // Leaving map via toggle — unlock all so IO can resume current slide
                   vlogs?.forEach((v) => { manuallyPausedRef.current[v.id] = false; });
+                  setMapPlayerVlog(null);
                 }
                 setMapView((v) => !v);
               }}
@@ -532,19 +536,7 @@ const VlogFeed = () => {
                           <button
                             type="button"
                             className="vlog-map-popup-btn"
-                            onClick={() => {
-                              const idx = vlogs.findIndex((v) => v.id === vlog.id);
-                              if (idx < 0) return;
-                              // Unlock only the target — all others stay blocked (manuallyPaused=true from map enter)
-                              sessionInteractedRef.current = true;
-                              manuallyPausedRef.current[vlog.id] = false;
-                              setVisibleVlogIdx(idx);
-                              setMapView(false);
-                              // currentVlog effect handles playback; setTimeout only scrolls
-                              setTimeout(() => {
-                                slideRefs.current[idx]?.scrollIntoView({ behavior: "instant", block: "start" });
-                              }, 0);
-                            }}
+                            onClick={() => setMapPlayerVlog(vlog)}
                           >
                             ▶ Xem Vlog
                           </button>
@@ -554,6 +546,75 @@ const VlogFeed = () => {
                   ))
               )}
             </MapContainer>
+          </Box>
+        )}
+
+        {/* ── MAP VIDEO PLAYER OVERLAY ──────────────────────────── */}
+        {mapView && mapPlayerVlog && (
+          <Box
+            sx={{
+              position: "absolute",
+              inset: 0,
+              zIndex: 1500,
+              background: "#0d0f18",
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                px: 1,
+                py: 0.5,
+                gap: 1,
+                borderBottom: "1px solid rgba(255,255,255,0.08)",
+                flexShrink: 0,
+              }}
+            >
+              <Button
+                startIcon={<ArrowBackIcon />}
+                onClick={() => setMapPlayerVlog(null)}
+                className="vlog-scroll-back"
+              >
+                Bản đồ
+              </Button>
+              <Typography
+                noWrap
+                sx={{ flex: 1, color: "#fff", fontSize: "0.85rem", fontWeight: 600 }}
+              >
+                {mapPlayerVlog.title}
+              </Typography>
+              <Button
+                component={RouterLink}
+                to={`/post-detail/${mapPlayerVlog.newsId}`}
+                className="vlog-scroll-back"
+                aria-label="Xem chi tiết"
+                onClick={() => {
+                  mapPlayerVideoRef.current?.pause();
+                  setMapPlayerVlog(null);
+                }}
+              >
+                <ArticleIcon sx={{ fontSize: 18 }} />
+              </Button>
+            </Box>
+            <video
+              ref={mapPlayerVideoRef}
+              key={mapPlayerVlog.id}
+              src={mapPlayerVlog.videoUrl}
+              poster={mapPlayerVlog.poster}
+              autoPlay
+              playsInline
+              controls
+              style={{
+                flex: 1,
+                width: "100%",
+                objectFit: "contain",
+                display: "block",
+                background: "#000",
+                minHeight: 0,
+              }}
+            />
           </Box>
         )}
 
@@ -628,6 +689,9 @@ const VlogFeed = () => {
                     to={`/post-detail/${vlog.newsId}`}
                     className="vlog-scroll-action"
                     aria-label="Xem chi tiết"
+                    onClick={() => {
+                      Object.values(videoRefs.current).forEach((v) => { if (v && !v.paused) v.pause(); });
+                    }}
                   >
                     <ArticleIcon />
                   </Button>
