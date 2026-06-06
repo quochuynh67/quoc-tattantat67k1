@@ -7,6 +7,7 @@ import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import PauseIcon from "@mui/icons-material/Pause";
 import ArticleIcon from "@mui/icons-material/Article";
 import MapIcon from "@mui/icons-material/Map";
+import MyLocationIcon from "@mui/icons-material/MyLocation";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import PlayCircleIcon from "@mui/icons-material/PlayCircle";
 import { MapContainer, TileLayer, Polyline, CircleMarker, Marker, Popup, useMap } from "react-leaflet";
@@ -46,6 +47,71 @@ const createPreviewIcon = (number, imageUrl, isActive, isVisited, altText = "") 
     iconSize: [width, height],
     iconAnchor: [width / 2, height - size / 2],
   });
+};
+
+const createThumbIcon = (imageUrl, altText = "") =>
+  L.divIcon({
+    html: `<div style="width:40px;height:40px;border-radius:8px;overflow:hidden;border:2px solid #82f3cf;box-shadow:0 4px 14px rgba(0,0,0,0.7);background:#1a1c24;">
+      <img src="${imageUrl}" alt="${altText.replace(/"/g, "&quot;")}" style="width:100%;height:100%;object-fit:cover;display:block;" />
+    </div>`,
+    className: "",
+    iconSize: [40, 40],
+    iconAnchor: [20, 40],
+  });
+
+const FitAllVlogsInView = ({ vlogs }) => {
+  const map = useMap();
+  useEffect(() => {
+    const coords = vlogs.flatMap((v) =>
+      (v.locations || []).filter((l) => l.latitude && l.longitude).map((l) => [l.latitude, l.longitude])
+    );
+    if (coords.length === 0) return;
+    map.fitBounds(coords, { padding: [48, 48], maxZoom: 14, animate: false });
+  }, [vlogs, map]);
+  return null;
+};
+
+const userLocationIcon = L.divIcon({
+  html: `<div style="position:relative;width:20px;height:20px;">
+    <div style="position:absolute;inset:0;background:rgba(130,243,207,0.35);border-radius:50%;animation:vlog-pulse-ring 2s infinite ease-out;"></div>
+    <div style="position:absolute;inset:3px;background:#82f3cf;border:2px solid #fff;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.55);"></div>
+  </div>`,
+  className: "",
+  iconSize: [20, 20],
+  iconAnchor: [10, 10],
+});
+
+const OverviewUserTracker = ({ userLocation }) => {
+  const map = useMap();
+  useEffect(() => {
+    if (!userLocation) return;
+    map.flyTo(userLocation, 15, { duration: 1.2 });
+  }, [userLocation, map]);
+  return null;
+};
+
+const OverviewLocationBtn = ({ userLocation, onRequest }) => {
+  const map = useMap();
+  return (
+    <div
+      style={{ position: "absolute", bottom: 20, right: 16, zIndex: 1000 }}
+    >
+      <button
+        type="button"
+        className="vlog-location-btn"
+        aria-label={userLocation ? "Về vị trí của tôi" : "Xác định vị trí"}
+        onClick={() => {
+          if (userLocation) {
+            map.flyTo(userLocation, 15, { duration: 1.2 });
+          } else {
+            onRequest();
+          }
+        }}
+      >
+        <MyLocationIcon sx={{ fontSize: 20, color: userLocation ? "#82f3cf" : "#fff" }} />
+      </button>
+    </div>
+  );
 };
 
 const Equalizer = ({ playing }) => (
@@ -127,8 +193,6 @@ const VlogFeed = () => {
     ensureLoaded,
     activeSpotByVlog,
     setActiveSpotByVlog,
-    playingByVlog,
-    setPlayingByVlog,
     visibleVlogIdx,
     setVisibleVlogIdx,
     sheetHeight: cachedSheetHeight,
@@ -137,6 +201,9 @@ const VlogFeed = () => {
     setHasInteracted,
     scrollTopRef,
   } = useVlogCache();
+
+  // Local — never persisted in context to avoid stale playing state across renders
+  const [playingByVlog, setPlayingByVlog] = useState({});
 
   const sheetHeight = cachedSheetHeight ?? SHEET_COLLAPSED;
   const setSheetHeight = setCachedSheetHeight;
@@ -154,6 +221,16 @@ const VlogFeed = () => {
   const location = useLocation();
   const isActive = location.pathname === "/vlogs";
   const [autoNext, setAutoNext] = useState(true);
+  const [mapView, setMapView] = useState(false);
+  const [userLocation, setUserLocation] = useState(null);
+
+  const handleRequestLocation = useCallback(() => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => setUserLocation([pos.coords.latitude, pos.coords.longitude]),
+      () => {}
+    );
+  }, []);
 
   const newsById = useMemo(() => {
     const map = new Map();
@@ -172,6 +249,7 @@ const VlogFeed = () => {
       Object.values(videoRefs.current).forEach((v) => { if (v && !v.paused) v.pause(); });
     }
   }, [isActive]);
+
 
   // Restore scroll position
   useEffect(() => {
@@ -321,7 +399,7 @@ const VlogFeed = () => {
   const currentVlog = vlogs?.[visibleVlogIdx] || null;
 
   useEffect(() => {
-    if (!isActive || !currentVlog) return;
+    if (!isActive || !currentVlog || mapView) return;
 
     Object.entries(videoRefs.current).forEach(([id, video]) => {
       if (String(id) !== String(currentVlog.id) && video && !video.paused) {
@@ -332,14 +410,14 @@ const VlogFeed = () => {
     if (!manuallyPausedRef.current[currentVlog.id]) {
       playVideo(currentVlog.id);
     }
-  }, [currentVlog, isActive, playVideo]);
+  }, [currentVlog, isActive, mapView, playVideo]);
 
   useEffect(() => {
-    if (isExpanded && currentVlog) {
+    if (isExpanded && currentVlog && !mapView) {
       const video = videoRefs.current[currentVlog.id];
       if (video && video.paused && !manuallyPausedRef.current[currentVlog.id]) playVideo(currentVlog.id);
     }
-  }, [isExpanded, currentVlog, playVideo]);
+  }, [isExpanded, currentVlog, mapView, playVideo]);
 
   const currentLocations = currentVlog?.locations || [];
   const locationsWithCoords = currentLocations.filter((l) => l.latitude && l.longitude);
@@ -370,20 +448,119 @@ const VlogFeed = () => {
           <Button component={RouterLink} to="/" startIcon={<ArrowBackIcon />} className="vlog-scroll-back">
             Trang chủ
           </Button>
-          <Box className="vlog-auto-next-toggle" component="label">
-            <span>Tự chuyển</span>
-            <Switch
-              size="small"
-              checked={autoNext}
-              onChange={(e) => setAutoNext(e.target.checked)}
-            />
+          <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+            <Button
+              className="vlog-scroll-back"
+              onClick={() => {
+                if (!mapView) {
+                  // Entering map — pause all and block IO from resuming them
+                  Object.values(videoRefs.current).forEach((v) => { if (v && !v.paused) v.pause(); });
+                  vlogs?.forEach((v) => { manuallyPausedRef.current[v.id] = true; });
+                  setPlayingByVlog({});
+                } else {
+                  // Leaving map via toggle — unlock all so IO can resume current slide
+                  vlogs?.forEach((v) => { manuallyPausedRef.current[v.id] = false; });
+                }
+                setMapView((v) => !v);
+              }}
+              aria-label={mapView ? "Xem dạng cuộn" : "Xem bản đồ"}
+              sx={{ minWidth: 0, px: 1.5 }}
+            >
+              <MapIcon fontSize="small" sx={{ color: mapView ? "#82f3cf" : "inherit" }} />
+            </Button>
+            {!mapView && (
+              <Box className="vlog-auto-next-toggle" component="label">
+                <span>Tự chuyển</span>
+                <Switch
+                  size="small"
+                  checked={autoNext}
+                  onChange={(e) => setAutoNext(e.target.checked)}
+                />
+              </Box>
+            )}
           </Box>
         </Box>
+
+        {/* ── MAP OVERVIEW ─────────────────────────────────────── */}
+        {mapView && (
+          <Box className="vlog-map-overview">
+            <MapContainer
+              key="vlog-overview"
+              center={userLocation || [10.6385, 105.2343]}
+              zoom={13}
+              scrollWheelZoom={true}
+              zoomControl={false}
+              attributionControl={false}
+              style={{ width: "100%", height: "100%" }}
+            >
+              <TileLayer
+                url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+                maxZoom={19}
+              />
+              <FitAllVlogsInView vlogs={vlogs} />
+              <OverviewUserTracker userLocation={userLocation} />
+              <OverviewLocationBtn userLocation={userLocation} onRequest={handleRequestLocation} />
+
+              {userLocation && (
+                <Marker position={userLocation} icon={userLocationIcon} zIndexOffset={2000}>
+                  <Popup>
+                    <div style={{ textAlign: "center", fontWeight: 700, fontSize: "0.82rem", padding: "4px 8px", color: "#333" }}>
+                      Vị trí của bạn
+                    </div>
+                  </Popup>
+                </Marker>
+              )}
+
+              {vlogs.map((vlog) =>
+                (vlog.locations || [])
+                  .filter((l) => l.latitude && l.longitude)
+                  .map((loc, i) => (
+                    <Marker
+                      key={`overview-${vlog.id}-${loc.time}-${i}`}
+                      position={[loc.latitude, loc.longitude]}
+                      icon={createThumbIcon(loc.image || vlog.poster, loc.name || vlog.title)}
+                    >
+                      <Popup>
+                        <div className="vlog-map-popup">
+                          <img
+                            src={loc.image || vlog.poster}
+                            alt={loc.name || vlog.title}
+                            className="vlog-map-popup-img"
+                          />
+                          <strong className="vlog-map-popup-name">{loc.name || vlog.title}</strong>
+                          <span className="vlog-map-popup-sub">{vlog.title}</span>
+                          <button
+                            type="button"
+                            className="vlog-map-popup-btn"
+                            onClick={() => {
+                              const idx = vlogs.findIndex((v) => v.id === vlog.id);
+                              if (idx < 0) return;
+                              // Unlock only the target — all others stay blocked (manuallyPaused=true from map enter)
+                              sessionInteractedRef.current = true;
+                              manuallyPausedRef.current[vlog.id] = false;
+                              setVisibleVlogIdx(idx);
+                              setMapView(false);
+                              // currentVlog effect handles playback; setTimeout only scrolls
+                              setTimeout(() => {
+                                slideRefs.current[idx]?.scrollIntoView({ behavior: "instant", block: "start" });
+                              }, 0);
+                            }}
+                          >
+                            ▶ Xem Vlog
+                          </button>
+                        </div>
+                      </Popup>
+                    </Marker>
+                  ))
+              )}
+            </MapContainer>
+          </Box>
+        )}
 
         <Box
           ref={feedRef}
           className="vlog-scroll-feed"
-          sx={{ pb: `${sheetHeight}px` }}
+          sx={{ pb: `${sheetHeight}px`, display: mapView ? "none" : undefined }}
           onScroll={handleFeedScroll}
         >
           {vlogs.map((vlog, idx) => {
@@ -474,7 +651,7 @@ const VlogFeed = () => {
         </Box>
 
         {/* ── BOTTOM SHEET ──────────────────────────────────────── */}
-        {currentVlog && (
+        {!mapView && currentVlog && (
           <Box
             className="vlog-bottom-sheet"
             sx={{

@@ -24,7 +24,8 @@ export const VlogCacheProvider = ({ children }) => {
 
   // UI state that must survive navigation
   const [activeSpotByVlog, setActiveSpotByVlog] = useState({});
-  const [playingByVlog, setPlayingByVlog] = useState({});
+  // playingByVlog is intentionally NOT cached — it's ephemeral per-session
+  // and caching it causes stale "playing" state that triggers duplicate playback
   const [visibleVlogIdx, setVisibleVlogIdx] = useState(0);
   const [sheetHeight, setSheetHeight] = useState(null); // null = use default
   const [hasInteracted, setHasInteracted] = useState(false);
@@ -57,8 +58,6 @@ export const VlogCacheProvider = ({ children }) => {
         ensureLoaded,
         activeSpotByVlog,
         setActiveSpotByVlog,
-        playingByVlog,
-        setPlayingByVlog,
         visibleVlogIdx,
         setVisibleVlogIdx,
         sheetHeight,
