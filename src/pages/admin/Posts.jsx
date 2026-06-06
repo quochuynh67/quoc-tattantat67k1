@@ -281,7 +281,7 @@ export default function AdminPosts() {
         <DialogContent sx={{ mt: 1, pt: 1 }}>
           <Grid container spacing={2.5}>
             {/* Left side: Information */}
-            <Grid item xs={12} md={7}>
+            <Grid size={{ xs: 12, md: 7 }}>
               <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>
                 <TextField label="Tiêu đề" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} fullWidth variant="outlined" />
                 
@@ -333,7 +333,7 @@ export default function AdminPosts() {
             </Grid>
 
             {/* Right side: Media, location, metadata */}
-            <Grid item xs={12} md={5}>
+            <Grid size={{ xs: 12, md: 5 }}>
               <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>
                 <TextField label="Image URL" value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} fullWidth variant="outlined" />
                 {form.image_url && (
@@ -344,7 +344,7 @@ export default function AdminPosts() {
                 <TextField label="Địa chỉ" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} fullWidth variant="outlined" />
 
                 <Grid container spacing={2}>
-                  <Grid item xs={6}>
+                  <Grid size={{ xs: 6 }}>
                     <TextField 
                       label="Đánh giá (Rating)" 
                       type="number" 
@@ -355,7 +355,7 @@ export default function AdminPosts() {
                       variant="outlined" 
                     />
                   </Grid>
-                  <Grid item xs={6}>
+                  <Grid size={{ xs: 6 }}>
                     <TextField 
                       label="Mức độ (Severity)" 
                       value={form.severity} 

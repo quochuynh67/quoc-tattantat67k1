@@ -10,6 +10,8 @@ import PlaceIcon from "@mui/icons-material/Place";
 import PlayCircleIcon from "@mui/icons-material/PlayCircle";
 import LocationOnIcon from "@mui/icons-material/LocationOn";
 import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
+import MapIcon from "@mui/icons-material/Map";
+import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import { MapContainer, TileLayer, Polyline, CircleMarker, Marker, Popup, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
@@ -17,6 +19,9 @@ import { getSectionItems, getVlogReviewForPost } from "../lib/phuTanApi";
 import { supabase } from "../lib/supabaseClient";
 import { DetailSkeleton } from "../components/CardSkeleton";
 import AgentChat from "../components/AgentChat";
+
+const SHEET_COLLAPSED = 120;
+const SHEET_EXPANDED = 380;
 
 const formatTime = (seconds) => {
   const m = Math.floor(seconds / 60).toString().padStart(2, "0");
@@ -286,6 +291,49 @@ const VlogReview = () => {
     [newsItems]
   );
 
+  // ── Scroll-mode bottom sheet state ────────────────────────────────────────
+  const [scrollSheetHeight, setScrollSheetHeight] = useState(SHEET_COLLAPSED);
+  const [visibleScrollIdx, setVisibleScrollIdx] = useState(0);
+  const scrollFeedRef = useRef(null);
+  const isDraggingRef = useRef(false);
+  const dragStartRef = useRef({ y: 0, h: 0 });
+  const sessionInteractedRef = useRef(false);
+  const manuallyPausedRef = useRef({});
+
+  // Track visible slide index in scroll mode
+  useEffect(() => {
+    if (viewMode !== "scroll" || vlogs.length === 0) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) setVisibleScrollIdx(Number(entry.target.dataset.idx));
+        });
+      },
+      { threshold: 0.6 }
+    );
+    scrollSlideRefs.current.forEach((el) => { if (el) observer.observe(el); });
+    return () => observer.disconnect();
+  }, [viewMode, vlogs]);
+
+  const handleScrollDragStart = (clientY) => {
+    isDraggingRef.current = true;
+    dragStartRef.current = { y: clientY, h: scrollSheetHeight };
+  };
+  const handleScrollDragMove = (clientY) => {
+    if (!isDraggingRef.current) return;
+    const delta = dragStartRef.current.y - clientY;
+    const next = Math.max(SHEET_COLLAPSED, Math.min(SHEET_EXPANDED, dragStartRef.current.h + delta));
+    setScrollSheetHeight(next);
+  };
+  const handleScrollDragEnd = () => {
+    isDraggingRef.current = false;
+    const mid = (SHEET_COLLAPSED + SHEET_EXPANDED) / 2;
+    setScrollSheetHeight((h) => (h > mid ? SHEET_EXPANDED : SHEET_COLLAPSED));
+  };
+  const toggleScrollSheet = () => {
+    setScrollSheetHeight((h) => (h >= SHEET_EXPANDED ? SHEET_COLLAPSED : SHEET_EXPANDED));
+  };
+
   // Tab mode handlers
   const handleSelectTab = (_, idx) => {
     setActiveVlogIdx(idx);
@@ -469,6 +517,21 @@ const VlogReview = () => {
 
   // ── SCROLL MODE ────────────────────────────────────────────────────────────
   if (viewMode === "scroll") {
+    const currentScrollVlog = vlogs[visibleScrollIdx] ?? null;
+    const currentScrollLocations = currentScrollVlog?.locations || [];
+    const scrollLocationsWithCoords = currentScrollLocations.filter((l) => l.latitude && l.longitude);
+    const scrollActiveTime = activeSpotByVlog[currentScrollVlog?.id];
+    const scrollActiveLocation = currentScrollLocations.find((l) => l.time === scrollActiveTime);
+    const scrollActiveIdx = scrollActiveLocation
+      ? scrollLocationsWithCoords.findIndex((l) => l.time === scrollActiveTime)
+      : -1;
+    const scrollTraversedCoords = scrollActiveIdx >= 0
+      ? scrollLocationsWithCoords.slice(0, scrollActiveIdx + 1).map((l) => [l.latitude, l.longitude]) : [];
+    const scrollUpcomingCoords = scrollActiveIdx >= 0
+      ? scrollLocationsWithCoords.slice(scrollActiveIdx).map((l) => [l.latitude, l.longitude])
+      : scrollLocationsWithCoords.map((l) => [l.latitude, l.longitude]);
+    const isScrollExpanded = scrollSheetHeight >= SHEET_EXPANDED;
+
     return (
       <main className="vlog-scroll-root" style={{ position: "fixed", inset: 0, zIndex: 1300 }}>
         <Box className="vlog-scroll-shell">
@@ -484,10 +547,13 @@ const VlogReview = () => {
             </Tooltip>
           </Box>
 
-          <Box className="vlog-scroll-feed">
+          <Box
+            ref={scrollFeedRef}
+            className="vlog-scroll-feed"
+            sx={{ pb: `${scrollSheetHeight}px` }}
+          >
             {vlogs.map((vlog, idx) => {
               const news = newsForVlog(vlog);
-              const activeTime = activeSpotByVlog[vlog.id] ?? vlog.locations?.[0]?.time;
               const isPlaying = !!playingByVlog[vlog.id];
 
               return (
@@ -504,15 +570,33 @@ const VlogReview = () => {
                       src={vlog.videoUrl}
                       poster={vlog.poster}
                       playsInline
-                      controls
                       preload="metadata"
                       onTimeUpdate={() => handleTimeUpdate(vlog, true)}
                       onPlay={() => handlePlayEvent(vlog.id, true)}
                       onPause={() => setPlayingByVlog((s) => ({ ...s, [vlog.id]: false }))}
                       onEnded={() => setPlayingByVlog((s) => ({ ...s, [vlog.id]: false }))}
                     />
+                    <button
+                      type="button"
+                      className="vlog-tap-overlay"
+                      onClick={() => {
+                        const video = scrollVideoRefs.current[vlog.id];
+                        if (!video) return;
+                        if (video.paused) {
+                          sessionInteractedRef.current = true;
+                          manuallyPausedRef.current[vlog.id] = false;
+                          video.play().catch(() => {});
+                          handlePlayEvent(vlog.id, true);
+                        } else {
+                          manuallyPausedRef.current[vlog.id] = true;
+                          video.pause();
+                          setPlayingByVlog((s) => ({ ...s, [vlog.id]: false }));
+                        }
+                      }}
+                      aria-label={isPlaying ? "Chạm để tạm dừng" : "Chạm để phát"}
+                    />
                     {!hasInteracted && (
-                      <div className={`vlog-play-hint${isPlaying ? " hidden" : ""}`}>
+                      <div className={`vlog-play-hint${isPlaying ? " hidden" : ""}`} style={{ pointerEvents: "none" }}>
                         <div className="vlog-play-hint-btn">
                           <PlayCircleIcon sx={{ fontSize: 36 }} />
                         </div>
@@ -521,42 +605,9 @@ const VlogReview = () => {
                     )}
                   </Box>
 
-                  <Box className="vlog-scroll-bottom-panel" sx={{ right: "14px" }}>
-                    {vlog.locations?.length > 0 && (
-                      <Box className="vlog-scroll-spots">
-                        <Box className="vlog-scroll-spots-title">
-                          <PlaceIcon fontSize="small" />
-                          <span>Vị trí theo giây</span>
-                        </Box>
-                        <Box className="vlog-scroll-spot-list">
-                          {vlog.locations.map((loc) => (
-                            <button
-                              key={`${vlog.id}-${loc.time}`}
-                              type="button"
-                              className={`vlog-scroll-spot ${activeTime === loc.time ? "active" : ""}`}
-                              onClick={() => seekToLocation(vlog.id, loc, true)}
-                            >
-                              <img src={loc.image} alt={loc.name} />
-                              <span>
-                                <strong>{loc.name}</strong>
-                                <small>{formatTime(loc.time)}</small>
-                              </span>
-                            </button>
-                          ))}
-                        </Box>
-                        <VlogMap vlog={vlog} activeTime={activeTime} />
-                      </Box>
-                    )}
+                  <Box className="vlog-scroll-bottom-panel" sx={{ bottom: `${scrollSheetHeight + 8}px` }}>
                     <Box className="vlog-scroll-info">
-                      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                        <Typography className="vlog-scroll-host">@{vlog.host}</Typography>
-                        <div className={`vlog-equalizer${isPlaying ? " playing" : ""}`}>
-                          <div className="vlog-equalizer-bar" />
-                          <div className="vlog-equalizer-bar" />
-                          <div className="vlog-equalizer-bar" />
-                          <div className="vlog-equalizer-bar" />
-                        </div>
-                      </Box>
+                      <Typography className="vlog-scroll-host">@{vlog.host}</Typography>
                       <Typography component="h2" className="vlog-scroll-title">{vlog.title}</Typography>
                       <Typography className="vlog-scroll-desc">{news?.excerpt || vlog.subtitle}</Typography>
                     </Box>
@@ -565,6 +616,113 @@ const VlogReview = () => {
               );
             })}
           </Box>
+
+          {/* ── BOTTOM SHEET ──────────────────────────────────────── */}
+          {currentScrollVlog && (
+            <Box
+              className="vlog-bottom-sheet"
+              sx={{
+                height: `${scrollSheetHeight}px`,
+                transition: isDraggingRef.current ? "none" : "height 0.3s cubic-bezier(.4,0,.2,1)",
+              }}
+            >
+              <Box
+                className="vlog-sheet-handle"
+                onTouchStart={(e) => handleScrollDragStart(e.touches[0].clientY)}
+                onTouchMove={(e) => handleScrollDragMove(e.touches[0].clientY)}
+                onTouchEnd={handleScrollDragEnd}
+                onMouseDown={(e) => { handleScrollDragStart(e.clientY); e.preventDefault(); }}
+                onMouseMove={(e) => handleScrollDragMove(e.clientY)}
+                onMouseUp={handleScrollDragEnd}
+                onMouseLeave={() => { if (isDraggingRef.current) handleScrollDragEnd(); }}
+                onClick={toggleScrollSheet}
+              >
+                <div className="vlog-sheet-handle-bar" />
+                <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, px: 1 }}>
+                  <MapIcon sx={{ fontSize: 16, color: "#82f3cf" }} />
+                  <Typography sx={{ fontSize: "0.72rem", fontWeight: 900, color: "#82f3cf", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                    Lộ trình
+                  </Typography>
+                  <KeyboardArrowDownIcon sx={{
+                    fontSize: 18, color: "rgba(255,255,255,0.6)", transition: "transform 0.3s",
+                    transform: isScrollExpanded ? "rotate(0deg)" : "rotate(180deg)", ml: "auto",
+                  }} />
+                </Box>
+              </Box>
+
+              {currentScrollLocations.length > 0 && (
+                <Box className="vlog-sheet-timeline">
+                  <Box className="vlog-sheet-timeline-row">
+                    {currentScrollLocations.map((loc) => (
+                      <button
+                        key={`${currentScrollVlog.id}-${loc.time}`}
+                        type="button"
+                        className={`vlog-scroll-spot ${scrollActiveTime === loc.time ? "active" : ""}`}
+                        onClick={() => seekToLocation(currentScrollVlog.id, loc, true)}
+                      >
+                        <img src={loc.image} alt={loc.name} />
+                        <span>
+                          <strong>{loc.name}</strong>
+                          <small>{formatTime(loc.time)}</small>
+                        </span>
+                      </button>
+                    ))}
+                  </Box>
+                </Box>
+              )}
+
+              {isScrollExpanded && scrollLocationsWithCoords.length > 0 && (
+                <Box className="vlog-sheet-map">
+                  <MapContainer
+                    center={[scrollLocationsWithCoords[0].latitude, scrollLocationsWithCoords[0].longitude]}
+                    zoom={14} scrollWheelZoom={false} dragging={true}
+                    zoomControl={false} attributionControl={false}
+                    style={{ width: "100%", height: "100%", borderRadius: "12px" }}
+                  >
+                    <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                    <MapResizer />
+                    <FitBounds locations={scrollLocationsWithCoords} />
+                    {scrollActiveLocation?.latitude && <ActiveMarkerHighlight location={scrollActiveLocation} />}
+                    {scrollUpcomingCoords.length >= 2 && (
+                      <Polyline positions={scrollUpcomingCoords} pathOptions={{ color: "#1976d2", weight: 3, opacity: 0.5, dashArray: "6, 8", lineCap: "round" }} />
+                    )}
+                    {scrollTraversedCoords.length >= 2 && (
+                      <Polyline positions={scrollTraversedCoords} pathOptions={{ color: "#1976d2", weight: 4, opacity: 0.9, lineCap: "round", lineJoin: "round" }} />
+                    )}
+                    {scrollLocationsWithCoords.map((loc, i) => {
+                      const isActiveMarker = scrollActiveTime === loc.time;
+                      const isVisited = scrollActiveIdx >= 0 && i <= scrollActiveIdx;
+                      return (
+                        <Marker key={`${loc.time}-${i}`} position={[loc.latitude, loc.longitude]}
+                          icon={createPreviewIcon(i + 1, loc.image, isActiveMarker, isVisited, loc.name)}
+                          zIndexOffset={isActiveMarker ? 1000 : isVisited ? 500 : 0}
+                        >
+                          <Popup>
+                            <div style={{ textAlign: "center", minWidth: 140 }}>
+                              <img src={loc.image} alt={loc.name} style={{ width: "100%", borderRadius: "6px", marginBottom: "8px", objectFit: "cover", aspectRatio: "16/9", display: "block" }} />
+                              <strong style={{ display: "block", marginBottom: 4, color: "#fff", fontSize: "0.9rem" }}>{loc.name}</strong>
+                              <span style={{ fontSize: "0.8rem", color: "#aaa" }}>{formatTime(loc.time)}</span>
+                            </div>
+                          </Popup>
+                        </Marker>
+                      );
+                    })}
+                    {scrollActiveLocation?.latitude && scrollActiveLocation?.longitude && (
+                      <CircleMarker center={[scrollActiveLocation.latitude, scrollActiveLocation.longitude]} radius={20}
+                        pathOptions={{ color: "#1976d2", fillColor: "#1976d2", fillOpacity: 0.18, weight: 2, opacity: 0.5, className: "vlog-map-pulse" }}
+                      />
+                    )}
+                  </MapContainer>
+                </Box>
+              )}
+
+              {isScrollExpanded && scrollLocationsWithCoords.length === 0 && (
+                <Box sx={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.4)", fontSize: "0.82rem" }}>
+                  Chưa có tọa độ cho vlog này
+                </Box>
+              )}
+            </Box>
+          )}
         </Box>
       </main>
     );

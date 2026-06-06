@@ -116,7 +116,7 @@ export default function SEOIntroSection() {
         {/* Highlight cards */}
         <Grid container spacing={3} sx={{ mb: 5 }}>
           {HIGHLIGHTS.map((h) => (
-            <Grid item xs={12} sm={6} md={3} key={h.title}>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }} key={h.title}>
               <Paper
                 component={RouterLink}
                 to={h.to}
@@ -200,7 +200,7 @@ export default function SEOIntroSection() {
         </Paper>
 
         {/* Semantic keyword tags */}
-        <Stack direction="row" flexWrap="wrap" gap={1} justifyContent="center" sx={{ mb: 6, overflow: "hidden" }}>
+        <Stack direction="row" gap={1} justifyContent="center" sx={{ mb: 6, overflow: "hidden", flexWrap: "wrap" }}>
           {TAGS.map((tag) => (
             <Chip
               key={tag}

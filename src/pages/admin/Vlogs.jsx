@@ -389,7 +389,7 @@ export default function AdminVlogs() {
         <DialogContent sx={{ mt: 1, maxHeight: "75vh" }}>
           <Grid container spacing={3}>
             {/* Left Column: Vlog basic information */}
-            <Grid item xs={12} md={5}>
+            <Grid size={{ xs: 12, md: 5 }}>
               <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: "primary.main" }}>
                 Thông tin cơ bản Vlog
               </Typography>
@@ -399,7 +399,7 @@ export default function AdminVlogs() {
                 <TextField label="Người dẫn (Host)" value={form.host} onChange={(e) => setForm({ ...form, host: e.target.value })} fullWidth variant="outlined" />
 
                 <Grid container spacing={2}>
-                  <Grid item xs={6}>
+                  <Grid size={{ xs: 6 }}>
                     <TextField 
                       label="Độ dài (Duration)" 
                       placeholder="Tự động lấy từ video" 
@@ -416,7 +416,7 @@ export default function AdminVlogs() {
                       helperText={originalDuration && form.duration_label && originalDuration !== form.duration_label ? `Lệch so với DB: ${originalDuration}` : ""}
                     />
                   </Grid>
-                  <Grid item xs={6}>
+                  <Grid size={{ xs: 6 }}>
                     <TextField label="Thứ tự hiển thị" type="number" value={form.display_order} onChange={(e) => setForm({ ...form, display_order: e.target.value })} fullWidth variant="outlined" />
                   </Grid>
                 </Grid>
@@ -595,7 +595,7 @@ export default function AdminVlogs() {
             </Grid>
 
             {/* Right Column: Dynamic Stage Timeline Locations */}
-            <Grid item xs={12} md={7}>
+            <Grid size={{ xs: 12, md: 7 }}>
               {form.video_url && (
                 <Box sx={{ mb: 3, borderRadius: 2, overflow: "hidden", bgcolor: "#000", border: "1px solid", borderColor: "divider" }}>
                   <Typography variant="caption" sx={{ display: "block", bgcolor: "rgba(255,255,255,0.1)", color: "#fff", p: 1, textAlign: "center" }}>
@@ -648,7 +648,7 @@ export default function AdminVlogs() {
                         <Grid container spacing={2}>
 
                           {/* Left inputs column (size 8) */}
-                          <Grid item xs={12} sm={8}>
+                          <Grid size={{ xs: 12, sm: 8 }}>
                             <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
                               <Box sx={{ display: "flex", gap: 2 }}>
                                 <Box sx={{ display: "flex", gap: 1 }}>
@@ -725,7 +725,7 @@ export default function AdminVlogs() {
                           </Grid>
 
                           {/* Right Image/Upload column (size 4) */}
-                          <Grid item xs={12} sm={4}>
+                          <Grid size={{ xs: 12, sm: 4 }}>
                             <Box sx={{ display: "flex", flexDirection: "column", gap: 1, height: "100%", justifyContent: "space-between" }}>
                               <Typography variant="caption" sx={{ fontWeight: 600, color: "text.secondary" }}>
                                 Ảnh mốc hành trình
