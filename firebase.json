@@ -9,6 +9,12 @@
     ],
     "frameworksBackend": {
       "region": "asia-east1"
-    }
+    },
+    "rewrites": [
+      {
+        "source": "/sitemap_v1.xml",
+        "destination": "/sitemap_v1.xml"
+      }
+    ]
   }
 }

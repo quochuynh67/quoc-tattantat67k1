@@ -2,6 +2,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { NavLink } from "react-router-dom";
 import ThemeToggle from "../ui/ThemeToggle";
+import { useSiteSettings } from "../../contexts/SiteSettingsContext";
 
 const TOOLS = [
   { id: "relax", label: "Relax", icon: "🧘", url: "https://quoc-research-retrogame.web.app/?feature=vlog" },
@@ -13,6 +14,7 @@ const TOOLS = [
 const Header = () => {
   const [toolsOpen, setToolsOpen] = useState(false);
   const toolsRef = useRef(null);
+  const { showOtherTab } = useSiteSettings();
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -41,6 +43,7 @@ const Header = () => {
         <NavLink to="/health" className={({ isActive }) => (isActive ? "active" : "")}>Sức khỏe</NavLink>
 
         {/* Other Menu */}
+        {showOtherTab && (
         <div ref={toolsRef} style={{ position: "relative" }}>
           <button
             onClick={() => setToolsOpen(!toolsOpen)}
@@ -108,6 +111,7 @@ const Header = () => {
             </div>
           )}
         </div>
+        )}
       </nav>
       <ThemeToggle />
     </header>

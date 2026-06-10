@@ -5,8 +5,10 @@ import { Container, Button, Card, CardMedia, CardContent, Typography, Box } from
 import { getSectionCount, getSectionItems, getSectionItemsSync } from "../../lib/phuTanApi";
 import { CardSkeletonGrid } from "../CardSkeleton";
 import AgentChat from "../AgentChat";
+import { useSiteSettings } from "../../contexts/SiteSettingsContext";
 
 const PlacesSection = () => {
+  const { canChatWithAi } = useSiteSettings();
   const [displayedPlaces, setDisplayedPlaces] = useState(() => getSectionItemsSync("places", 4) ?? []);
   const [totalItems, setTotalItems] = useState(0);
   const [loading, setLoading] = useState(() => getSectionItemsSync("places", 4) === null);
@@ -38,7 +40,7 @@ const PlacesSection = () => {
             Địa điểm nổi bật
           </Typography>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <AgentChat section="places" variant="inline" />
+            {canChatWithAi && <AgentChat section="places" variant="inline" />}
             {totalItems > 4 && (
               <Button component={RouterLink} to="/places" className="section-more-button">
                 Xem thêm

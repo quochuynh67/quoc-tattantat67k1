@@ -6,8 +6,10 @@ import { getSectionCount, getSectionItems, getSectionItemsSync } from "../../lib
 import { AlertSkeleton } from "../CardSkeleton";
 import AgentChat from "../AgentChat";
 import { HealthCard } from "../HealthCard";
+import { useSiteSettings } from "../../contexts/SiteSettingsContext";
 
 const HealthSection = () => {
+  const { canChatWithAi } = useSiteSettings();
   const [displayedHealth, setDisplayedHealth] = useState(() => getSectionItemsSync("health", 4) ?? []);
   const [totalItems, setTotalItems] = useState(0);
   const [loading, setLoading] = useState(() => getSectionItemsSync("health", 4) === null);
@@ -39,7 +41,7 @@ const HealthSection = () => {
             Sức khỏe & Y tế
           </Typography>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <AgentChat section="health" variant="inline" />
+            {canChatWithAi && <AgentChat section="health" variant="inline" />}
             {totalItems > 4 && (
               <Button component={RouterLink} to="/health" className="section-more-button">
                 Xem thêm

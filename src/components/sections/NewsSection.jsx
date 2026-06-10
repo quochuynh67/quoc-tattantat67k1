@@ -5,8 +5,10 @@ import { Container, Button, Card, CardActionArea, CardMedia, CardContent, Typogr
 import { getSectionCount, getSectionItems, getSectionItemsSync } from "../../lib/phuTanApi";
 import { CardSkeletonGrid } from "../CardSkeleton";
 import AgentChat from "../AgentChat";
+import { useSiteSettings } from "../../contexts/SiteSettingsContext";
 
 const NewsSection = () => {
+  const { canChatWithAi } = useSiteSettings();
   const [displayedNews, setDisplayedNews] = useState(() => getSectionItemsSync("news", 4) ?? []);
   const [totalItems, setTotalItems] = useState(0);
   const [loading, setLoading] = useState(() => getSectionItemsSync("news", 4) === null);
@@ -38,7 +40,7 @@ const NewsSection = () => {
             Tin tức địa phương
           </Typography>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <AgentChat section="news" variant="inline" />
+            {canChatWithAi && <AgentChat section="news" variant="inline" />}
             {totalItems > 4 && (
               <Button component={RouterLink} to="/news" className="section-more-button">
                 Xem thêm

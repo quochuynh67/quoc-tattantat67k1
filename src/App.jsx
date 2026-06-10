@@ -5,6 +5,7 @@ import { HelmetProvider } from "react-helmet-async";
 import { ThemeProvider } from "./hooks/useTheme";
 import { AdminAuthProvider } from "./contexts/AdminAuthContext";
 import { VlogCacheProvider } from "./contexts/VlogCacheContext";
+import { SiteSettingsProvider } from "./contexts/SiteSettingsContext";
 import Header from "./components/layout/Header";
 import Footer from "./components/layout/Footer";
 import ScrollRestoration from "./components/ScrollRestoration";
@@ -84,13 +85,15 @@ export default function App() {
   return (
     <HelmetProvider>
       <ThemeProvider>
-        <AdminAuthProvider>
-          <VlogCacheProvider>
-            <Router>
-              <AppLayout />
-            </Router>
-          </VlogCacheProvider>
-        </AdminAuthProvider>
+        <SiteSettingsProvider>
+          <AdminAuthProvider>
+            <VlogCacheProvider>
+              <Router>
+                <AppLayout />
+              </Router>
+            </VlogCacheProvider>
+          </AdminAuthProvider>
+        </SiteSettingsProvider>
       </ThemeProvider>
     </HelmetProvider>
   );

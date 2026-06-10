@@ -5,8 +5,10 @@ import { Box, Button, Card, CardContent, CardMedia, Chip, Container, Rating, Typ
 import { getSectionCount, getSectionItems, getSectionItemsSync } from "../../lib/phuTanApi";
 import { CardSkeletonGrid } from "../CardSkeleton";
 import AgentChat from "../AgentChat";
+import { useSiteSettings } from "../../contexts/SiteSettingsContext";
 
 const BeautyHealthSection = () => {
+  const { canChatWithAi } = useSiteSettings();
   const [displayedServices, setDisplayedServices] = useState(() => getSectionItemsSync("beautyHealth", 4) ?? []);
   const [totalItems, setTotalItems] = useState(0);
   const [loading, setLoading] = useState(() => getSectionItemsSync("beautyHealth", 4) === null);
@@ -38,7 +40,7 @@ const BeautyHealthSection = () => {
             Làm đẹp & Sức khỏe
           </Typography>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <AgentChat section="beautyHealth" variant="inline" />
+            {canChatWithAi && <AgentChat section="beautyHealth" variant="inline" />}
             {totalItems > 4 && (
               <Button component={RouterLink} to="/beauty-health" className="section-more-button">
                 Xem thêm

@@ -88,6 +88,31 @@ export async function getNewsletterConfig() {
   return data.value;
 }
 
+export interface FeatureFlags {
+  can_chat_with_ai: boolean;
+  can_explore: boolean;
+  show_other_tab: boolean;
+}
+
+const FEATURE_FLAG_KEYS: (keyof FeatureFlags)[] = ["can_chat_with_ai", "can_explore", "show_other_tab"];
+const _featureFlagDefaults: FeatureFlags = { can_chat_with_ai: true, can_explore: true, show_other_tab: true };
+
+export async function getFeatureFlags(): Promise<FeatureFlags> {
+  if (!isSupabaseConfigured) return { ..._featureFlagDefaults };
+  const { data, error } = await supabase
+    .from("site_settings")
+    .select("row_key, value")
+    .in("row_key", FEATURE_FLAG_KEYS);
+  if (error || !data) return { ..._featureFlagDefaults };
+  const result = { ..._featureFlagDefaults };
+  for (const row of data) {
+    if (FEATURE_FLAG_KEYS.includes(row.row_key as keyof FeatureFlags)) {
+      (result as any)[row.row_key] = Boolean(row.value);
+    }
+  }
+  return result;
+}
+
 export async function getSiteSetting(rowKey: string) {
   if (!isSupabaseConfigured) return null;
   const { data, error } = await supabase

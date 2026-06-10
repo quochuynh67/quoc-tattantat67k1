@@ -12,8 +12,10 @@ import VlogsMapSection from "../components/sections/VlogsMapSection";
 import NewsletterCTA from "../components/sections/NewsletterCTA";
 import AgentChatDashboard from "../components/AgentChatDashboard";
 import SEOIntroSection from "../components/sections/SEOIntroSection";
+import { useSiteSettings } from "../contexts/SiteSettingsContext";
 
 const Home = () => {
+  const { canChatWithAi } = useSiteSettings();
   return (
     <div className="home-page">
       <Helmet>
@@ -33,7 +35,7 @@ const Home = () => {
       <VlogsMapSection />
       <SEOIntroSection />
       <NewsletterCTA />
-      <AgentChatDashboard />
+      {canChatWithAi && <AgentChatDashboard />}
     </div>
   );
 };

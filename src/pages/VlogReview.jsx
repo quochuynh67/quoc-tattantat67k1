@@ -19,6 +19,7 @@ import { getSectionItems, getVlogReviewForPost } from "../lib/phuTanApi";
 import { supabase } from "../lib/supabaseClient";
 import { DetailSkeleton } from "../components/CardSkeleton";
 import AgentChat from "../components/AgentChat";
+import { useSiteSettings } from "../contexts/SiteSettingsContext";
 
 const SHEET_COLLAPSED = 120;
 const SHEET_EXPANDED = 380;
@@ -192,6 +193,7 @@ const VlogMap = ({ vlog, activeTime }) => {
 const VlogReview = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { canChatWithAi } = useSiteSettings();
 
   // Tab mode: single video ref; scroll mode: ref map keyed by vlog id
   const tabVideoRef = useRef(null);
@@ -451,7 +453,7 @@ const VlogReview = () => {
             </Box>
           </Box>
         </Container>
-        <AgentChat section={post.section} />
+        {canChatWithAi && <AgentChat section={post.section} />}
       </main>
     );
   }
@@ -886,7 +888,7 @@ const VlogReview = () => {
           </>
         )}
       </Container>
-      <AgentChat section={post?.section} />
+      {canChatWithAi && <AgentChat section={post?.section} />}
     </main>
   );
 };

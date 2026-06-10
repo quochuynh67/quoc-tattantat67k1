@@ -20,6 +20,7 @@ import { getSectionItems, getSectionItemsSync } from "../lib/phuTanApi";
 import { CardSkeletonGrid, AlertSkeleton } from "../components/CardSkeleton";
 import { HealthCard } from "../components/HealthCard";
 import AgentChat from "../components/AgentChat";
+import { useSiteSettings } from "../contexts/SiteSettingsContext";
 
 const sectionConfig = {
   news: {
@@ -69,6 +70,7 @@ const SectionList = ({ sectionKey }) => {
   const params = useParams();
   const navigate = useNavigate();
   const key = sectionKey || params.section;
+  const { canChatWithAi } = useSiteSettings();
   const section = sectionConfig[key];
   const [items, setItems] = useState(() => getSectionItemsSync(key) ?? []);
   const [loading, setLoading] = useState(() => getSectionItemsSync(key) === null);
@@ -172,7 +174,7 @@ const SectionList = ({ sectionKey }) => {
           {toastMessage}
         </MuiAlert>
       </Snackbar>
-      <AgentChat section={key} />
+      {canChatWithAi && <AgentChat section={key} />}
     </main>
   );
 };

@@ -5,8 +5,10 @@ import { Container, Button, Card, CardMedia, CardContent, Typography, Box } from
 import { getSectionCount, getSectionItems, getSectionItemsSync } from "../../lib/phuTanApi";
 import { CardSkeletonGrid } from "../CardSkeleton";
 import AgentChat from "../AgentChat";
+import { useSiteSettings } from "../../contexts/SiteSettingsContext";
 
 const AgricultureSection = () => {
+  const { canChatWithAi } = useSiteSettings();
   const [displayedAgri, setDisplayedAgri] = useState(() => getSectionItemsSync("agriculture", 4) ?? []);
   const [totalItems, setTotalItems] = useState(0);
   const [loading, setLoading] = useState(() => getSectionItemsSync("agriculture", 4) === null);
@@ -38,7 +40,7 @@ const AgricultureSection = () => {
             Nông nghiệp & Phát triển nông thôn
           </Typography>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <AgentChat section="agriculture" variant="inline" />
+            {canChatWithAi && <AgentChat section="agriculture" variant="inline" />}
             {totalItems > 4 && (
               <Button component={RouterLink} to="/agriculture" className="section-more-button">
                 Xem thêm

@@ -5,8 +5,10 @@ import { Container, Button, Card, CardMedia, CardContent, Typography, Rating, Bo
 import { getSectionCount, getSectionItems, getSectionItemsSync } from "../../lib/phuTanApi";
 import { CardSkeletonGrid } from "../CardSkeleton";
 import AgentChat from "../AgentChat";
+import { useSiteSettings } from "../../contexts/SiteSettingsContext";
 
 const FoodSection = () => {
+  const { canChatWithAi } = useSiteSettings();
   const [displayedFood, setDisplayedFood] = useState(() => getSectionItemsSync("food", 4) ?? []);
   const [totalItems, setTotalItems] = useState(0);
   const [loading, setLoading] = useState(() => getSectionItemsSync("food", 4) === null);
@@ -38,7 +40,7 @@ const FoodSection = () => {
             Ẩm thực địa phương
           </Typography>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <AgentChat section="food" variant="inline" />
+            {canChatWithAi && <AgentChat section="food" variant="inline" />}
             {totalItems > 4 && (
               <Button component={RouterLink} to="/food" className="section-more-button">
                 Xem thêm
