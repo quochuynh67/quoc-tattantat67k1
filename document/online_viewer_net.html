@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <title>Quản lý thu mua & bán rau củ quả</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.2/css/fontawesome.min.css"
+  />
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.2/css/regular.min.css"
+  />
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.2/css/solid.min.css"
+  />
+  <style>
+    :root {
+      --primary: #22c55e;
+      --primary-dark: #16a34a;
+      --bg: #f8fafc;
+      --text: #0f172a;
+    }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      -webkit-touch-callout: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    * {
+      -webkit tap-highlight-color: transparent;
+    }
+    /* Sidebar */
+    .sidebar {
+      background: linear-gradient(180deg, #111827 0%, #0b0f19 100%);
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100vh;
+      width: 280px;
+      z-index: 50;
+      transition: transform 0.3s ease;
+      transform: translateX(-100%);
+    }
+    .sidebar.open {
+      transform: translateX(0);
+    }
+    .sidebar-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 40;
+      display: none;
+    }
+    .sidebar-overlay.open {
+      display: block;
+    }
+    /* Mobile bottom nav */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #fff;
+      border-top: 1px solid #e5e7eb;
+      z-index: 30;
+      display: flex;
+      justify-content: space-around;
+      padding: 8px 0;
+      box-shadow: 0 -2px 8px rgba(0,0,0,0.05);
+    }
+    .bottom-nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 12px;
+      color: #6b7280;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .bottom-nav-item:hover {
+      color: var(--primary);
+    }
+    .bottom-nav-item.active {
+      color: var(--primary);
+    }
+    .bottom-nav-item i {
+      font-size: 20px;
+    }
+    /* Desktop nav */
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      color: #9ca3af;
+      border-radius: 8px;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+    .nav-item:hover {
+      background: #1f2937;
+      color: #fff;
+    }
+    .nav-item.active {
+      background: var(--primary);
+      color: #fff;
+    }
+    /* Cards */
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    /* Buttons */
+    .btn {
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s;
+      cursor: pointer;
+      border: none;
+      font-size: 14px;
+      white-space: nowrap;
+    }
+    .btn:active {
+      transform: scale(0.98);
+    }
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+    .btn-primary:hover {
+      background: var(--primary-dark);
+    }
+    .btn-secondary {
+      background: #e5e7eb;
+      color: #1f2937;
+    }
+    .btn-secondary:hover {
+      background: #d1d5db;
+    }
+    .btn-sm {
+      padding: 6px 10px;
+      font-size: 12px;
+    }
+    /* Inputs */
+    .input, .select {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+      font-size: 14px;
+      background: #fff;
+    }
+    .input:focus, .select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(34,197,94,0.15);
+    }
+    /* Table */
+    .table {
+      overflow-x: auto;
+    }
+    .table table {
+      min-width: 600px;
+    }
+    .table th {
+      background: #f9fafb;
+      font-weight: 600;
+      color: #4b5563;
+      text-align: left;
+      padding: 12px 16px;
+      font-size: 13px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .table td {
+      padding: 12px 16px;
+      border-bottom: 1px solid #e5e7eb;
+      font-size: 14px;
+    }
+    /* Stat cards */
+    .stat-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    .stat-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--primary);
+    }
+    /* Map */
+    .map-container {
+      height: 300px;
+      border-radius: 12px;
+      background: #e5e7eb;
+      overflow: hidden;
+    }
+    /* Badges */
+    .badge {
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      display: inline-block;
+    }
+    .badge-success {
+      background: #dcfce7;
+      color: #166534;
+    }
+    .badge-warning {
+      background: #fef3c7;
+      color: #92400e;
+    }
+    .badge-danger {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+    .badge-info {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+    /* Header */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px;
+      background: #fff;
+      border-bottom: 1px solid #e5e7eb;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .header-title {
+      font-size: 20px;
+      font-weight: 700;
+    }
+    /* Mobile adjustments */
+    @media (min-width: 768px) {
+      .sidebar {
+        transform: translateX(0);
+      }
+      .sidebar-overlay {
+        display: none;
+      }
+      .bottom-nav {
+        display: none;
+      }
+      .main-content {
+        margin-left: 280px;
+      }
+      .header-menu-btn {
+        display: none;
+      }
+    }
+    /* Grid adjustments */
+    .grid-cols-mobile {
+      grid-template-columns: 1fr;
+    }
+    @media (min-width: 640px) {
+      .grid-cols-mobile {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+    @media (min-width: 1024px) {
+      .grid-cols-mobile {
+        grid-template-columns: 1fr 1fr 1fr 1fr;
+      }
+    }
+    /* Item row for forms */
+    .item-row {
+      display: grid;
+      gap: 8px;
+      padding: 12px;
+      background: #f9fafb;
+      border-radius: 8px;
+    }
+    @media (min-width: 640px) {
+      .item-row {
+        grid-template-columns: 1fr;
+      }
+    }
+    /* Hide scrollbar */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="pb-20">
+  <!-- Sidebar Overlay -->
+  <div id="sidebar-overlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+  <!-- Sidebar (Desktop) -->
+  <aside id="sidebar" class="sidebar">
+    <div class="p-6">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-green-500 flex items-center justify-center">
+          <i class="fas fa-leaf text-white text-xl"></i>
+        </div>
+        <div>
+          <h1 class="text-white font-bold text-lg">Rau Củ Farm</h1>
+          <p class="text-gray-400 text-xs">Quản lý thu mua & bán</p>
+        </div>
+      </div>
+    </div>
+    <nav class="px-4 space-y-2">
+      <div class="nav-item active" onclick="showPage('dashboard')">
+        <i class="fas fa-home"></i>
+        <span>Dashboard</span>
+      </div>
+      <div class="nav-item" onclick="showPage('purchases')">
+        <i class="fas fa-shopping-cart"></i>
+        <span>Thu mua</span>
+      </div>
+      <div class="nav-item" onclick="showPage('sales')">
+        <i class="fas fa-cash-register"></i>
+        <span>Bán hàng</span>
+      </div>
+      <div class="nav-item" onclick="showPage('farmers')">
+        <i class="fas fa-users"></i>
+        <span>Nông dân</span>
+      </div>
+      <div class="nav-item" onclick="showPage('customers')">
+        <i class="fas fa-user-friends"></i>
+        <span>Khách hàng</span>
+      </div>
+      <div class="nav-item" onclick="showPage('history')">
+        <i class="fas fa-history"></i>
+        <span>Lịch sử</span>
+      </div>
+      <div class="nav-item" onclick="showPage('map')">
+        <i class="fas fa-map-marker-alt"></i>
+        <span>Bản đồ</span>
+      </div>
+    </nav>
+  </aside>
+
+  <!-- Main content -->
+  <div class="main-content">
+    <!-- Mobile Header -->
+    <div class="header">
+      <div class="flex items-center gap-3">
+        <button class="header-menu-btn btn btn-secondary btn-sm" onclick="toggleSidebar()">
+          <i class="fas fa-bars"></i>
+        </button>
+        <div id="header-title" class="header-title">Dashboard</div>
+      </div>
+      <div>
+        <button class="btn btn-primary btn-sm">
+          <i class="fas fa-plus"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Page content -->
+    <main class="p-4">
+      <!-- Dashboard Page -->
+      <div id="page-dashboard" class="page">
+        <!-- Stats -->
+        <div class="grid grid-cols-mobile gap-4 mb-6">
+          <div class="stat-card">
+            <div class="flex items-center gap-3 mb-2">
+              <div class="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
+                <i class="fas fa-shopping-cart text-green-600"></i>
+              </div>
+              <span class="text-gray-600 font-medium text-sm">Tổng thu mua</span>
+            </div>
+            <div class="stat-value">2,450,000 VND</div>
+            <div class="text-sm text-gray-500 mt-1">12 phiếu hôm nay</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="flex items-center gap-3 mb-2">
+              <div class="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                <i class="fas fa-cash-register text-blue-600"></i>
+              </div>
+              <span class="text-gray-600 font-medium text-sm">Tổng bán hàng</span>
+            </div>
+            <div class="stat-value">3,890,000 VND</div>
+            <div class="text-sm text-gray-500 mt-1">8 hoá đơn hôm nay</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="flex items-center gap-3 mb-2">
+              <div class="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center">
+                <i class="fas fa-chart-line text-emerald-600"></i>
+              </div>
+              <span class="text-gray-600 font-medium text-sm">Lợi nhuận</span>
+            </div>
+            <div class="stat-value">1,440,000 VND</div>
+            <div class="text-sm text-gray-500 mt-1">58.8% lợi nhuận</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="flex items-center gap-3 mb-2">
+              <div class="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
+                <i class="fas fa-users text-purple-600"></i>
+              </div>
+              <span class="text-gray-600 font-medium text-sm">Nông dân</span>
+            </div>
+            <div class="stat-value">24</div>
+            <div class="text-sm text-gray-500 mt-1">5 nông dân mới</div>
+          </div>
+        </div>
+
+        <!-- Charts & Tables -->
+        <div class="space-y-4">
+          <div class="card p-4">
+            <h3 class="text-lg font-bold mb-3">Doanh thu theo ngày</h3>
+            <div class="h-48 bg-gray-100 rounded-lg flex items-center justify-center text-gray-500">
+              [Chart: Doanh thu theo ngày]
+            </div>
+          </div>
+
+          <div class="card p-4">
+            <h3 class="text-lg font-bold mb-3">Top nông dân</h3>
+            <div class="table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Nông dân</th>
+                    <th>Số lần</th>
+                    <th>Tổng tiền</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Nguyễn Văn A</td>
+                    <td>8</td>
+                    <td>1,250,000 VND</td>
+                  </tr>
+                  <tr>
+                    <td>Trần Thị B</td>
+                    <td>6</td>
+                    <td>980,000 VND</td>
+                  </tr>
+                  <tr>
+                    <td>Lê Văn C</td>
+                    <td>5</td>
+                    <td>720,000 VND</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Thu mua Page -->
+      <div id="page-purchases" class="page hidden">
+        <div class="mb-4">
+          <h2 class="text-2xl font-bold mb-1">Thu mua</h2>
+          <p class="text-gray-600 text-sm">Ghi nhận phiếu thu mua rau củ quả từ nông dân</p>
+        </div>
+
+        <div class="card p-4 mb-4">
+          <h3 class="text-lg font-bold mb-3">Tạo phiếu thu mua</h3>
+
+          <div class="space-y-3">
+            <div>
+              <label class="block text-sm font-medium mb-2">Nông dân</label>
+              <select class="select">
+                <option value="">Chọn nông dân...</option>
+                <option value="1">Nguyễn Văn A</option>
+                <option value="2">Trần Thị B</option>
+                <option value="3">Lê Văn C</option>
+              </select>
+              <button class="btn btn-secondary mt-2 text-sm w-full">
+                <i class="fas fa-plus"></i> Thêm nông dân mới
+              </button>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium mb-2">Vị trí nông dân</label>
+              <div class="map-container mb-2">
+                <div class="w-full h-full flex items-center justify-center text-gray-500">
+                  [Map: Chọn vị trí nông dân]
+                </div>
+              </div>
+              <button class="btn btn-primary w-full">
+                <i class="fas fa-map-marker-alt"></i> Lấy vị trí GPS
+              </button>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium mb-2">Mặt hàng</label>
+              <div class="space-y-2">
+                <div class="grid grid-cols-1 gap-2">
+                  <input class="select" placeholder="Tên rau củ quả" />
+                  <div class="flex gap-2">
+                    <select class="select" style="width: 80px;">
+                      <option value="kg">kg</option>
+                      <option value="bó">bó</option>
+                    </select>
+                    <input type="number" class="select" placeholder="Số lượng" min="0" step="0.1" />
+                    <input type="number" class="select" placeholder="Đơn giá" min="0" />
+                  </div>
+                  <button class="btn btn-secondary w-full">
+                    <i class="fas fa-plus"></i> Thêm món
+                  </button>
+                </div>
+                <div class="item-row">
+                  <div class="flex items-center justify-between">
+                    <div class="font-medium">Rau cải</div>
+                    <div class="text-red-500 cursor-pointer">
+                      <i class="fas fa-trash"></i>
+                    </div>
+                  </div>
+                  <div class="flex items-center justify-between text-sm text-gray-600">
+                    <div>5.0 kg</div>
+                    <div>20,000 VND/kg</div>
+                  </div>
+                  <div class="text-right font-bold">100,000 VND</div>
+                </div>
+                <div class="item-row">
+                  <div class="flex items-center justify-between">
+                    <div class="font-medium">Cà phê</div>
+                    <div class="text-red-500 cursor-pointer">
+                      <i class="fas fa-trash"></i>
+                    </div>
+                  </div>
+                  <div class="flex items-center justify-between text-sm text-gray-600">
+                    <div>10 bó</div>
+                    <div>15,000 VND/bó</div>
+                  </div>
+                  <div class="text-right font-bold">150,000 VND</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-3 border-t">
+              <div>
+                <span class="text-gray-600">Tổng tiền:</span>
+                <span class="text-xl font-bold ml-2">250,000 VND</span>
+              </div>
+            </div>
+
+            <div class="flex gap-2">
+              <button class="btn btn-secondary w-full">
+                <i class="fas fa-save"></i> Lưu pending
+              </button>
+              <button class="btn btn-primary w-full">
+                <i class="fas fa-check"></i> Lưu & Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Danh sách phiếu hôm nay -->
+        <div class="card p-4">
+          <h3 class="text-lg font-bold mb-3">Phiếu hôm nay</h3>
+          <div class="space-y-2">
+            <div class="p-3 bg-gray-50 rounded-lg">
+              <div class="flex items-center gap-2 mb-1">
+                <span class="badge badge-success">Confirm</span>
+                <span class="text-sm text-gray-500">14:30</span>
+              </div>
+              <div class="font-medium">Nguyễn Văn A</div>
+              <div class="text-sm text-gray-600">Rau cải 5kg, Cà phê 10 bó</div>
+              <div class="text-sm font-bold mt-1">250,000 VND</div>
+            </div>
+            <div class="p-3 bg-gray-50 rounded-lg">
+              <div class="flex items-center gap-2 mb-1">
+                <span class="badge badge-warning">Pending</span>
+                <span class="text-sm text-gray-500">13:15</span>
+              </div>
+              <div class="font-medium">Trần Thị B</div>
+              <div class="text-sm text-gray-600">Khoai lang 8kg</div>
+              <div class="text-sm font-bold mt-1">120,000 VND</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bán hàng Page -->
+      <div id="page-sales" class="page hidden">
+        <div class="mb-4">
+          <h2 class="text-2xl font-bold mb-1">Bán hàng</h2>
+          <p class="text-gray-600 text-sm">Tạo hoá đơn bán rau củ quả cho khách</p>
+        </div>
+
+        <div class="card p-4">
+          <h3 class="text-lg font-bold mb-3">Tạo hoá đơn</h3>
+
+          <div class="space-y-3">
+            <div>
+              <label class="block text-sm font-medium mb-2">Khách hàng</label>
+              <select class="select">
+                <option value="">Khách lẻ...</option>
+                <option value="1">Nguyễn Minh D</option>
+                <option value="2">Trần Hoa E</option>
+              </select>
+              <button class="btn btn-secondary mt-2 text-sm w-full">
+                <i class="fas fa-plus"></i> Thêm khách mới
+              </button>
+            </div>
+
+            <div id="guest-customer-form" class="grid grid-cols-2 gap-2">
+              <input type="text" class="select" placeholder="Tên khách" />
+              <input type="text" class="select" placeholder="Số điện thoại" />
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium mb-2">Mặt hàng trong hoá đơn</label>
+              <div class="space-y-2">
+                <div class="grid grid-cols-1 gap-2">
+                  <input class="select" placeholder="Tên rau củ quả" />
+                  <div class="flex gap-2">
+                    <select class="select" style="width: 80px;">
+                      <option value="kg">kg</option>
+                      <option value="bó">bó</option>
+                    </select>
+                    <input type="number" class="select" placeholder="Số lượng" min="0" step="0.1" />
+                    <input type="number" class="select" placeholder="Đơn giá bán" min="0" />
+                  </div>
+                  <button class="btn btn-secondary w-full">
+                    <i class="fas fa-plus"></i> Thêm món
+                  </button>
+                </div>
+                <div class="item-row">
+                  <div class="flex items-center justify-between">
+                    <div class="font-medium">Rau cải</div>
+                    <div class="text-red-500 cursor-pointer">
+                      <i class="fas fa-trash"></i>
+                    </div>
+                  </div>
+                  <div class="flex items-center justify-between text-sm text-gray-600">
+                    <div>3.0 kg</div>
+                    <div>35,000 VND/kg</div>
+                  </div>
+                  <div class="text-right font-bold">105,000 VND</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-3 border-t">
+              <div>
+                <div>
+                  <span class="text-gray-600">Tổng tiền:</span>
+                  <span class="text-xl font-bold ml-2">105,000 VND</span>
+                </div>
+                <div class="mt-1">
+                  <span class="text-gray-600">Lợi nhuận:</span>
+                  <span class="text-lg font-bold ml-2 text-emerald-600">60,000 VND</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex gap-2">
+              <button class="btn btn-secondary w-full">
+                <i class="fas fa-save"></i> Lưu pending
+              </button>
+              <button class="btn btn-primary w-full">
+                <i class="fas fa-check"></i> Lưu & Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Danh sách hoá đơn -->
+        <div class="card p-4 mt-4">
+          <h3 class="text-lg font-bold mb-3">Hoá đơn hôm nay</h3>
+          <div class="space-y-2">
+            <div class="p-3 bg-gray-50 rounded-lg">
+              <div class="flex items-center gap-2 mb-1">
+                <span class="badge badge-success">Confirm</span>
+                <span class="text-sm text-gray-500">14:00</span>
+              </div>
+              <div class="font-medium">Nguyễn Minh D</div>
+              <div class="text-sm text-gray-600">Rau cải 3kg</div>
+              <div class="text-sm font-bold mt-1">105,000 VND</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Nông dân Page -->
+      <div id="page-farmers" class="page hidden">
+        <div class="mb-4">
+          <h2 class="text-2xl font-bold mb-1">Nông dân</h2>
+          <p class="text-gray-600 text-sm">Quản lý danh sách nông dân cung cấp</p>
+        </div>
+
+        <div class="card p-4">
+          <div class="flex items-center gap-2 mb-3">
+            <input type="text" class="select" placeholder="Search nông dân..." />
+            <button class="btn btn-primary">
+              <i class="fas fa-search"></i>
+            </button>
+          </div>
+          <button class="btn btn-primary w-full mb-3">
+            <i class="fas fa-plus"></i> Thêm nông dân
+          </button>
+
+          <div class="space-y-2">
+            <div class="p-3 bg-gray-50 rounded-lg">
+              <div class="flex items-center justify-between mb-1">
+                <div class="font-medium">Nguyễn Văn A</div>
+                <button class="btn btn-secondary btn-sm">
+                  <i class="fas fa-eye"></i>
+                </button>
+              </div>
+              <div class="text-sm text-gray-600">0912345678</div>
+              <div class="text-sm text-gray-500">Làng X, Huyện Y</div>
+              <div class="flex items-center justify-between mt-2 text-sm">
+                <div>8 lần</div>
+                <div class="font-bold">1,250,000 VND</div>
+              </div>
+            </div>
+            <div class="p-3 bg-gray-50 rounded-lg">
+              <div class="flex items-center justify-between mb-1">
+                <div class="font-medium">Trần Thị B</div>
+                <button class="btn btn-secondary btn-sm">
+                  <i class="fas fa-eye"></i>
+                </button>
+              </div>
+              <div class="text-sm text-gray-600">0923456789</div>
+              <div class="text-sm text-gray-500">Làng Z, Huyện W</div>
+              <div class="flex items-center justify-between mt-2 text-sm">
+                <div>6 lần</div>
+                <div class="font-bold">980,000 VND</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Khách hàng Page -->
+      <div id="page-customers" class="page hidden">
+        <div class="mb-4">
+          <h2 class="text-2xl font-bold mb-1">Khách hàng</h2>
+          <p class="text-gray-600 text-sm">Quản lý danh sách khách hàng mua lại</p>
+        </div>
+
+        <div class="card p-4">
+          <div class="flex items-center gap-2 mb-3">
+            <input type="text" class="select" placeholder="Search khách..." />
+            <button class="btn btn-primary">
+              <i class="fas fa-search"></i>
+            </button>
+          </div>
+          <button class="btn btn-primary w-full mb-3">
+            <i class="fas fa-plus"></i> Thêm khách
+          </button>
+
+          <div class="space-y-2">
+            <div class="p-3 bg-gray-50 rounded-lg">
+              <div class="flex items-center justify-between mb-1">
+                <div class="font-medium">Nguyễn Minh D</div>
+                <button class="btn btn-secondary btn-sm">
+                  <i class="fas fa-eye"></i> Lịch sử
+                </button>
+              </div>
+              <div class="text-sm text-gray-600">0934567890</div>
+              <div class="flex items-center justify-between mt-2 text-sm">
+                <div>5 lần</div>
+                <div class="font-bold">520,000 VND</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Lịch sử Page -->
+      <div id="page-history" class="page hidden">
+        <div class="mb-4">
+          <h2 class="text-2xl font-bold mb-1">Lịch sử giao dịch</h2>
+          <p class="text-gray-600 text-sm">Xem lại tất phiếu thu mua & hoá đơn bán</p>
+        </div>
+
+        <div class="card p-4">
+          <div class="flex items-center gap-2 mb-3">
+            <input type="date" class="select" />
+            <input type="date" class="select" />
+          </div>
+          <div class="flex items-center gap-2 mb-3">
+            <select class="select">
+              <option value="">Tất loại</option>
+              <option value="purchase">Thu mua</option>
+              <option value="sale">Bán hàng</option>
+            </select>
+            <button class="btn btn-primary w-full">
+              <i class="fas fa-search"></i> Search
+            </button>
+          </div>
+
+          <div class="space-y-2">
+            <div class="p-3 bg-gray-50 rounded-lg">
+              <div class="flex items-center gap-2 mb-1">
+                <span class="badge badge-warning">Thu mua</span>
+                <span class="text-sm text-gray-500">11/06/2026 14:30</span>
+              </div>
+              <div class="font-medium">Nguyễn Văn A</div>
+              <div class="text-sm text-gray-600">Rau cải 5kg, Cà phê 10 bó</div>
+              <div class="flex items-center justify-between mt-2">
+                <div class="text-sm font-bold">250,000 VND</div>
+                <span class="badge badge-success">Confirm</span>
+              </div>
+              <button class="btn btn-secondary btn-sm w-full mt-2">
+                <i class="fas fa-eye"></i> Xem
+              </button>
+            </div>
+            <div class="p-3 bg-gray-50 rounded-lg">
+              <div class="flex items-center gap-2 mb-1">
+                <span class="badge badge-info">Bán</span>
+                <span class="text-sm text-gray-500">11/06/2026 14:00</span>
+              </div>
+              <div class="font-medium">Nguyễn Minh D</div>
+              <div class="text-sm text-gray-600">Rau cải 3kg</div>
+              <div class="flex items-center justify-between mt-2">
+                <div class="text-sm font-bold">105,000 VND</div>
+                <span class="badge badge-success">Confirm</span>
+              </div>
+              <button class="btn btn-secondary btn-sm w-full mt-2">
+                <i class="fas fa-eye"></i> Xem
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bản đồ Page -->
+      <div id="page-map" class="page hidden">
+        <div class="mb-4">
+          <h2 class="text-2xl font-bold mb-1">Bản đồ vị trí</h2>
+          <p class="text-gray-600 text-sm">Xem vị trí nông dân trên bản đồ</p>
+        </div>
+
+        <div class="map-container mb-4">
+          <div class="w-full h-full flex items-center justify-center text-gray-500">
+            [Map: Hiển thị tất vị trí nông dân]
+          </div>
+        </div>
+
+        <div class="card p-4">
+          <h3 class="text-lg font-bold mb-3">Lịch sử vị trí</h3>
+          <div class="space-y-2">
+            <div class="p-3 bg-gray-50 rounded-lg">
+              <div class="font-medium">Nguyễn Văn A</div>
+              <div class="text-sm text-gray-600">11/06/2026 14:30</div>
+              <div class="text-sm text-gray-500">Làng X, Huyện Y</div>
+              <div class="text-sm font-bold mt-1">250,000 VND</div>
+            </div>
+            <div class="p-3 bg-gray-50 rounded-lg">
+              <div class="font-medium">Trần Thị B</div>
+              <div class="text-sm text-gray-600">11/06/2026 13:15</div>
+              <div class="text-sm text-gray-500">Làng Z, Huyện W</div>
+              <div class="text-sm font-bold mt-1">120,000 VND</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Mobile Bottom Navigation -->
+  <nav class="bottom-nav">
+    <div class="bottom-nav-item active" onclick="showPage('dashboard')">
+      <i class="fas fa-home"></i>
+      <span>Dashboard</span>
+    </div>
+    <div class="bottom-nav-item" onclick="showPage('purchases')">
+      <i class="fas fa-shopping-cart"></i>
+      <span>Thu mua</span>
+    </div>
+    <div class="bottom-nav-item" onclick="showPage('sales')">
+      <i class="fas fa-cash-register"></i>
+      <span>Bán</span>
+    </div>
+    <div class="bottom-nav-item" onclick="showPage('farmers')">
+      <i class="fas fa-users"></i>
+      <span>Nông</span>
+    </div>
+    <div class="bottom-nav-item" onclick="showPage('history')">
+      <i class="fas fa-history"></i>
+      <span>Lịch</span>
+    </div>
+  </nav>
+
+  <script>
+    function showPage(pageId) {
+      // Hide all pages
+      document.querySelectorAll('.page').forEach(page => {
+        page.classList.add('hidden');
+      });
+      // Show selected page
+      document.getElementById('page-' + pageId).classList.remove('hidden');
+
+      // Update header title
+      const titles = {
+        dashboard: 'Dashboard',
+        purchases: 'Thu mua',
+        sales: 'Bán hàng',
+        farmers: 'Nông dân',
+        customers: 'Khách hàng',
+        history: 'Lịch sử',
+        map: 'Bản đồ'
+      };
+      document.getElementById('header-title').textContent = titles[pageId] || 'Dashboard';
+
+      // Update active nav (desktop)
+      document.querySelectorAll('.nav-item').forEach(item => {
+        item.classList.remove('active');
+      });
+      const desktopNav = document.querySelector(`.nav-item[onclick="showPage('${pageId}')"]`);
+      if (desktopNav) desktopNav.classList.add('active');
+
+      // Update active bottom nav (mobile)
+      document.querySelectorAll('.bottom-nav-item').forEach(item => {
+        item.classList.remove('active');
+      });
+      const mobileNav = document.querySelector(`.bottom-nav-item[onclick="showPage('${pageId}')"]`);
+      if (mobileNav) mobileNav.classList.add('active');
+
+      // Close sidebar on mobile
+      if (window.innerWidth < 768) {
+        toggleSidebar(false);
+      }
+    }
+
+    function toggleSidebar(open) {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebar-overlay');
+      const shouldOpen = open === undefined ? !sidebar.classList.contains('open') : open;
+
+      if (shouldOpen) {
+        sidebar.classList.add('open');
+        overlay.classList.add('open');
+      } else {
+        sidebar.classList.remove('open');
+        overlay.classList.remove('open');
+      }
+    }
+
+    // Show guest customer form by default
+    document.getElementById('guest-customer-form').style.display = 'grid';
+
+    // Prevent double-tap zoom
+    document.addEventListener('touchstart', function(e) {
+      if (e.touches.length > 1) {
+        e.preventDefault();
+      }
+    }, { passive: false });
+  </script>
+</body>
+</html>

@@ -2,8 +2,8 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { getFeatureFlags } from "../lib/phuTanApi";
 
 const SiteSettingsContext = createContext({
-  canChatWithAi: true,
-  canExplore: true,
+  canChatWithAi: false,
+  canExplore: false,
   showOtherTab: true,
 });
 
@@ -11,9 +11,9 @@ export const useSiteSettings = () => useContext(SiteSettingsContext);
 
 export const SiteSettingsProvider = ({ children }) => {
   const [flags, setFlags] = useState({
-    canChatWithAi: true,
-    canExplore: true,
-    showOtherTab: true,
+    canChatWithAi: false,
+    canExplore: false,
+    showOtherTab: false,
   });
 
   useEffect(() => {

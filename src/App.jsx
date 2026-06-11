@@ -30,16 +30,23 @@ const AdminPosts      = lazy(() => import("./pages/admin/Posts"));
 const AdminVlogs      = lazy(() => import("./pages/admin/Vlogs"));
 const AdminSettings   = lazy(() => import("./pages/admin/Settings"));
 
+// Trading module
+const TradingLayout   = lazy(() => import("./pages/trading/TradingLayout"));
+const TradingDashboard = lazy(() => import("./pages/trading/Dashboard"));
+const TradingFarmers  = lazy(() => import("./pages/trading/Farmers"));
+const TradingPurchases = lazy(() => import("./pages/trading/Purchases"));
+const TradingSales    = lazy(() => import("./pages/trading/Sales"));
 const AppLayout = () => {
   const location = useLocation();
   const isVlogFeed = location.pathname === "/vlogs";
   const isHome = location.pathname === "/";
+  const isTrading = location.pathname.startsWith("/trading");
 
   return (
     <>
       <ScrollRestoration />
-      {!isVlogFeed && <Header />}
-      <main style={{ minHeight: isVlogFeed ? "100vh" : "80vh" }}>
+      {!isVlogFeed && !isTrading && <Header />}
+      <main style={{ minHeight: isVlogFeed || isTrading ? "100vh" : "80vh", padding: isTrading ? 0 : undefined }}>
         {/* Home: always mounted, hidden when not active */}
         <div style={{ display: isHome ? "block" : "none" }}>
           <Home />
@@ -71,12 +78,18 @@ const AppLayout = () => {
               <Route path="vlogs"     element={<AdminVlogs />} />
               <Route path="settings"  element={<AdminSettings />} />
             </Route>
+            <Route path="/trading" element={<TradingLayout />}>
+              <Route index element={<TradingDashboard />} />
+              <Route path="farmers" element={<TradingFarmers />} />
+              <Route path="purchases" element={<TradingPurchases />} />
+              <Route path="sales" element={<TradingSales />} />
+            </Route>
             <Route path="/detail/:id" element={<DetailPage />} />
             <Route path="*"           element={<NotFound />} />
           </Routes>
         </Suspense>
       </main>
-      {!isVlogFeed && <Footer />}
+      {!isVlogFeed && !isTrading && <Footer />}
     </>
   );
 };

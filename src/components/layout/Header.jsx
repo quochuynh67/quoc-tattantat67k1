@@ -7,6 +7,7 @@ import { useSiteSettings } from "../../contexts/SiteSettingsContext";
 const TOOLS = [
   { id: "relax", label: "Relax", icon: "🧘", url: "https://quoc-research-retrogame.web.app/?feature=vlog" },
   { id: "retro", label: "Chơi game thùng", icon: "🕹️", url: "https://quoc-research-retrogame.web.app/?feature=retro" },
+  { id: "trade", label: "Thương lái Nông sản", icon: "🌾", url: "/trading" },
   { id: "wish", label: "Tạo văn lời chúc hay", icon: "🎉", url: "#" },
   { id: "scale", label: "Tính toán cân lúa", icon: "🧮", url: "#" },
 ];
@@ -44,73 +45,73 @@ const Header = () => {
 
         {/* Other Menu */}
         {showOtherTab && (
-        <div ref={toolsRef} style={{ position: "relative" }}>
-          <button
-            onClick={() => setToolsOpen(!toolsOpen)}
-            style={{
-              background: "none",
-              border: "none",
-              color: "inherit",
-              cursor: "pointer",
-              fontSize: "inherit",
-              fontWeight: "inherit",
-              padding: "0",
-              textDecoration: "none",
-              display: "flex",
-              alignItems: "center",
-              gap: "0.4rem",
-            }}
-            className={toolsOpen ? "active" : ""}
-          >
-            <span>⚙️</span>
-            <span>Tiện ích</span>
-          </button>
-          {toolsOpen && (
-            <div
+          <div ref={toolsRef} style={{ position: "relative" }}>
+            <button
+              onClick={() => setToolsOpen(!toolsOpen)}
               style={{
-                position: "absolute",
-                top: "100%",
-                left: 0,
-                background: "var(--color-surface)",
-                border: "1px solid var(--color-border)",
-                borderRadius: "6px",
-                boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-                minWidth: "150px",
-                marginTop: "8px",
-                zIndex: 1000,
+                background: "none",
+                border: "none",
+                color: "inherit",
+                cursor: "pointer",
+                fontSize: "inherit",
+                fontWeight: "inherit",
+                padding: "0",
+                textDecoration: "none",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.4rem",
               }}
+              className={toolsOpen ? "active" : ""}
             >
-              {TOOLS.map((tool) => (
-                <button
-                  key={tool.id}
-                  onClick={() => {
-                    window.open(tool.url, "_blank");
-                    setToolsOpen(false);
-                  }}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    width: "100%",
-                    padding: "12px 16px",
-                    background: "none",
-                    border: "none",
-                    color: "var(--color-text)",
-                    cursor: "pointer",
-                    fontSize: "0.95rem",
-                    textAlign: "left",
-                    transition: "background-color 0.2s",
-                  }}
-                  onMouseEnter={(e) => e.target.style.backgroundColor = "var(--color-background)"}
-                  onMouseLeave={(e) => e.target.style.backgroundColor = "transparent"}
-                >
-                  <span>{tool.icon}</span>
-                  <span>{tool.label}</span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+              <span>⚙️</span>
+              <span>Tiện ích</span>
+            </button>
+            {toolsOpen && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: "100%",
+                  left: 0,
+                  background: "var(--color-surface)",
+                  border: "1px solid var(--color-border)",
+                  borderRadius: "6px",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                  minWidth: "150px",
+                  marginTop: "8px",
+                  zIndex: 1000,
+                }}
+              >
+                {TOOLS.map((tool) => (
+                  <button
+                    key={tool.id}
+                    onClick={() => {
+                      window.open(tool.url, "_blank");
+                      setToolsOpen(false);
+                    }}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      width: "100%",
+                      padding: "12px 16px",
+                      background: "none",
+                      border: "none",
+                      color: "var(--color-text)",
+                      cursor: "pointer",
+                      fontSize: "0.95rem",
+                      textAlign: "left",
+                      transition: "background-color 0.2s",
+                    }}
+                    onMouseEnter={(e) => e.target.style.backgroundColor = "var(--color-background)"}
+                    onMouseLeave={(e) => e.target.style.backgroundColor = "transparent"}
+                  >
+                    <span>{tool.icon}</span>
+                    <span>{tool.label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         )}
       </nav>
       <ThemeToggle />
