@@ -48,10 +48,23 @@ const Sales = () => {
             <textarea className="input" placeholder="Ghi chú hoá đơn..."></textarea>
           </div>
 
-          <div className="flex items-center justify-between pt-3 border-t">
-            <div>
-              <span className="text-gray-600">Tổng tiền:</span>
-              <span className="text-xl font-bold ml-2">105,000 VND</span>
+          <div className="pt-3 border-t space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-gray-600">Tổng tiền:</span>
+                <span className="text-xl font-bold ml-2">105,000 VND</span>
+              </div>
+            </div>
+            
+            <div className="bg-white p-3 rounded border">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium">Thu tiền khách hàng:</span>
+                <div className="flex items-center gap-2">
+                  <input type="checkbox" id="collectedFull" className="w-4 h-4 text-green-600 rounded focus:ring-green-500" />
+                  <label htmlFor="collectedFull" className="text-sm text-gray-700 cursor-pointer">Đã thu đủ</label>
+                </div>
+              </div>
+              <input type="number" className="input text-sm w-full" placeholder="Hoặc nhập số tiền đã thu (VND)..." />
             </div>
           </div>
 
@@ -77,7 +90,12 @@ const Sales = () => {
             </div>
             <div className="font-medium">Nguyễn Minh D</div>
             <div className="text-sm text-gray-600">Rau cải 3kg</div>
-            <div className="text-sm font-bold mt-1">105,000 VND</div>
+            <div className="flex items-center justify-between mt-1">
+              <div className="text-sm font-bold">105,000 VND</div>
+              <div className="flex items-center gap-1 text-green-600 text-xs font-medium">
+                <i className="fas fa-check-circle"></i> Đã thu đủ
+              </div>
+            </div>
           </div>
         </div>
       </div>

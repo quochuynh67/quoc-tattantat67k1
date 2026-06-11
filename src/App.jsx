@@ -36,6 +36,7 @@ const TradingDashboard = lazy(() => import("./pages/trading/Dashboard"));
 const TradingFarmers  = lazy(() => import("./pages/trading/Farmers"));
 const TradingPurchases = lazy(() => import("./pages/trading/Purchases"));
 const TradingSales    = lazy(() => import("./pages/trading/Sales"));
+const TradingCustomers = lazy(() => import("./pages/trading/Customers"));
 const AppLayout = () => {
   const location = useLocation();
   const isVlogFeed = location.pathname === "/vlogs";
@@ -83,6 +84,7 @@ const AppLayout = () => {
               <Route path="farmers" element={<TradingFarmers />} />
               <Route path="purchases" element={<TradingPurchases />} />
               <Route path="sales" element={<TradingSales />} />
+              <Route path="customers" element={<TradingCustomers />} />
             </Route>
             <Route path="/detail/:id" element={<DetailPage />} />
             <Route path="*"           element={<NotFound />} />

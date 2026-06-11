@@ -13,6 +13,7 @@ const TradingLayout = () => {
     if (location.pathname.includes('purchases')) return 'Thu mua';
     if (location.pathname.includes('sales')) return 'Bán hàng';
     if (location.pathname.includes('farmers')) return 'Nông dân';
+    if (location.pathname.includes('customers')) return 'Khách hàng';
     return 'Quản lý';
   };
 
@@ -54,6 +55,10 @@ const TradingLayout = () => {
             <i className="fas fa-users w-5 text-center"></i>
             <span>Nông dân</span>
           </NavLink>
+          <NavLink to="/trading/customers" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} onClick={() => setSidebarOpen(false)}>
+            <i className="fas fa-user-tag w-5 text-center"></i>
+            <span>Khách hàng</span>
+          </NavLink>
         </nav>
       </aside>
 
@@ -81,7 +86,11 @@ const TradingLayout = () => {
         </NavLink>
         <NavLink to="/trading/farmers" className={({ isActive }) => `bottom-nav-item flex-1 ${isActive ? 'active' : ''}`}>
           <i className="fas fa-users"></i>
-          <span style={{ fontSize: '10px' }}>Nông dân</span>
+          <span style={{ fontSize: '10px' }}>Nông</span>
+        </NavLink>
+        <NavLink to="/trading/customers" className={({ isActive }) => `bottom-nav-item flex-1 ${isActive ? 'active' : ''}`}>
+          <i className="fas fa-user-tag"></i>
+          <span style={{ fontSize: '10px' }}>Khách</span>
         </NavLink>
       </div>
 

@@ -50,10 +50,23 @@ const Purchases = () => {
             </div>
           </div>
 
-          <div className="flex items-center justify-between pt-3 border-t">
-            <div>
-              <span className="text-gray-600">Tổng tiền:</span>
-              <span className="text-xl font-bold ml-2">250,000 VND</span>
+          <div className="pt-3 border-t space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-gray-600">Tổng tiền:</span>
+                <span className="text-xl font-bold ml-2">250,000 VND</span>
+              </div>
+            </div>
+            
+            <div className="bg-white p-3 rounded border">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium">Thanh toán cho nông dân:</span>
+                <div className="flex items-center gap-2">
+                  <input type="checkbox" id="paidFull" className="w-4 h-4 text-green-600 rounded focus:ring-green-500" />
+                  <label htmlFor="paidFull" className="text-sm text-gray-700 cursor-pointer">Đã trả đủ</label>
+                </div>
+              </div>
+              <input type="number" className="input text-sm w-full" placeholder="Hoặc nhập số tiền đã trả (VND)..." />
             </div>
           </div>
 
@@ -79,7 +92,12 @@ const Purchases = () => {
             </div>
             <div className="font-medium">Nguyễn Văn A</div>
             <div className="text-sm text-gray-600">Rau cải 5kg, Cà phê 10 bó</div>
-            <div className="text-sm font-bold mt-1">250,000 VND</div>
+            <div className="flex items-center justify-between mt-1">
+              <div className="text-sm font-bold">250,000 VND</div>
+              <div className="flex items-center gap-1 text-green-600 text-xs font-medium">
+                <i className="fas fa-check-circle"></i> Đã trả đủ
+              </div>
+            </div>
           </div>
           <div className="p-3 bg-gray-50 rounded-lg">
             <div className="flex items-center gap-2 mb-1">
@@ -88,7 +106,12 @@ const Purchases = () => {
             </div>
             <div className="font-medium">Trần Thị B</div>
             <div className="text-sm text-gray-600">Khoai lang 8kg</div>
-            <div className="text-sm font-bold mt-1">120,000 VND</div>
+            <div className="flex items-center justify-between mt-1">
+              <div className="text-sm font-bold">120,000 VND</div>
+              <div className="flex items-center gap-1 text-orange-500 text-xs font-medium">
+                <i className="fas fa-clock"></i> Đã trả 50k
+              </div>
+            </div>
           </div>
         </div>
       </div>
