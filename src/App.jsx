@@ -37,6 +37,7 @@ const TradingFarmers  = lazy(() => import("./pages/trading/Farmers"));
 const TradingPurchases = lazy(() => import("./pages/trading/Purchases"));
 const TradingSales    = lazy(() => import("./pages/trading/Sales"));
 const TradingCustomers = lazy(() => import("./pages/trading/Customers"));
+const TradingProducts  = lazy(() => import("./pages/trading/Products"));
 const TradingLogin    = lazy(() => import("./pages/trading/TradingLogin"));
 const ProtectedTradingRoute = lazy(() => import("./components/trading/ProtectedTradingRoute"));
 
@@ -89,6 +90,7 @@ const AppLayout = () => {
               <Route path="purchases" element={<TradingPurchases />} />
               <Route path="sales" element={<TradingSales />} />
               <Route path="customers" element={<TradingCustomers />} />
+              <Route path="products" element={<TradingProducts />} />
             </Route>
             <Route path="/detail/:id" element={<DetailPage />} />
             <Route path="*"           element={<NotFound />} />

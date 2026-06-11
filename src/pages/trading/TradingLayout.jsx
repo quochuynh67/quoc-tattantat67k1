@@ -32,6 +32,7 @@ const TradingLayout = () => {
     if (location.pathname.includes('sales')) return 'Bán hàng';
     if (location.pathname.includes('farmers')) return 'Nông dân';
     if (location.pathname.includes('customers')) return 'Khách hàng';
+    if (location.pathname.includes('products')) return 'Danh mục sản phẩm';
     return 'Quản lý';
   };
 
@@ -76,6 +77,11 @@ const TradingLayout = () => {
           <NavLink to="/trading/customers" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} onClick={() => setSidebarOpen(false)}>
             <i className="fas fa-user-tag w-5 text-center"></i>
             <span>Khách hàng</span>
+          </NavLink>
+          <div className="my-2 border-t border-gray-700"></div>
+          <NavLink to="/trading/products" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} onClick={() => setSidebarOpen(false)}>
+            <i className="fas fa-seedling w-5 text-center"></i>
+            <span>Danh mục rau</span>
           </NavLink>
         </nav>
 

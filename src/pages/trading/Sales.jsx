@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { getSales, createSale, getCustomers } from '../../lib/tradingApi';
+import { getSales, createSale, getCustomers, getProducts, createProduct } from '../../lib/tradingApi';
+import ProductAutocomplete from './ProductAutocomplete';
 
 const Sales = () => {
   const [customers, setCustomers] = useState([]);
   const [sales, setSales] = useState([]);
+  const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -23,15 +25,22 @@ const Sales = () => {
     setLoading(true);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
-    const [customersRes, salesRes] = await Promise.all([
+
+    const [customersRes, salesRes, productsRes] = await Promise.all([
       getCustomers(),
-      getSales(today.toISOString(), null)
+      getSales(today.toISOString(), null),
+      getProducts(),
     ]);
-    
+
     if (customersRes.data) setCustomers(customersRes.data);
     if (salesRes.data) setSales(salesRes.data);
+    if (productsRes.data) setProducts(productsRes.data);
     setLoading(false);
+  };
+
+  const handleCreateProduct = async (name) => {
+    const { data, error } = await createProduct(name);
+    if (!error && data) setProducts(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
   };
 
   const calculateTotal = () => {
@@ -134,7 +143,13 @@ const Sales = () => {
                 )}
               </div>
               <div className="flex items-center gap-2">
-                <input type="text" className="input flex-1" placeholder="Tên mặt hàng" value={item.name} onChange={(e) => handleItemChange(item.id, 'name', e.target.value)} />
+                <ProductAutocomplete
+                  value={item.name}
+                  onChange={(val) => handleItemChange(item.id, 'name', val)}
+                  products={products}
+                  onCreateProduct={handleCreateProduct}
+                  placeholder="Tên mặt hàng"
+                />
                 {items.length > 1 && (
                   <button className="hidden md:block btn btn-secondary btn-sm p-2 text-red-500" onClick={() => handleRemoveItem(item.id)}>
                     <i className="fas fa-trash"></i>
