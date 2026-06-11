@@ -2,12 +2,53 @@ import React, { useState, useEffect } from 'react';
 import { getSales, createSale, getCustomers, getProducts, createProduct } from '../../lib/tradingApi';
 import ProductAutocomplete from './ProductAutocomplete';
 
+const DATE_FILTERS = [
+  { label: 'Hôm nay', value: 'today' },
+  { label: 'Hôm qua', value: 'yesterday' },
+  { label: '7 ngày', value: '7days' },
+  { label: '30 ngày', value: '30days' },
+  { label: 'Ngày cụ thể', value: 'custom' },
+];
+
+const getDateRange = (filter, customDate) => {
+  const now = new Date();
+  const startOfDay = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
+  switch (filter) {
+    case 'today':
+      return { from: startOfDay(now).toISOString(), to: null };
+    case 'yesterday': {
+      const y = new Date(now); y.setDate(y.getDate() - 1);
+      const end = new Date(y); end.setHours(23, 59, 59, 999);
+      return { from: startOfDay(y).toISOString(), to: end.toISOString() };
+    }
+    case '7days': {
+      const d = new Date(now); d.setDate(d.getDate() - 6);
+      return { from: startOfDay(d).toISOString(), to: null };
+    }
+    case '30days': {
+      const d = new Date(now); d.setDate(d.getDate() - 29);
+      return { from: startOfDay(d).toISOString(), to: null };
+    }
+    case 'custom': {
+      if (!customDate) return { from: startOfDay(now).toISOString(), to: null };
+      const d = new Date(customDate);
+      const end = new Date(d); end.setHours(23, 59, 59, 999);
+      return { from: startOfDay(d).toISOString(), to: end.toISOString() };
+    }
+    default:
+      return { from: startOfDay(now).toISOString(), to: null };
+  }
+};
+
 const Sales = () => {
   const [customers, setCustomers] = useState([]);
   const [sales, setSales] = useState([]);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [expandedId, setExpandedId] = useState(null);
+  const [dateFilter, setDateFilter] = useState('today');
+  const [customDate, setCustomDate] = useState('');
 
   // Form state
   const [customerId, setCustomerId] = useState('');
@@ -21,17 +62,30 @@ const Sales = () => {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    if (dateFilter !== 'custom') fetchSales();
+  }, [dateFilter]);
+
+  useEffect(() => {
+    if (dateFilter === 'custom' && customDate) fetchSales();
+  }, [customDate]);
+
+  const fetchSales = async () => {
+    setLoading(true);
+    const { from, to } = getDateRange(dateFilter, customDate);
+    const res = await getSales(from, to);
+    if (res.data) setSales(res.data);
+    setLoading(false);
+  };
+
   const fetchData = async () => {
     setLoading(true);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
+    const { from, to } = getDateRange(dateFilter, customDate);
     const [customersRes, salesRes, productsRes] = await Promise.all([
       getCustomers(),
-      getSales(today.toISOString(), null),
+      getSales(from, to),
       getProducts(),
     ]);
-
     if (customersRes.data) setCustomers(customersRes.data);
     if (salesRes.data) setSales(salesRes.data);
     if (productsRes.data) setProducts(productsRes.data);
@@ -108,9 +162,11 @@ const Sales = () => {
       setPaidAmount('');
       setIsPaidFull(false);
       setLocation(null);
-      fetchData();
+      fetchSales();
     }
   };
+
+  const filterLabel = DATE_FILTERS.find(f => f.value === dateFilter)?.label || '';
 
   return (
     <div>
@@ -205,7 +261,7 @@ const Sales = () => {
                 <span className="text-xl font-bold ml-2 text-green-700">{totalAmount.toLocaleString()} đ</span>
               </div>
             </div>
-            
+
             <div className="bg-white p-3 rounded border">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium">Thu tiền khách hàng:</span>
@@ -233,37 +289,104 @@ const Sales = () => {
 
       {/* Danh sách hoá đơn */}
       <div className="card p-4 mt-4">
-        <h3 className="text-lg font-bold mb-3">Hoá đơn hôm nay</h3>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-lg font-bold">Hoá đơn {filterLabel}</h3>
+          <span className="text-sm text-gray-500">{sales.length} đơn</span>
+        </div>
+
+        {/* Date filter */}
+        <div className="flex gap-1.5 flex-wrap mb-3">
+          {DATE_FILTERS.map(f => (
+            <button
+              key={f.value}
+              className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                dateFilter === f.value
+                  ? 'bg-green-600 text-white border-green-600'
+                  : 'bg-white text-gray-600 border-gray-300 hover:border-green-400'
+              }`}
+              onClick={() => setDateFilter(f.value)}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+        {dateFilter === 'custom' && (
+          <input
+            type="date"
+            className="input mb-3 text-sm"
+            value={customDate}
+            onChange={(e) => setCustomDate(e.target.value)}
+          />
+        )}
+
         <div className="space-y-2">
           {loading ? (
              <div className="text-center py-4 text-gray-500"><i className="fas fa-circle-notch fa-spin mr-2"></i> Đang tải...</div>
           ) : sales.length === 0 ? (
-             <div className="text-center py-4 text-gray-500">Chưa có hoá đơn nào hôm nay.</div>
+             <div className="text-center py-4 text-gray-500">Chưa có hoá đơn nào.</div>
           ) : sales.map(sale => (
-            <div key={sale.id} className="p-3 bg-gray-50 rounded-lg">
-              <div className="flex items-center justify-between mb-1">
-                <div className="flex items-center gap-2">
-                  <span className={`badge ${sale.status === 'confirmed' ? 'badge-success' : 'badge-warning'}`}>
-                    {sale.status === 'confirmed' ? 'Confirm' : 'Pending'}
-                  </span>
-                  <span className="text-sm text-gray-500">{new Date(sale.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+            <div key={sale.id} className="bg-gray-50 rounded-lg overflow-hidden">
+              <div
+                className="p-3 cursor-pointer hover:bg-gray-100 transition-colors"
+                onClick={() => setExpandedId(prev => prev === sale.id ? null : sale.id)}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-2">
+                    <span className={`badge ${sale.status === 'confirmed' ? 'badge-success' : 'badge-warning'}`}>
+                      {sale.status === 'confirmed' ? 'Confirm' : 'Pending'}
+                    </span>
+                    <span className="text-sm text-gray-500">{new Date(sale.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                    {dateFilter !== 'today' && (
+                      <span className="text-xs text-gray-400">{new Date(sale.created_at).toLocaleDateString('vi-VN')}</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="text-xs text-gray-400">#{sale.id.slice(0, 8)}</div>
+                    <i className={`fas fa-chevron-${expandedId === sale.id ? 'up' : 'down'} text-xs text-gray-400`}></i>
+                  </div>
                 </div>
-                <div className="text-xs text-gray-400">#{sale.id.slice(0, 8)}</div>
-              </div>
-              <div className="font-medium text-gray-800">{sale.customer?.name || 'Khách vãng lai'}</div>
-              <div className="text-sm text-gray-600 truncate">
-                {sale.items.map(i => `${i.name} ${i.quantity}${i.unit}`).join(', ')}
-              </div>
-              <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-200">
-                <div className="text-sm font-bold text-green-700">{Number(sale.total_amount).toLocaleString()} đ</div>
-                <div className="flex items-center gap-1 text-xs font-medium">
-                  {Number(sale.paid_amount) >= Number(sale.total_amount) ? (
-                    <span className="text-green-600"><i className="fas fa-check-circle"></i> Đã thu đủ</span>
-                  ) : (
-                    <span className="text-orange-500"><i className="fas fa-clock"></i> Đã thu {Number(sale.paid_amount).toLocaleString()}đ</span>
-                  )}
+                <div className="font-medium text-gray-800">{sale.customer?.name || 'Khách vãng lai'}</div>
+                <div className="text-sm text-gray-500">
+                  {sale.items.map(i => `${i.name} ${i.quantity}${i.unit}`).join(', ')}
+                </div>
+                <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-200">
+                  <div className="text-sm font-bold text-green-700">{Number(sale.total_amount).toLocaleString()} đ</div>
+                  <div className="flex items-center gap-1 text-xs font-medium">
+                    {Number(sale.paid_amount) >= Number(sale.total_amount) ? (
+                      <span className="text-green-600"><i className="fas fa-check-circle"></i> Đã thu đủ</span>
+                    ) : (
+                      <span className="text-orange-500"><i className="fas fa-clock"></i> Đã thu {Number(sale.paid_amount).toLocaleString()}đ</span>
+                    )}
+                  </div>
                 </div>
               </div>
+              {expandedId === sale.id && (
+                <div className="px-3 pb-3 border-t border-gray-200 bg-white">
+                  <div className="pt-2 space-y-1">
+                    <div className="grid grid-cols-4 gap-1 text-xs font-semibold text-gray-500 uppercase pb-1 border-b">
+                      <span className="col-span-2">Mặt hàng</span>
+                      <span className="text-right">Số lượng</span>
+                      <span className="text-right">Thành tiền</span>
+                    </div>
+                    {sale.items.map((item, idx) => (
+                      <div key={idx} className="grid grid-cols-4 gap-1 text-sm py-1.5 border-b border-gray-100 last:border-0">
+                        <div className="col-span-2">
+                          <div className="font-medium text-gray-800">{item.name}</div>
+                          <div className="text-xs text-gray-400">{Number(item.price).toLocaleString()} đ/{item.unit}</div>
+                        </div>
+                        <div className="text-right text-gray-600 self-center">{item.quantity} {item.unit}</div>
+                        <div className="text-right font-semibold text-green-700 self-center">
+                          {(Number(item.quantity) * Number(item.price)).toLocaleString()} đ
+                        </div>
+                      </div>
+                    ))}
+                    <div className="flex justify-between pt-1.5 text-sm font-bold border-t border-gray-200">
+                      <span className="text-gray-700">Tổng cộng</span>
+                      <span className="text-green-700">{Number(sale.total_amount).toLocaleString()} đ</span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>

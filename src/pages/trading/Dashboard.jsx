@@ -3,7 +3,7 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend,
 } from 'recharts';
-import { getDashboardStats } from '../../lib/tradingApi';
+import { getDashboardStats, getProductPnL } from '../../lib/tradingApi';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 const fmt = (n) => {
@@ -102,14 +102,22 @@ const Dashboard = () => {
     topFarmers: [], topCustomers: [], chartData: [],
   });
   const [loading, setLoading] = useState(true);
+  const [pnl, setPnl] = useState([]);
+  const [pnlLoading, setPnlLoading] = useState(true);
 
   const fetchStats = useCallback(async () => {
     const { startDate, endDate } = getDateRange(dateFilter, customStart, customEnd);
     if (dateFilter === 'custom' && (!customStart || !customEnd)) return;
     setLoading(true);
-    const { data } = await getDashboardStats(startDate, endDate);
+    setPnlLoading(true);
+    const [{ data }, { data: pnlData }] = await Promise.all([
+      getDashboardStats(startDate, endDate),
+      getProductPnL(startDate, endDate),
+    ]);
     if (data) setStats(data);
+    if (pnlData) setPnl(pnlData);
     setLoading(false);
+    setPnlLoading(false);
   }, [dateFilter, customStart, customEnd]);
 
   useEffect(() => {
@@ -279,6 +287,121 @@ const Dashboard = () => {
                 <i className="fas fa-chart-area text-3xl mb-2 text-gray-200"></i>
                 <p className="text-sm">Chưa có dữ liệu trong khoảng thời gian này</p>
               </div>
+            )}
+          </div>
+
+          {/* ── Product P&L Analysis ── */}
+          <div className="card p-4">
+            <h3 className="text-base font-bold mb-1 flex items-center gap-2">
+              <i className="fas fa-balance-scale text-amber-500 text-sm"></i>
+              Phân tích lời / lỗ theo mặt hàng
+            </h3>
+            <p className="text-xs text-gray-400 mb-4">So sánh giá thu mua vs giá bán · Tồn kho chưa bán tính vào lỗ</p>
+            {pnlLoading ? (
+              <div className="text-center py-6 text-gray-400">
+                <i className="fas fa-circle-notch fa-spin mr-2"></i> Đang tính...
+              </div>
+            ) : pnl.length === 0 ? (
+              <div className="text-center py-6 text-gray-400">
+                <i className="fas fa-box-open text-2xl mb-2 block text-gray-200"></i>
+                Chưa có dữ liệu mặt hàng
+              </div>
+            ) : (
+              <>
+                {/* Summary bar */}
+                {(() => {
+                  const totalNet = pnl.reduce((s, p) => s + p.net, 0);
+                  const totalBought = pnl.reduce((s, p) => s + p.buyTotal, 0);
+                  const totalSold = pnl.reduce((s, p) => s + p.sellTotal, 0);
+                  const totalUnsoldCost = Math.max(0, totalBought - totalSold);
+                  const profitable = pnl.filter(p => p.net > 0).length;
+                  const losing = pnl.filter(p => p.net < 0).length;
+                  return (
+                    <div className="grid grid-cols-3 gap-2 mb-4">
+                      <div className={`rounded-lg p-2.5 text-center ${totalNet >= 0 ? 'bg-emerald-50' : 'bg-red-50'}`}>
+                        <div className={`text-base font-bold ${totalNet >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
+                          {totalNet >= 0 ? '+' : ''}{fmt(totalNet)}đ
+                        </div>
+                        <div className="text-xs text-gray-500 mt-0.5">Tổng kết</div>
+                      </div>
+                      <div className="bg-orange-50 rounded-lg p-2.5 text-center">
+                        <div className="text-base font-bold text-orange-600">{fmt(totalUnsoldCost)}đ</div>
+                        <div className="text-xs text-gray-500 mt-0.5">Tồn chưa bán</div>
+                      </div>
+                      <div className="bg-gray-50 rounded-lg p-2.5 text-center">
+                        <div className="text-base font-bold text-gray-700">
+                          <span className="text-emerald-600">{profitable}</span>
+                          <span className="text-gray-300 mx-1">/</span>
+                          <span className="text-red-500">{losing}</span>
+                        </div>
+                        <div className="text-xs text-gray-500 mt-0.5">Lời / Lỗ</div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Product rows */}
+                <div className="space-y-2">
+                  {pnl.map((p, i) => {
+                    const isProfit = p.net > 0;
+                    const isBreakeven = p.net === 0;
+                    return (
+                      <div key={i} className={`rounded-lg border p-3 ${isProfit ? 'border-emerald-200 bg-emerald-50' : isBreakeven ? 'border-gray-200 bg-gray-50' : 'border-red-200 bg-red-50'}`}>
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 mt-1.5 ${isProfit ? 'bg-emerald-500' : isBreakeven ? 'bg-gray-400' : 'bg-red-500'}`}></span>
+                            <span className="font-semibold text-gray-800 truncate">{p.name}</span>
+                          </div>
+                          <div className={`text-sm font-bold flex-shrink-0 ${isProfit ? 'text-emerald-700' : isBreakeven ? 'text-gray-500' : 'text-red-600'}`}>
+                            {p.net > 0 ? '+' : ''}{fmt(p.net)}đ
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-2 text-xs text-gray-600">
+                          <div className="flex justify-between">
+                            <span className="text-gray-400">Mua:</span>
+                            <span>{p.buyQty} · {fmt(p.avgBuyPrice)}đ/đvt</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-400">Bán:</span>
+                            <span>{p.sellQty > 0 ? `${p.sellQty} · ${fmt(p.avgSellPrice)}đ/đvt` : <span className="text-red-400">Chưa bán</span>}</span>
+                          </div>
+                          {p.matchedQty > 0 && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">Lời trên bán:</span>
+                              <span className={p.profitOnSold >= 0 ? 'text-emerald-600' : 'text-red-500'}>
+                                {p.profitOnSold >= 0 ? '+' : ''}{fmt(p.profitOnSold)}đ
+                              </span>
+                            </div>
+                          )}
+                          {p.unsoldQty > 0 && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">Tồn {p.unsoldQty} đvt:</span>
+                              <span className="text-orange-500">-{fmt(p.unsoldCost)}đ</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Progress bar: sold vs unsold */}
+                        {p.buyQty > 0 && (
+                          <div className="mt-2">
+                            <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                              <div
+                                className={`h-full rounded-full transition-all ${isProfit ? 'bg-emerald-500' : 'bg-orange-400'}`}
+                                style={{ width: `${Math.min(100, (p.sellQty / p.buyQty) * 100)}%` }}
+                              ></div>
+                            </div>
+                            <div className="flex justify-between text-xs text-gray-400 mt-0.5">
+                              <span>Đã bán {p.buyQty > 0 ? Math.round((p.sellQty / p.buyQty) * 100) : 0}%</span>
+                              {p.unsoldQty > 0 && <span className="text-orange-400">Tồn {Math.round((p.unsoldQty / p.buyQty) * 100)}%</span>}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
             )}
           </div>
 

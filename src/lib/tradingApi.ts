@@ -117,6 +117,59 @@ export async function updateSale(id, payload) {
   return supabase.from("trading_sales").update(payload).eq("id", id).select().single();
 }
 
+// Product P&L Analysis
+export async function getProductPnL(startDate, endDate) {
+  if (!isSupabaseConfigured) return { data: null, error: { message: "Supabase not configured" } };
+
+  let purchasesQ = supabase.from("trading_purchases").select("items, created_at");
+  let salesQ = supabase.from("trading_sales").select("items, created_at");
+
+  if (startDate) { purchasesQ = purchasesQ.gte("created_at", startDate); salesQ = salesQ.gte("created_at", startDate); }
+  if (endDate)   { purchasesQ = purchasesQ.lte("created_at", endDate);   salesQ = salesQ.lte("created_at", endDate); }
+
+  const [purchasesRes, salesRes] = await Promise.all([purchasesQ, salesQ]);
+
+  type ProductEntry = {
+    name: string;
+    buyQty: number; buyTotal: number;
+    sellQty: number; sellTotal: number;
+  };
+  const map: Record<string, ProductEntry> = {};
+
+  const key = (name: string) => name.trim().toLowerCase();
+
+  purchasesRes.data?.forEach(p => {
+    (p.items as any[])?.forEach(item => {
+      const k = key(item.name);
+      if (!map[k]) map[k] = { name: item.name, buyQty: 0, buyTotal: 0, sellQty: 0, sellTotal: 0 };
+      map[k].buyQty += Number(item.quantity) || 0;
+      map[k].buyTotal += (Number(item.quantity) || 0) * (Number(item.price) || 0);
+    });
+  });
+
+  salesRes.data?.forEach(s => {
+    (s.items as any[])?.forEach(item => {
+      const k = key(item.name);
+      if (!map[k]) map[k] = { name: item.name, buyQty: 0, buyTotal: 0, sellQty: 0, sellTotal: 0 };
+      map[k].sellQty += Number(item.quantity) || 0;
+      map[k].sellTotal += (Number(item.quantity) || 0) * (Number(item.price) || 0);
+    });
+  });
+
+  const products = Object.values(map).map(p => {
+    const avgBuyPrice = p.buyQty > 0 ? p.buyTotal / p.buyQty : 0;
+    const avgSellPrice = p.sellQty > 0 ? p.sellTotal / p.sellQty : 0;
+    const matchedQty = Math.min(p.buyQty, p.sellQty);
+    const unsoldQty = Math.max(0, p.buyQty - p.sellQty);
+    const profitOnSold = matchedQty * (avgSellPrice - avgBuyPrice);
+    const unsoldCost = unsoldQty * avgBuyPrice;
+    const net = profitOnSold - unsoldCost;
+    return { ...p, avgBuyPrice, avgSellPrice, matchedQty, unsoldQty, profitOnSold, unsoldCost, net };
+  }).sort((a, b) => a.net - b.net);
+
+  return { data: products, error: null };
+}
+
 // Dashboard Stats
 export async function getDashboardStats(startDate, endDate) {
   if (!isSupabaseConfigured) return { data: null, error: { message: "Supabase not configured" } };
