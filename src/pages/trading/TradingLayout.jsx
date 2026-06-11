@@ -1,10 +1,28 @@
 import React, { useState } from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { useAdminAuth } from '../../contexts/AdminAuthContext';
 import './Trading.css';
 
 const TradingLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout } = useAdminAuth();
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/trading/login');
+  };
+
+  const getUserInitials = () => {
+    if (!user?.email) return '?';
+    return user.email.charAt(0).toUpperCase();
+  };
+
+  const getUserDisplayName = () => {
+    if (!user?.email) return 'Người dùng';
+    return user.email;
+  };
 
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
@@ -26,7 +44,7 @@ const TradingLayout = () => {
       ></div>
 
       {/* Sidebar (Desktop) */}
-      <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
+      <aside className={`sidebar relative ${sidebarOpen ? 'open' : ''}`}>
         <div className="p-6">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-green-500 flex items-center justify-center">
@@ -60,6 +78,26 @@ const TradingLayout = () => {
             <span>Khách hàng</span>
           </NavLink>
         </nav>
+
+        {/* User info at bottom of sidebar */}
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-700">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
+              <span className="text-white font-bold text-sm">{getUserInitials()}</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-white text-sm font-medium truncate">{getUserDisplayName()}</p>
+              <p className="text-gray-400 text-xs">Đang hoạt động</p>
+            </div>
+            <button
+              onClick={handleLogout}
+              title="Đăng xuất"
+              className="text-gray-400 hover:text-red-400 transition-colors p-1"
+            >
+              <i className="fas fa-sign-out-alt"></i>
+            </button>
+          </div>
+        </div>
       </aside>
 
       {/* Mobile Bottom Nav */}
@@ -104,11 +142,13 @@ const TradingLayout = () => {
             </button>
             <div className="header-title m-0">{getPageTitle()}</div>
           </div>
-          <div className="hidden md:block">
-            {/* Header Plus Button only on Desktop */}
-            <button className="btn btn-primary btn-sm rounded-full w-8 h-8 p-0 flex items-center justify-center shadow-md">
-              <i className="fas fa-plus"></i>
-            </button>
+          <div className="hidden md:flex items-center gap-2">
+            <div className="text-right">
+              <p className="text-sm font-medium text-gray-800 leading-tight truncate max-w-[160px]">{getUserDisplayName()}</p>
+            </div>
+            <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
+              <span className="text-white font-bold text-xs">{getUserInitials()}</span>
+            </div>
           </div>
         </div>
 

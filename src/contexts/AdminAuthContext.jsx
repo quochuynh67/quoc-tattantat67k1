@@ -57,6 +57,30 @@ export const AdminAuthProvider = ({ children }) => {
     }
   };
 
+  const register = async (email, password) => {
+    setError(null);
+    setLoading(true);
+    try {
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+      });
+
+      if (signUpError) {
+        setError(signUpError.message);
+        return false;
+      }
+
+      setUser(data.user);
+      return true;
+    } catch (err) {
+      setError(err.message);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const logout = async () => {
     setError(null);
     setLoading(true);
@@ -73,7 +97,7 @@ export const AdminAuthProvider = ({ children }) => {
   };
 
   return (
-    <AdminAuthContext.Provider value={{ user, loading, error, login, logout, isLoggedIn: !!user }}>
+    <AdminAuthContext.Provider value={{ user, loading, error, login, register, logout, isLoggedIn: !!user }}>
       {children}
     </AdminAuthContext.Provider>
   );

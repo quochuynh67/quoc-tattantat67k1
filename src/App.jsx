@@ -37,6 +37,9 @@ const TradingFarmers  = lazy(() => import("./pages/trading/Farmers"));
 const TradingPurchases = lazy(() => import("./pages/trading/Purchases"));
 const TradingSales    = lazy(() => import("./pages/trading/Sales"));
 const TradingCustomers = lazy(() => import("./pages/trading/Customers"));
+const TradingLogin    = lazy(() => import("./pages/trading/TradingLogin"));
+const ProtectedTradingRoute = lazy(() => import("./components/trading/ProtectedTradingRoute"));
+
 const AppLayout = () => {
   const location = useLocation();
   const isVlogFeed = location.pathname === "/vlogs";
@@ -79,7 +82,8 @@ const AppLayout = () => {
               <Route path="vlogs"     element={<AdminVlogs />} />
               <Route path="settings"  element={<AdminSettings />} />
             </Route>
-            <Route path="/trading" element={<TradingLayout />}>
+            <Route path="/trading-login" element={<TradingLogin />} />
+            <Route path="/trading" element={<ProtectedTradingRoute><TradingLayout /></ProtectedTradingRoute>}>
               <Route index element={<TradingDashboard />} />
               <Route path="farmers" element={<TradingFarmers />} />
               <Route path="purchases" element={<TradingPurchases />} />

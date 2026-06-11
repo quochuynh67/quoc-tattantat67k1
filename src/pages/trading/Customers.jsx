@@ -1,17 +1,81 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
-const DUMMY_CUSTOMERS = [
-  { id: 1, name: 'Chị Lan (Chợ đầu mối)', phone: '0933445566', address: 'Quận 1, TP.HCM', transactions: 12, total: '5,450,000' },
-  { id: 2, name: 'Anh Hải (Siêu thị mini)', phone: '0988776655', address: 'Quận 3, TP.HCM', transactions: 5, total: '2,100,000' }
-];
+import { getCustomers, createCustomer, updateCustomer } from '../../lib/tradingApi';
 
 const Customers = () => {
+  const [customers, setCustomers] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
 
+  // Form state
+  const [formData, setFormData] = useState({ name: '', phone: '', address: '', type: 'le', latitude: '', longitude: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [locating, setLocating] = useState(false);
+
+  useEffect(() => {
+    fetchCustomers();
+  }, []);
+
+  const fetchCustomers = async () => {
+    setLoading(true);
+    const { data } = await getCustomers();
+    if (data) setCustomers(data);
+    setLoading(false);
+  };
+
+  const handleInputChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleGetLocation = () => {
+    if (!navigator.geolocation) return alert('Thiết bị không hỗ trợ GPS');
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setFormData(prev => ({ ...prev, latitude: pos.coords.latitude, longitude: pos.coords.longitude }));
+        setLocating(false);
+      },
+      () => {
+        alert('Không thể lấy vị trí. Hãy cấp quyền truy cập GPS cho trình duyệt.');
+        setLocating(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
+  const handleCreate = async () => {
+    if (!formData.name) return alert("Vui lòng nhập tên khách hàng");
+    setIsSubmitting(true);
+    const { data, error } = await createCustomer(formData);
+    setIsSubmitting(false);
+    if (!error && data) {
+      setCustomers([data, ...customers]);
+      setShowAddForm(false);
+      setFormData({ name: '', phone: '', address: '', type: 'le', latitude: '', longitude: '' });
+    } else {
+      alert("Lỗi: " + (error?.message || "Không thể tạo khách hàng"));
+    }
+  };
+
+  const handleUpdate = async () => {
+    if (!selectedCustomer || !formData.name) return;
+    setIsSubmitting(true);
+    const { data, error } = await updateCustomer(selectedCustomer.id, formData);
+    setIsSubmitting(false);
+    if (!error && data) {
+      setCustomers(customers.map(c => c.id === data.id ? data : c));
+      setSelectedCustomer(data);
+      setIsEditing(false);
+    } else {
+      alert("Lỗi: " + (error?.message || "Không thể cập nhật khách hàng"));
+    }
+  };
+
   const handleView = (customer) => {
     setSelectedCustomer(customer);
+    setFormData({ name: customer.name || '', phone: customer.phone || '', address: customer.address || '', type: customer.type || 'le', latitude: customer.latitude || '', longitude: customer.longitude || '' });
     setIsEditing(false);
     setShowAddForm(false);
   };
@@ -47,15 +111,15 @@ const Customers = () => {
           <div className="space-y-3">
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">Tên khách hàng</label>
-              <input type="text" className={`input ${!isEditing ? 'bg-gray-50' : ''}`} defaultValue={selectedCustomer.name} readOnly={!isEditing} />
+              <input type="text" name="name" className={`input ${!isEditing ? 'bg-gray-50' : ''}`} value={isEditing ? formData.name : selectedCustomer.name} onChange={handleInputChange} readOnly={!isEditing} />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">Số điện thoại</label>
-              <input type="tel" className={`input ${!isEditing ? 'bg-gray-50' : ''}`} defaultValue={selectedCustomer.phone} readOnly={!isEditing} />
+              <input type="tel" name="phone" className={`input ${!isEditing ? 'bg-gray-50' : ''}`} value={isEditing ? formData.phone : (selectedCustomer.phone || '')} onChange={handleInputChange} readOnly={!isEditing} />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">Địa chỉ</label>
-              <input type="text" className={`input ${!isEditing ? 'bg-gray-50' : ''}`} defaultValue={selectedCustomer.address} readOnly={!isEditing} />
+              <input type="text" name="address" className={`input ${!isEditing ? 'bg-gray-50' : ''}`} value={isEditing ? formData.address : (selectedCustomer.address || '')} onChange={handleInputChange} readOnly={!isEditing} />
             </div>
             
             <div>
@@ -72,24 +136,54 @@ const Customers = () => {
 
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">Vị trí bản đồ</label>
-              <div className="flex items-center gap-2">
-                <button className="btn btn-secondary flex-1 bg-white border border-gray-300" disabled={!isEditing}>
-                  <i className="fas fa-map-marker-alt text-red-500"></i> {isEditing ? 'Chọn trên bản đồ' : 'Xem trên bản đồ'}
-                </button>
-                {isEditing && (
-                  <button className="btn btn-secondary w-12 h-10 flex items-center justify-center bg-white border border-gray-300" title="Lấy vị trí hiện tại">
-                    <i className="fas fa-location-arrow text-blue-500"></i>
-                  </button>
-                )}
-              </div>
-              {!isEditing && <div className="text-xs text-green-600 mt-1"><i className="fas fa-check-circle"></i> Đã có vị trí (Nhấn để xem)</div>}
+              {isEditing ? (
+                <>
+                  <div className="flex items-center gap-2">
+                    <button
+                      className={`btn ${formData.latitude ? 'btn-primary' : 'btn-secondary'} flex-1 bg-white border border-gray-300`}
+                      onClick={handleGetLocation}
+                      disabled={locating}
+                    >
+                      <i className={`fas ${locating ? 'fa-circle-notch fa-spin' : 'fa-location-arrow'} text-blue-500`}></i>
+                      {locating ? 'Đang lấy...' : 'Lấy vị trí GPS'}
+                    </button>
+                  </div>
+                  <div className="text-xs mt-1">
+                    {formData.latitude && formData.longitude ? (
+                      <span className="text-green-600"><i className="fas fa-check-circle"></i> {Number(formData.latitude).toFixed(5)}, {Number(formData.longitude).toFixed(5)}</span>
+                    ) : (
+                      <span className="text-gray-400 italic">Chưa có vị trí nào được chọn</span>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <>
+                  {selectedCustomer.latitude && selectedCustomer.longitude ? (
+                    <a
+                      href={`https://www.google.com/maps?q=${selectedCustomer.latitude},${selectedCustomer.longitude}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-secondary w-full bg-white border border-gray-300 text-sm"
+                    >
+                      <i className="fas fa-map-marker-alt text-red-500"></i> Xem trên bản đồ
+                    </a>
+                  ) : (
+                    <div className="text-xs text-gray-400 italic mt-1">Chưa có vị trí</div>
+                  )}
+                  {selectedCustomer.latitude && selectedCustomer.longitude && (
+                    <div className="text-xs text-green-600 mt-1">
+                      <i className="fas fa-check-circle"></i> {Number(selectedCustomer.latitude).toFixed(5)}, {Number(selectedCustomer.longitude).toFixed(5)}
+                    </div>
+                  )}
+                </>
+              )}
             </div>
 
             {isEditing && (
               <div className="flex gap-2 pt-3 border-t mt-4">
                 <button className="btn btn-secondary flex-1" onClick={() => setIsEditing(false)}>Hủy</button>
-                <button className="btn btn-primary flex-1" onClick={() => setIsEditing(false)}>
-                  <i className="fas fa-save mr-1"></i> Lưu thay đổi
+                <button className="btn btn-primary flex-1" onClick={handleUpdate} disabled={isSubmitting}>
+                  <i className="fas fa-save mr-1"></i> {isSubmitting ? 'Đang lưu...' : 'Lưu thay đổi'}
                 </button>
               </div>
             )}
@@ -140,9 +234,9 @@ const Customers = () => {
           <div className="bg-white p-4 rounded-lg border border-green-100 mb-4 shadow-md">
             <h3 className="font-bold mb-3 text-lg text-green-800">Thêm khách hàng mới</h3>
             <div className="space-y-3">
-              <input type="text" className="input" placeholder="Tên khách hàng / Đơn vị" />
-              <input type="tel" className="input" placeholder="Số điện thoại" />
-              <input type="text" className="input" placeholder="Địa chỉ" />
+              <input type="text" name="name" className="input" placeholder="Tên khách hàng / Đơn vị (*)" value={formData.name} onChange={handleInputChange} />
+              <input type="tel" name="phone" className="input" placeholder="Số điện thoại" value={formData.phone} onChange={handleInputChange} />
+              <input type="text" name="address" className="input" placeholder="Địa chỉ" value={formData.address} onChange={handleInputChange} />
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Hình ảnh (Tối đa 3 ảnh)</label>
@@ -159,20 +253,28 @@ const Customers = () => {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Vị trí bản đồ</label>
                 <div className="flex items-center gap-2">
-                  <button className="btn btn-secondary flex-1 bg-white border border-gray-300">
-                    <i className="fas fa-map-marker-alt text-red-500"></i> Chọn trên bản đồ
-                  </button>
-                  <button className="btn btn-secondary w-12 h-10 flex items-center justify-center bg-white border border-gray-300" title="Lấy vị trí hiện tại">
-                    <i className="fas fa-location-arrow text-blue-500"></i>
+                  <button
+                    className={`btn ${formData.latitude ? 'btn-primary' : 'btn-secondary'} flex-1 bg-white border border-gray-300`}
+                    onClick={handleGetLocation}
+                    disabled={locating}
+                  >
+                    <i className={`fas ${locating ? 'fa-circle-notch fa-spin' : 'fa-location-arrow'} text-blue-500`}></i>
+                    {locating ? 'Đang lấy...' : 'Lấy vị trí GPS'}
                   </button>
                 </div>
-                <div className="text-xs text-gray-500 mt-1 italic">Chưa có vị trí nào được chọn</div>
+                <div className="text-xs mt-1">
+                  {formData.latitude && formData.longitude ? (
+                    <span className="text-green-600"><i className="fas fa-check-circle"></i> {Number(formData.latitude).toFixed(5)}, {Number(formData.longitude).toFixed(5)}</span>
+                  ) : (
+                    <span className="text-gray-500 italic">Chưa có vị trí nào được chọn</span>
+                  )}
+                </div>
               </div>
 
               <div className="flex gap-2 pt-3 border-t mt-4">
                 <button className="btn btn-secondary flex-1" onClick={() => setShowAddForm(false)}>Hủy</button>
-                <button className="btn btn-primary flex-1" onClick={() => setShowAddForm(false)}>
-                  <i className="fas fa-save mr-1"></i> Lưu thông tin
+                <button className="btn btn-primary flex-1" onClick={handleCreate} disabled={isSubmitting}>
+                  <i className="fas fa-save mr-1"></i> {isSubmitting ? 'Đang lưu...' : 'Lưu thông tin'}
                 </button>
               </div>
             </div>
@@ -180,7 +282,11 @@ const Customers = () => {
         )}
 
         <div className="space-y-2">
-          {DUMMY_CUSTOMERS.map(customer => (
+          {loading ? (
+            <div className="text-center py-4 text-gray-500"><i className="fas fa-circle-notch fa-spin mr-2"></i> Đang tải...</div>
+          ) : customers.length === 0 ? (
+            <div className="text-center py-4 text-gray-500">Chưa có dữ liệu khách hàng.</div>
+          ) : customers.map(customer => (
             <div key={customer.id} className="p-3 bg-gray-50 rounded-lg border border-transparent hover:border-green-200 transition-colors cursor-pointer" onClick={() => handleView(customer)}>
               <div className="flex items-center justify-between mb-1">
                 <div className="font-medium text-gray-800">{customer.name}</div>
@@ -191,8 +297,8 @@ const Customers = () => {
               <div className="text-sm text-gray-600"><i className="fas fa-phone w-4 text-center text-gray-400"></i> {customer.phone}</div>
               <div className="text-sm text-gray-500"><i className="fas fa-map-marker-alt w-4 text-center text-gray-400"></i> {customer.address}</div>
               <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-200 text-sm">
-                <div className="text-gray-500">{customer.transactions} đơn hàng</div>
-                <div className="font-bold text-green-700">{customer.total} đ</div>
+                <div className="text-gray-500">{customer.transactions || 0} đơn hàng</div>
+                <div className="font-bold text-green-700">{customer.total || 0} đ</div>
               </div>
             </div>
           ))}
