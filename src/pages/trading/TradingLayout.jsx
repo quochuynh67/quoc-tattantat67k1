@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAdminAuth } from '../../contexts/AdminAuthContext';
 import './Trading.css';
@@ -45,7 +45,7 @@ const TradingLayout = () => {
       ></div>
 
       {/* Sidebar (Desktop) */}
-      <aside className={`sidebar relative ${sidebarOpen ? 'open' : ''}`}>
+      <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
         <div className="p-6">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-green-500 flex items-center justify-center">
@@ -107,7 +107,7 @@ const TradingLayout = () => {
       </aside>
 
       {/* Mobile Bottom Nav */}
-      <div className="bottom-nav md:hidden relative flex items-center">
+      <div className="bottom-nav md:hidden flex items-center">
         <NavLink to="/trading" end className={({ isActive }) => `bottom-nav-item flex-1 ${isActive ? 'active' : ''}`}>
           <i className="fas fa-home"></i>
           <span style={{ fontSize: '10px' }}>Home</span>
@@ -116,14 +116,6 @@ const TradingLayout = () => {
           <i className="fas fa-shopping-cart"></i>
           <span style={{ fontSize: '10px' }}>Mua</span>
         </NavLink>
-        
-        {/* Floating Action Button */}
-        <div className="relative flex-1 flex justify-center h-full">
-          <button className="absolute -top-8 bg-green-500 text-white w-14 h-14 rounded-full flex items-center justify-center shadow-[0_4px_10px_rgba(34,197,94,0.4)] border-4 border-[#fff] z-50 transition-transform active:scale-95">
-            <i className="fas fa-plus text-xl"></i>
-          </button>
-        </div>
-
         <NavLink to="/trading/sales" className={({ isActive }) => `bottom-nav-item flex-1 ${isActive ? 'active' : ''}`}>
           <i className="fas fa-cash-register"></i>
           <span style={{ fontSize: '10px' }}>Bán</span>
@@ -140,15 +132,13 @@ const TradingLayout = () => {
 
       {/* Main content */}
       <div className="main-content flex flex-col min-h-screen">
-        {/* Header */}
+        {/* Header (desktop only, hidden on mobile via CSS) */}
         <div className="header shadow-sm">
-          <div className="flex items-center gap-3">
-            <button className="header-menu-btn btn btn-secondary btn-sm" onClick={toggleSidebar}>
-              <i className="fas fa-bars"></i>
-            </button>
-            <div className="header-title m-0">{getPageTitle()}</div>
-          </div>
-          <div className="hidden md:flex items-center gap-2">
+          <button className="header-menu-btn btn btn-secondary btn-sm flex-shrink-0" onClick={toggleSidebar}>
+            <i className="fas fa-bars"></i>
+          </button>
+          <div className="header-title flex-1 m-0 mx-3">{getPageTitle()}</div>
+          <div className="flex items-center gap-2">
             <div className="text-right">
               <p className="text-sm font-medium text-gray-800 leading-tight truncate max-w-[160px]">{getUserDisplayName()}</p>
             </div>
@@ -158,9 +148,26 @@ const TradingLayout = () => {
           </div>
         </div>
 
+        {/* Mobile user info bar (shown on mobile only) */}
+        <div className="flex md:hidden items-center gap-3 px-4 py-2 bg-white border-b border-gray-100 sticky top-0 z-10">
+          <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
+            <span className="text-white font-bold text-sm">{getUserInitials()}</span>
+          </div>
+          <span className="text-sm font-semibold text-gray-800 truncate">{getUserDisplayName()}</span>
+        </div>
+
         {/* Page content */}
         <main className="p-4 md:p-6 flex-1 bg-[#f8fafc]">
-          <Outlet />
+          <Suspense fallback={
+            <div className="flex items-center justify-center py-16">
+              <div className="text-center">
+                <i className="fas fa-circle-notch fa-spin text-green-500 text-3xl"></i>
+                <p className="text-sm text-gray-400 mt-2">Đang tải...</p>
+              </div>
+            </div>
+          }>
+            <Outlet />
+          </Suspense>
         </main>
       </div>
     </div>

@@ -241,6 +241,11 @@
   font-weight: 700;
 }
 /* Mobile adjustments */
+@media (max-width: 767px) {
+  .trading-app .header {
+    display: none;
+  }
+}
 @media (min-width: 768px) {
   .trading-app .sidebar {
     transform: translateX(0);
