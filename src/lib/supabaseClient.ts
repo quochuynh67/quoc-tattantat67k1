@@ -25,8 +25,29 @@ export const createSection = async (section) => {
   return data;
 };
   
+// Admin: fetch all sections including hidden ones
+export const getSectionsAll = async () => {
+  const { data, error } = await supabase.from('content_sections').select('*').order('created_at', { ascending: true });
+  if (error) throw error;
+  return data;
+};
+
+// Public: only fetch sections that are not hidden
 export const getSections = async () => {
-  const { data, error } = await supabase.from('content_sections').select('*');
+  const { data, error } = await supabase
+    .from('content_sections')
+    .select('*')
+    .neq('hide', true)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return data;
+};
+
+export const toggleSectionHide = async (id: string, hide: boolean) => {
+  const { data, error } = await supabase
+    .from('content_sections')
+    .update({ hide })
+    .eq('id', id);
   if (error) throw error;
   return data;
 };

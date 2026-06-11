@@ -1,4 +1,4 @@
-// src/pages/Home.jsx – homepage with placeholder sections
+// src/pages/Home.jsx – homepage with dynamic section visibility from SiteSettingsContext
 import React from "react";
 import { Helmet } from "react-helmet-async";
 import HeroSection from "../components/sections/HeroSection";
@@ -14,8 +14,19 @@ import AgentChatDashboard from "../components/AgentChatDashboard";
 import SEOIntroSection from "../components/sections/SEOIntroSection";
 import { useSiteSettings } from "../contexts/SiteSettingsContext";
 
+// Map slug → component, in display order
+const SECTION_COMPONENTS = [
+  { slug: "news",         Component: NewsSection },
+  { slug: "places",       Component: PlacesSection },
+  { slug: "food",         Component: FoodSection },
+  { slug: "beautyHealth", Component: BeautyHealthSection },
+  { slug: "agriculture",  Component: AgricultureSection },
+  { slug: "health",       Component: HealthSection },
+];
+
 const Home = () => {
-  const { canChatWithAi } = useSiteSettings();
+  const { canChatWithAi, visibleSectionSlugs } = useSiteSettings();
+
   return (
     <div className="home-page">
       <Helmet>
@@ -25,13 +36,16 @@ const Home = () => {
           content="Cổng thông tin địa phương An Giang – Phú Tân 67K1. Khám phá di tích lịch sử, hệ sinh thái rừng tràm trà sư, miếu bà chúa xứ núi sam, lăng thoại ngọc hầu, văn hóa và ẩm thực An Giang."
         />
       </Helmet>
+
       <HeroSection />
-      <NewsSection />
-      <PlacesSection />
-      <FoodSection />
-      <BeautyHealthSection />
-      <AgricultureSection />
-      <HealthSection />
+
+      {/* Render only sections that are not hidden (visibleSectionSlugs=null means still loading → show all) */}
+      {SECTION_COMPONENTS
+        .filter(({ slug }) => !visibleSectionSlugs || visibleSectionSlugs.has(slug))
+        .map(({ slug, Component }) => (
+          <Component key={slug} />
+        ))}
+
       <VlogsMapSection />
       <SEOIntroSection />
       <NewsletterCTA />

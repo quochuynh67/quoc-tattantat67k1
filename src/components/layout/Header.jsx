@@ -12,10 +12,20 @@ const TOOLS = [
   { id: "scale", label: "Tính toán cân lúa", icon: "🧮", url: "#" },
 ];
 
+// Map from slug → { to, label } for nav rendering
+const SECTION_NAV = [
+  { slug: "news",        to: "/news",         label: "Tin tức" },
+  { slug: "places",      to: "/places",       label: "Địa điểm" },
+  { slug: "food",        to: "/food",         label: "Ẩm thực" },
+  { slug: "beautyHealth",to: "/beauty-health",label: "Làm đẹp" },
+  { slug: "agriculture", to: "/agriculture",  label: "Nông nghiệp" },
+  { slug: "health",      to: "/health",       label: "Sức khỏe" },
+];
+
 const Header = () => {
   const [toolsOpen, setToolsOpen] = useState(false);
   const toolsRef = useRef(null);
-  const { showOtherTab } = useSiteSettings();
+  const { showOtherTab, visibleSectionSlugs } = useSiteSettings();
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -36,12 +46,11 @@ const Header = () => {
       </div>
       <nav className="nav" style={{ display: "flex", gap: "var(--spacing-md)", alignItems: "center" }}>
         <NavLink to="/" end className={({ isActive }) => (isActive ? "active" : "")}>Trang chủ</NavLink>
-        <NavLink to="/news" className={({ isActive }) => (isActive ? "active" : "")}>Tin tức</NavLink>
-        <NavLink to="/places" className={({ isActive }) => (isActive ? "active" : "")}>Địa điểm</NavLink>
-        <NavLink to="/food" className={({ isActive }) => (isActive ? "active" : "")}>Ẩm thực</NavLink>
-        <NavLink to="/beauty-health" className={({ isActive }) => (isActive ? "active" : "")}>Làm đẹp</NavLink>
-        <NavLink to="/agriculture" className={({ isActive }) => (isActive ? "active" : "")}>Nông nghiệp</NavLink>
-        <NavLink to="/health" className={({ isActive }) => (isActive ? "active" : "")}>Sức khỏe</NavLink>
+        {SECTION_NAV.filter((s) => !visibleSectionSlugs || visibleSectionSlugs.has(s.slug)).map((s) => (
+          <NavLink key={s.slug} to={s.to} className={({ isActive }) => (isActive ? "active" : "")}>
+            {s.label}
+          </NavLink>
+        ))}
 
         {/* Other Menu */}
         {showOtherTab && (

@@ -2,12 +2,13 @@
 import React, { useEffect, useState } from "react";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
-import { Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Grid, FormControl, InputLabel, Select, MenuItem, FormControlLabel, Switch, List, ListItem, ListItemText } from "@mui/material";
+import { Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Grid, FormControl, InputLabel, Select, MenuItem, FormControlLabel, Switch, List, ListItem, ListItemText, Tooltip, Chip } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import EditIcon from "@mui/icons-material/Edit";
-import { getPostsBySection, createPost, updatePost, deletePost, getSections, uploadVideoForVlog, uploadPostVideo, getVlogByPost, supabase } from "../../lib/supabaseClient";
 import VisibilityIcon from "@mui/icons-material/Visibility";
+import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
+import { getPostsBySection, createPost, updatePost, deletePost, getSections, uploadVideoForVlog, uploadPostVideo, getVlogByPost, supabase } from "../../lib/supabaseClient";
 
 export default function AdminPosts() {
   const [posts, setPosts] = useState([]);
@@ -29,7 +30,7 @@ export default function AdminPosts() {
     severity: "",
     published_date: new Date().toISOString().split('T')[0],
     is_featured: false,
-    is_published: true,
+    hide: false,
   });
 
   const [vlogDialogOpen, setVlogDialogOpen] = useState(false);
@@ -101,7 +102,7 @@ export default function AdminPosts() {
       severity: post.severity || "",
       published_date: post.published_date || "",
       is_featured: !!post.is_featured,
-      is_published: post.is_published !== false,
+      hide: !!post.hide,
     });
     setOpen(true);
   };
@@ -120,7 +121,7 @@ export default function AdminPosts() {
       severity: "",
       published_date: new Date().toISOString().split('T')[0],
       is_featured: false,
-      is_published: true,
+      hide: false,
     });
   };
 
@@ -137,14 +138,13 @@ export default function AdminPosts() {
       description: form.description || null,
       content: form.content || null,
       image_url: form.image_url || null,
-
       category: form.category || null,
       address: form.address || null,
       rating: form.rating !== "" ? Number(form.rating) : null,
       severity: form.severity || null,
       published_date: form.published_date || null,
       is_featured: form.is_featured,
-      is_published: form.is_published,
+      hide: form.hide,
     };
 
     try {
@@ -170,6 +170,24 @@ export default function AdminPosts() {
       fetchPosts();
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const handleToggleHide = async (post) => {
+    try {
+      const newHide = !post.hide;
+      const { error } = await supabase
+        .from('content_items')
+        .update({ hide: newHide })
+        .eq('id', post.id);
+      if (error) throw error;
+      // Optimistic update
+      setPosts((prev) =>
+        prev.map((p) => (p.id === post.id ? { ...p, hide: newHide } : p))
+      );
+    } catch (e) {
+      console.error(e);
+      alert('Không thể cập nhật trạng thái: ' + e.message);
     }
   };
 
@@ -234,19 +252,28 @@ export default function AdminPosts() {
               <TableCell sx={{ fontWeight: 600 }}>Tiêu đề</TableCell>
               <TableCell sx={{ fontWeight: 600 }}>Chuyên mục</TableCell>
               <TableCell sx={{ fontWeight: 600 }}>Đặc sắc</TableCell>
+              <TableCell sx={{ fontWeight: 600 }}>Hiển thị</TableCell>
               <TableCell align="right" sx={{ fontWeight: 600, pr: 3 }}>Thao tác</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {filteredPosts.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} align="center" sx={{ py: 6, color: "text.secondary" }}>
+                <TableCell colSpan={5} align="center" sx={{ py: 6, color: "text.secondary" }}>
                   Không tìm thấy bài viết nào phù hợp.
                 </TableCell>
               </TableRow>
             ) : (
               filteredPosts.map((post) => (
-                <TableRow key={post.id} hover sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
+                <TableRow
+                  key={post.id}
+                  hover
+                  sx={{
+                    '&:last-child td, &:last-child th': { border: 0 },
+                    opacity: post.hide ? 0.55 : 1,
+                    transition: 'opacity 0.2s',
+                  }}
+                >
                   <TableCell sx={{ fontWeight: 500 }}>{post.title}</TableCell>
                   <TableCell>
                     <Typography variant="body2" sx={{ display: "inline-block", bgcolor: "primary.light", color: "primary.contrastText", px: 1.5, py: 0.5, borderRadius: 1.5, fontSize: "0.75rem", fontWeight: 600 }}>
@@ -257,6 +284,19 @@ export default function AdminPosts() {
                     <Typography variant="body2" sx={{ color: post.is_featured ? "warning.main" : "text.disabled", fontWeight: 600 }}>
                       {post.is_featured ? "★ Có" : "Không"}
                     </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Tooltip title={!post.hide ? "Đang hiển thị – nhấn để ẩn" : "Đang ẩn – nhấn để hiện"} arrow>
+                      <Chip
+                        icon={!post.hide ? <VisibilityIcon sx={{ fontSize: '1rem !important' }} /> : <VisibilityOffIcon sx={{ fontSize: '1rem !important' }} />}
+                        label={!post.hide ? "Hiện" : "Ẩn"}
+                        size="small"
+                        onClick={() => handleToggleHide(post)}
+                        color={!post.hide ? "success" : "default"}
+                        variant={!post.hide ? "filled" : "outlined"}
+                        sx={{ cursor: 'pointer', fontWeight: 600, fontSize: '0.72rem', transition: 'all 0.2s' }}
+                      />
+                    </Tooltip>
                   </TableCell>
                   <TableCell align="right" sx={{ pr: 3 }}>
                     <Box sx={{ display: "flex", gap: 1, justifyContent: "flex-end" }}>
@@ -383,8 +423,8 @@ export default function AdminPosts() {
                     label="Bài viết nổi bật (Featured)"
                   />
                   <FormControlLabel
-                    control={<Switch checked={form.is_published} onChange={(e) => setForm({ ...form, is_published: e.target.checked })} />}
-                    label="Xuất bản công khai (Published)"
+                    control={<Switch checked={!!form.hide} onChange={(e) => setForm({ ...form, hide: e.target.checked })} color="warning" />}
+                    label="Ẩn bài viết (Hide)"
                   />
                 </Paper>
               </Box>

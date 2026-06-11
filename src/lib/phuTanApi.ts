@@ -142,7 +142,7 @@ export async function getSectionItems(section: string, limit?: number) {
     .from("content_items")
     .select("*")
     .eq("section_slug", section)
-    .eq("is_published", true)
+    .neq("hide", true)
     .order("display_order", { ascending: true })
     .order("published_date", { ascending: false });
 
@@ -163,7 +163,7 @@ export async function getSectionCount(section: string) {
     .from("content_items")
     .select("id", { count: "exact", head: true })
     .eq("section_slug", section)
-    .eq("is_published", true);
+    .neq("hide", true);
 
   if (error || typeof count !== "number" || count === 0) return 0;
 
