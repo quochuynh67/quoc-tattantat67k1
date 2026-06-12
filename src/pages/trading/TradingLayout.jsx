@@ -52,7 +52,7 @@ const TradingLayout = () => {
               <i className="fas fa-leaf text-white text-xl"></i>
             </div>
             <div>
-              <h1 className="text-white font-bold text-lg m-0 leading-tight">Rau Củ Farm</h1>
+              <h1 className="text-white font-bold text-lg m-0 leading-tight">Rau Farm</h1>
               <p className="text-gray-400 text-xs m-0 mt-1">Quản lý thu mua & bán</p>
             </div>
           </div>

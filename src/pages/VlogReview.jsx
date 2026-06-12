@@ -193,7 +193,10 @@ const VlogMap = ({ vlog, activeTime }) => {
 const VlogReview = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { canChatWithAi } = useSiteSettings();
+  const { canChatWithAi, canExplore } = useSiteSettings();
+
+  const [vlogsState, setVlogsState] = useState([]);
+  const vlogs = canExplore ? vlogsState : [];
 
   // Tab mode: single video ref; scroll mode: ref map keyed by vlog id
   const tabVideoRef = useRef(null);
@@ -201,7 +204,6 @@ const VlogReview = () => {
   const scrollSlideRefs = useRef([]);
   const hasInteractedRef = useRef(false);
 
-  const [vlogs, setVlogs] = useState([]);
   const [activeVlogIdx, setActiveVlogIdx] = useState(0);
   const [activeSpotByVlog, setActiveSpotByVlog] = useState({});
   const [playingByVlog, setPlayingByVlog] = useState({});
@@ -243,7 +245,7 @@ const VlogReview = () => {
         if (!isMounted) return;
         setPost(postData);
         setNewsItems(newsData);
-        setVlogs(vlogsData);
+        setVlogsState(vlogsData);
         setActiveVlogIdx(0);
         setLoading(false);
       }

@@ -63,7 +63,7 @@ const Products = () => {
       <div className="mb-4 flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold mb-1">Danh mục sản phẩm</h2>
-          <p className="text-gray-600 text-sm">Quản lý các loại rau củ — dùng để gợi ý khi thu mua &amp; bán</p>
+          <p className="text-gray-600 text-sm">Quản lý các loại rau — dùng để gợi ý khi thu mua &amp; bán</p>
         </div>
         <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded-full">{products.length} mặt hàng</span>
       </div>
