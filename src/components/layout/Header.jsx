@@ -7,19 +7,19 @@ import { useSiteSettings } from "../../contexts/SiteSettingsContext";
 const TOOLS = [
   { id: "relax", label: "Relax", icon: "🧘", url: "https://quoc-research-retrogame.web.app/?feature=vlog" },
   { id: "retro", label: "Chơi game thùng", icon: "🕹️", url: "https://quoc-research-retrogame.web.app/?feature=retro" },
-  { id: "trade", label: "Thương lái Nông sản", icon: "🌾", url: "/trading" },
+  { id: "trade", label: "Mua bán rau cải", icon: "🌿", url: "/trading" },
   { id: "wish", label: "Tạo văn lời chúc hay", icon: "🎉", url: "#" },
   { id: "scale", label: "Tính toán cân lúa", icon: "🧮", url: "#" },
 ];
 
 // Map from slug → { to, label } for nav rendering
 const SECTION_NAV = [
-  { slug: "news",        to: "/news",         label: "Tin tức" },
-  { slug: "places",      to: "/places",       label: "Địa điểm" },
-  { slug: "food",        to: "/food",         label: "Ẩm thực" },
-  { slug: "beautyHealth",to: "/beauty-health",label: "Làm đẹp" },
-  { slug: "agriculture", to: "/agriculture",  label: "Nông nghiệp" },
-  { slug: "health",      to: "/health",       label: "Sức khỏe" },
+  { slug: "news", to: "/news", label: "Tin tức" },
+  { slug: "places", to: "/places", label: "Địa điểm" },
+  { slug: "food", to: "/food", label: "Ẩm thực" },
+  { slug: "beautyHealth", to: "/beauty-health", label: "Làm đẹp" },
+  { slug: "agriculture", to: "/agriculture", label: "Nông nghiệp" },
+  { slug: "health", to: "/health", label: "Sức khỏe" },
 ];
 
 const Header = () => {
