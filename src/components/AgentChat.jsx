@@ -125,7 +125,8 @@ export default function AgentChat({ section, variant = "float" }) {
       sx={{
         position: "fixed",
         bottom: variant === "float" ? 96 : 24,
-        right: 24,
+        right: { xs: "auto", sm: 24 },
+        left: { xs: 16, sm: "auto" },
         zIndex: 1400,
         width: { xs: "calc(100vw - 32px)", sm: 350 },
         height: 480,
@@ -188,6 +189,18 @@ export default function AgentChat({ section, variant = "float" }) {
 
       {/* Input */}
       <Box sx={{ display: "flex", alignItems: "center", gap: 1, px: 1.5, py: 1, borderTop: "1px solid #f0f0f0", background: "#fafafa" }}>
+        <IconButton
+          onClick={send}
+          disabled={!input.trim() || loading}
+          sx={{
+            order: { xs: 0, sm: 1 },
+            background: agent.color, color: "#fff", width: 38, height: 38,
+            "&:hover": { background: agent.color, opacity: 0.88 },
+            "&.Mui-disabled": { background: "#e0e0e0", color: "#bbb" },
+          }}
+        >
+          {loading ? <CircularProgress size={18} color="inherit" /> : <SendIcon sx={{ fontSize: 18 }} />}
+        </IconButton>
         <InputBase
           inputRef={inputRef}
           fullWidth
@@ -197,19 +210,8 @@ export default function AgentChat({ section, variant = "float" }) {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
-          sx={{ fontSize: "0.875rem", px: 1.5, py: 0.75, background: "#fff", borderRadius: 3, border: "1px solid #e0e0e0", flex: 1 }}
+          sx={{ order: { xs: 1, sm: 0 }, fontSize: "0.875rem", px: 1.5, py: 0.75, background: "#fff", borderRadius: 3, border: "1px solid #e0e0e0", flex: 1 }}
         />
-        <IconButton
-          onClick={send}
-          disabled={!input.trim() || loading}
-          sx={{
-            background: agent.color, color: "#fff", width: 38, height: 38,
-            "&:hover": { background: agent.color, opacity: 0.88 },
-            "&.Mui-disabled": { background: "#e0e0e0", color: "#bbb" },
-          }}
-        >
-          {loading ? <CircularProgress size={18} color="inherit" /> : <SendIcon sx={{ fontSize: 18 }} />}
-        </IconButton>
       </Box>
     </Box>
   );
@@ -256,7 +258,10 @@ export default function AgentChat({ section, variant = "float" }) {
         ref={triggerRef}
         onClick={handleOpen}
         sx={{
-          position: "fixed", bottom: 24, right: 24, zIndex: 1400,
+          position: "fixed", bottom: 24,
+          right: { xs: "auto", sm: 24 },
+          left: { xs: 16, sm: "auto" },
+          zIndex: 1400,
           display: "flex", alignItems: "center", gap: 1.2,
           px: 1.5, py: 1,
           borderRadius: "999px",

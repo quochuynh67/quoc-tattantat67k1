@@ -128,11 +128,11 @@ export default function AgentChatDashboard() {
   const fabColor = agent?.color ?? "#333";
 
   return (
-    <Box ref={rootRef} sx={{ position: "fixed", bottom: 24, right: 24, zIndex: 1400 }}>
+    <Box ref={rootRef} sx={{ position: "fixed", bottom: 24, left: 24, zIndex: 1400 }}>
 
       {/* Agent picker popup */}
       <Box sx={{
-        position: "absolute", bottom: "calc(100% + 12px)", right: 0,
+        position: "absolute", bottom: "calc(100% + 12px)", left: 0,
         width: 220,
         background: "#fff",
         borderRadius: 3,
@@ -142,7 +142,7 @@ export default function AgentChatDashboard() {
         opacity: pickerOpen ? 1 : 0,
         transform: pickerOpen ? "translateY(0) scale(1)" : "translateY(10px) scale(0.96)",
         transition: "opacity 0.22s ease, transform 0.22s ease",
-        transformOrigin: "bottom right",
+        transformOrigin: "bottom left",
       }}>
         <Box sx={{ px: 2, py: 1.2, borderBottom: "1px solid #f0f0f0" }}>
           <Typography sx={{ fontSize: "0.78rem", fontWeight: 700, color: "text.secondary", textTransform: "uppercase", letterSpacing: "0.06em" }}>
@@ -182,7 +182,7 @@ export default function AgentChatDashboard() {
 
       {/* Chat panel */}
       <Box sx={{
-        position: "absolute", bottom: "calc(100% + 12px)", right: 0,
+        position: "absolute", bottom: "calc(100% + 12px)", left: 0,
         width: { xs: "calc(100vw - 32px)", sm: 350 },
         height: "560px",
         display: chatOpen && agent ? "flex" : "none",
@@ -255,6 +255,14 @@ export default function AgentChatDashboard() {
         {/* Input */}
         {agent && (
           <Box sx={{ display: "flex", alignItems: "center", gap: 1, px: 1.5, py: 1, borderTop: "1px solid #f0f0f0", background: "#fafafa" }}>
+            <IconButton onClick={send} disabled={!input.trim() || loading}
+              sx={{
+                background: agent.color, color: "#fff", width: 38, height: 38,
+                "&:hover": { background: agent.color, opacity: 0.88 },
+                "&.Mui-disabled": { background: "#e0e0e0", color: "#bbb" },
+              }}>
+              {loading ? <CircularProgress size={18} color="inherit" /> : <SendIcon sx={{ fontSize: 18 }} />}
+            </IconButton>
             <InputBase
               inputRef={inputRef}
               fullWidth multiline maxRows={3}
@@ -264,14 +272,6 @@ export default function AgentChatDashboard() {
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
               sx={{ fontSize: "0.875rem", px: 1.5, py: 0.75, background: "#fff", borderRadius: 3, border: "1px solid #e0e0e0", flex: 1 }}
             />
-            <IconButton onClick={send} disabled={!input.trim() || loading}
-              sx={{
-                background: agent.color, color: "#fff", width: 38, height: 38,
-                "&:hover": { background: agent.color, opacity: 0.88 },
-                "&.Mui-disabled": { background: "#e0e0e0", color: "#bbb" },
-              }}>
-              {loading ? <CircularProgress size={18} color="inherit" /> : <SendIcon sx={{ fontSize: 18 }} />}
-            </IconButton>
           </Box>
         )}
       </Box>
