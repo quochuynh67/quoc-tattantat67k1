@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { Link as RouterLink } from "react-router-dom";
 import { Container, Button, Card, CardMedia, CardContent, Typography, Box } from "@mui/material";
+import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 import { getSectionCount, getSectionItems, getSectionItemsSync } from "../../lib/phuTanApi";
 import { CardSkeletonGrid } from "../CardSkeleton";
 import AgentChat from "../AgentChat";
@@ -39,14 +40,7 @@ const AgricultureSection = () => {
           >
             Nông nghiệp & Phát triển nông thôn
           </Typography>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            {canChatWithAi && <AgentChat section="agriculture" variant="inline" />}
-            {totalItems > 4 && (
-              <Button component={RouterLink} to="/agriculture" className="section-more-button">
-                Xem thêm
-              </Button>
-            )}
-          </Box>
+          {canChatWithAi && <AgentChat section="agriculture" variant="inline" />}
         </Box>
         <Typography
           variant="body1"
@@ -58,17 +52,15 @@ const AgricultureSection = () => {
         {loading ? <CardSkeletonGrid count={4} /> : <Box
           className="card-scroll-row"
           sx={{
-            display: "grid",
-            gridTemplateColumns: { xs: "repeat(4, 72vw)", sm: "repeat(2, minmax(0, 1fr))", md: "repeat(4, minmax(0, 1fr))" },
+            display: "flex",
             gap: 4,
-            alignItems: "stretch",
-            overflowX: { xs: "auto", sm: "visible" },
-            scrollSnapType: { xs: "x mandatory", sm: "none" },
-            pb: { xs: 1, sm: 0 },
+            overflowX: "auto",
+            scrollSnapType: "x mandatory",
+            pb: 1,
           }}
         >
           {displayedAgri.map((item) => (
-            <Box key={item.id} sx={{ minWidth: 0, scrollSnapAlign: { xs: "start", sm: "unset" } }}>
+            <Box key={item.id} sx={{ flex: "0 0 auto", width: { xs: "72vw", sm: "45vw", md: "280px" }, scrollSnapAlign: "start" }}>
               <Card
                 elevation={2}
                 component={RouterLink}
@@ -125,6 +117,20 @@ const AgricultureSection = () => {
               </Card>
             </Box>
           ))}
+          {totalItems > 4 && (
+            <Box sx={{ flex: "0 0 auto", width: { xs: "140px", md: "160px" }, scrollSnapAlign: "start", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Button
+                component={RouterLink}
+                to="/agriculture"
+                variant="outlined"
+                endIcon={<ArrowForwardIcon />}
+                className="section-more-button"
+                sx={{ whiteSpace: "nowrap" }}
+              >
+                Xem thêm
+              </Button>
+            </Box>
+          )}
         </Box>}
       </Container>
     </section>
