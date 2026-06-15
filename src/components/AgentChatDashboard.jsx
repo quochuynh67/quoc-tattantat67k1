@@ -118,8 +118,11 @@ export default function AgentChatDashboard() {
     try {
       const reply = await callAgent(next, selectedSection, agent);
       setMessages((m) => [...m, { role: "assistant", content: reply }]);
-    } catch {
-      setMessages((m) => [...m, { role: "assistant", content: "Hỏng kết nối được rồi cưng ơi, thử lại sau nha~" }]);
+    } catch (err) {
+      const errorMsg = err instanceof Error && err.message
+        ? err.message.replace(/^\[ERROR_\d+\]\s*/, "")
+        : "Hỏng kết nối được rồi cưng ơi, thử lại sau nha~";
+      setMessages((m) => [...m, { role: "assistant", content: errorMsg }]);
     }
     setLoading(false);
     setTimeout(() => inputRef.current?.focus(), 50);

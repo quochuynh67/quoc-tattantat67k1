@@ -97,20 +97,9 @@ export default function AgentChat({ section, variant = "float" }) {
       const reply = await callAgent(next, section, agent);
       setMessages((m) => [...m, { role: "assistant", content: reply }]);
     } catch (err) {
-      let errorMsg = "Hỏng kết nối được rồi cưng ơi, thử lại sau nha~";
-      if (err instanceof Error) {
-        const msgMatch = err.message?.match(/\[ERROR_(\d+)\]/);
-        const errorCode = msgMatch ? parseInt(msgMatch[1]) : null;
-        if (errorCode === 429) {
-          errorMsg = "🚫 API hết quota rồi cưng ơi, hãy chờ hoặc nâng cấp plan để tiếp tục nhé~";
-        } else if (errorCode === 401) {
-          errorMsg = "❌ API key không hợp lệ, liên hệ admin để kiểm tra nha~";
-        } else if (errorCode === 403) {
-          errorMsg = "🔒 Không có quyền sử dụng API này cưng, xin lỗi nha~";
-        } else if (err.message) {
-          errorMsg = err.message.replace(/^\[ERROR_\d+\]\s*/, "");
-        }
-      }
+      const errorMsg = err instanceof Error && err.message
+        ? err.message.replace(/^\[ERROR_\d+\]\s*/, "")
+        : "Hỏng kết nối được rồi cưng ơi, thử lại sau nha~";
       setMessages((m) => [...m, { role: "assistant", content: errorMsg }]);
     }
     setLoading(false);

@@ -136,9 +136,15 @@ Câu trả lời ngắn gọn, dưới 150 từ, không dùng markdown.`;
       const errorCode = body?.error?.code;
       let msg = body?.error?.message ?? `HTTP ${res.status}`;
 
-      // Show Vietnamese message for common errors
       if (errorCode === 429) {
-        msg = "API đã hết quota free tier, hãy chờ hoặc nâng cấp plan";
+        const retryInfo = (body?.error?.details as any[])?.find(
+          (d) => d["@type"] === "type.googleapis.com/google.rpc.RetryInfo"
+        );
+        const delaySecs = retryInfo?.retryDelay ? parseInt(retryInfo.retryDelay) : 60;
+        _blockedUntil = Date.now() + delaySecs * 1000;
+        msg = `${agent.name} đang bận, cưng đợi xíu ${delaySecs} giây rồi nhắn lại nha~`;
+      } else if (body?.error?.status === "UNAVAILABLE" || res.status === 503) {
+        msg = `${agent.name} đang bận lắm, cưng đợi xíu rồi nhắn lại nha~`;
       } else if (errorCode === 401) {
         msg = "API key không hợp lệ";
       } else if (errorCode === 403) {
@@ -162,7 +168,17 @@ Câu trả lời ngắn gọn, dưới 150 từ, không dùng markdown.`;
   }
 }
 
+const RATE_LIMIT_MS = 60_000;
+let _blockedUntil = 0;
+
 export async function callAgent(messages: Message[], section: string, agent: AgentConfig): Promise<string> {
+  const now = Date.now();
+  if (now < _blockedUntil) {
+    const wait = Math.ceil((_blockedUntil - now) / 1000);
+    throw new Error(`Chờ ${wait} giây nữa mới nhắn được nha cưng~`);
+  }
+  _blockedUntil = now + RATE_LIMIT_MS;
+
   try {
     return await callGeminiAgent(messages, section, agent, _currentGeminiModelIdx);
   } catch (err) {
