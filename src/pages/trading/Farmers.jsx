@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getFarmers, createFarmer, updateFarmer, uploadTradingImage, deleteTradingImage, getPurchasesByFarmer } from '../../lib/tradingApi';
 
 const ImageSlot = ({ url, uploading, editable, onPick, onRemove }) => (
@@ -68,6 +69,7 @@ const getTxDateRange = (filter, customDate) => {
 };
 
 const Farmers = () => {
+  const navigate = useNavigate();
   const [farmers, setFarmers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -359,7 +361,15 @@ const Farmers = () => {
           <div className="bg-white p-4 rounded-lg border shadow-sm mt-4">
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-bold text-lg">Lịch sử giao dịch</h3>
-              <span className="text-sm text-gray-500">{transactions.length} phiếu</span>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-500">{transactions.length} phiếu</span>
+                <button
+                  className="btn btn-primary btn-sm ml-2"
+                  onClick={() => navigate(`/trading/purchases?farmerId=${selectedFarmer.id}`)}
+                >
+                  <i className="fas fa-plus"></i> Tạo phiếu thu
+                </button>
+              </div>
             </div>
 
             {/* Summary stats */}

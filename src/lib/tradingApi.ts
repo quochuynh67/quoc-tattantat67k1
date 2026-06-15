@@ -37,7 +37,25 @@ export async function deleteTradingImage(url: string): Promise<void> {
 // Farmers
 export async function getFarmers() {
   if (!isSupabaseConfigured) return { data: [], error: { message: "Supabase not configured" } };
-  return supabase.from("trading_farmers").select("*").order("created_at", { ascending: false });
+  const [farmersRes, purchasesRes] = await Promise.all([
+    supabase.from("trading_farmers").select("*").order("created_at", { ascending: false }),
+    supabase.from("trading_purchases").select("farmer_id, total_amount"),
+  ]);
+  if (farmersRes.error) return farmersRes;
+  // Aggregate transactions & total per farmer
+  const statsMap: Record<string, { transactions: number; total: number }> = {};
+  (purchasesRes.data || []).forEach((p: any) => {
+    if (!p.farmer_id) return;
+    if (!statsMap[p.farmer_id]) statsMap[p.farmer_id] = { transactions: 0, total: 0 };
+    statsMap[p.farmer_id].transactions += 1;
+    statsMap[p.farmer_id].total += Number(p.total_amount) || 0;
+  });
+  const data = (farmersRes.data || []).map((f: any) => ({
+    ...f,
+    transactions: statsMap[f.id]?.transactions || 0,
+    total: statsMap[f.id]?.total || 0,
+  }));
+  return { data, error: null };
 }
 
 export async function createFarmer(payload) {
@@ -57,7 +75,25 @@ export async function updateFarmer(id, payload) {
 // Customers
 export async function getCustomers() {
   if (!isSupabaseConfigured) return { data: [], error: { message: "Supabase not configured" } };
-  return supabase.from("trading_customers").select("*").order("created_at", { ascending: false });
+  const [customersRes, salesRes] = await Promise.all([
+    supabase.from("trading_customers").select("*").order("created_at", { ascending: false }),
+    supabase.from("trading_sales").select("customer_id, total_amount"),
+  ]);
+  if (customersRes.error) return customersRes;
+  // Aggregate transactions & total per customer
+  const statsMap: Record<string, { transactions: number; total: number }> = {};
+  (salesRes.data || []).forEach((s: any) => {
+    if (!s.customer_id) return;
+    if (!statsMap[s.customer_id]) statsMap[s.customer_id] = { transactions: 0, total: 0 };
+    statsMap[s.customer_id].transactions += 1;
+    statsMap[s.customer_id].total += Number(s.total_amount) || 0;
+  });
+  const data = (customersRes.data || []).map((c: any) => ({
+    ...c,
+    transactions: statsMap[c.id]?.transactions || 0,
+    total: statsMap[c.id]?.total || 0,
+  }));
+  return { data, error: null };
 }
 
 export async function createCustomer(payload) {

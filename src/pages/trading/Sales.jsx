@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { getSales, createSale, getCustomers, getProducts, createProduct } from '../../lib/tradingApi';
 import ProductAutocomplete from './ProductAutocomplete';
 
@@ -41,6 +42,9 @@ const getDateRange = (filter, customDate) => {
 };
 
 const Sales = () => {
+  const [searchParams] = useSearchParams();
+  const initialCustomerId = searchParams.get('customerId') || '';
+
   const [customers, setCustomers] = useState([]);
   const [sales, setSales] = useState([]);
   const [products, setProducts] = useState([]);
@@ -51,7 +55,7 @@ const Sales = () => {
   const [customDate, setCustomDate] = useState('');
 
   // Form state
-  const [customerId, setCustomerId] = useState('');
+  const [customerId, setCustomerId] = useState(initialCustomerId);
   const [items, setItems] = useState([{ id: Date.now(), name: '', quantity: '', unit: 'kg', price: '' }]);
   const [paidAmount, setPaidAmount] = useState('');
   const [isPaidFull, setIsPaidFull] = useState(false);
