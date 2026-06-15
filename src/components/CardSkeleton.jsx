@@ -3,9 +3,12 @@ import { Box, Card, CardContent, Skeleton } from "@mui/material";
 
 const GRID_SX = {
   display: "grid",
-  gridTemplateColumns: { xs: "1fr", sm: "repeat(2, minmax(0, 1fr))", md: "repeat(4, minmax(0, 1fr))" },
+  gridTemplateColumns: { xs: "repeat(4, 72vw)", sm: "repeat(2, minmax(0, 1fr))", md: "repeat(4, minmax(0, 1fr))" },
   gap: 4,
   alignItems: "stretch",
+  overflowX: { xs: "auto", sm: "visible" },
+  scrollSnapType: { xs: "x mandatory", sm: "none" },
+  pb: { xs: 1, sm: 0 },
 };
 
 export function CardSkeleton({ imageHeight = 200, hasRating = false, hasChip = false }) {
@@ -26,9 +29,9 @@ export function CardSkeleton({ imageHeight = 200, hasRating = false, hasChip = f
 
 export function CardSkeletonGrid({ count = 4, imageHeight = 200, hasRating = false, hasChip = false }) {
   return (
-    <Box sx={GRID_SX}>
+    <Box sx={GRID_SX} className="card-scroll-row">
       {Array.from({ length: count }).map((_, i) => (
-        <Box key={i} sx={{ minWidth: 0 }}>
+        <Box key={i} sx={{ minWidth: 0, scrollSnapAlign: { xs: "start", sm: "unset" } }}>
           <CardSkeleton imageHeight={imageHeight} hasRating={hasRating} hasChip={hasChip} />
         </Box>
       ))}

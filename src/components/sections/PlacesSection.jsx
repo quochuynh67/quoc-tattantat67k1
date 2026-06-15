@@ -56,15 +56,19 @@ const PlacesSection = () => {
           Khám phá những địa danh đặc sắc của Phú Tân 67K1 AG, từ thiên nhiên hoang sơ tới di tích lịch sử.
         </Typography>
         {loading ? <CardSkeletonGrid count={4} /> : <Box
+          className="card-scroll-row"
           sx={{
             display: "grid",
-            gridTemplateColumns: { xs: "1fr", sm: "repeat(2, minmax(0, 1fr))", md: "repeat(4, minmax(0, 1fr))" },
+            gridTemplateColumns: { xs: "repeat(4, 72vw)", sm: "repeat(2, minmax(0, 1fr))", md: "repeat(4, minmax(0, 1fr))" },
             gap: 4,
             alignItems: "stretch",
+            overflowX: { xs: "auto", sm: "visible" },
+            scrollSnapType: { xs: "x mandatory", sm: "none" },
+            pb: { xs: 1, sm: 0 },
           }}
         >
           {displayedPlaces.map((place) => (
-            <Box key={place.id} sx={{ minWidth: 0 }}>
+            <Box key={place.id} sx={{ minWidth: 0, scrollSnapAlign: { xs: "start", sm: "unset" } }}>
               <Card
                 elevation={2}
                 component={RouterLink}

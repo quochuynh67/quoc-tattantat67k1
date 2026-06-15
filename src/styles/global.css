@@ -122,6 +122,15 @@ html.dark {
   width: 100%;
 }
 
+/* Hide scrollbar on horizontal-scroll card rows (mobile) */
+.card-scroll-row::-webkit-scrollbar {
+  display: none;
+}
+.card-scroll-row {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 .header {
   align-items: center;
   display: flex;
