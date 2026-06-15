@@ -9,7 +9,9 @@ import EditIcon from "@mui/icons-material/Edit";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import DeleteIcon from "@mui/icons-material/Delete";
-import { getSectionsAll, createSection, deleteSection, updateSection, toggleSectionHide } from "../../lib/supabaseClient";
+import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
+import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
+import { getSectionsAll, createSection, deleteSection, updateSection, toggleSectionHide, updateSectionOrder } from "../../lib/supabaseClient";
 
 export default function AdminSections() {
   const [sections, setSections] = useState([]);
@@ -99,6 +101,7 @@ export default function AdminSections() {
       } else {
         await createSection(payload);
       }
+
       setForm({ title: "", description: "", slug: "", route: "", hide: false });
       setOpen(false);
       fetchSections();
@@ -114,6 +117,24 @@ export default function AdminSections() {
       fetchSections();
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const moveSection = async (idx, direction) => {
+    const swapIdx = idx + direction;
+    if (swapIdx < 0 || swapIdx >= sections.length) return;
+
+    // Normalize all sort_orders, swap the two, re-index
+    const reordered = sections.map((s, i) => ({ ...s, sort_order: i }));
+    [reordered[idx], reordered[swapIdx]] = [reordered[swapIdx], reordered[idx]];
+    reordered.forEach((s, i) => { s.sort_order = i; });
+
+    setSections(reordered);
+    try {
+      await updateSectionOrder(reordered.map(({ id, sort_order }) => ({ id, sort_order })));
+    } catch (e) {
+      console.error(e);
+      fetchSections(); // revert on failure
     }
   };
 
@@ -153,7 +174,7 @@ export default function AdminSections() {
       </Button>
 
       <List sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-        {sections.map((sec) => (
+        {sections.map((sec, idx) => (
           <Paper
             key={sec.id}
             variant="outlined"
@@ -173,6 +194,24 @@ export default function AdminSections() {
               disablePadding
               secondaryAction={
                 <Box sx={{ display: "flex", gap: 1.5, alignItems: "center" }}>
+                  {/* Reorder buttons */}
+                  <Box sx={{ display: "flex", flexDirection: "column", gap: 0.25 }}>
+                    <Tooltip title="Lên trên" arrow>
+                      <span>
+                        <IconButton size="small" disabled={idx === 0} onClick={() => moveSection(idx, -1)} sx={{ p: 0.25 }}>
+                          <ArrowUpwardIcon sx={{ fontSize: 16 }} />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                    <Tooltip title="Xuống dưới" arrow>
+                      <span>
+                        <IconButton size="small" disabled={idx === sections.length - 1} onClick={() => moveSection(idx, 1)} sx={{ p: 0.25 }}>
+                          <ArrowDownwardIcon sx={{ fontSize: 16 }} />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                  </Box>
+
                   {/* Quick hide/show toggle */}
                   <Tooltip title={!sec.hide ? "Đang hiển thị – nhấn để ẩn" : "Đang ẩn – nhấn để hiện"} arrow>
                     <Chip

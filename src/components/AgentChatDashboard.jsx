@@ -4,7 +4,7 @@ import CloseIcon from "@mui/icons-material/Close";
 import SendIcon from "@mui/icons-material/Send";
 import SmartToyIcon from "@mui/icons-material/SmartToy";
 import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
-import { getSiteSetting } from "../lib/phuTanApi";
+import { getAiAgentBySlug } from "../lib/supabaseClient";
 import { streamAgent, DEFAULT_AGENTS } from "../lib/agentApi";
 
 const SECTIONS = [
@@ -59,7 +59,7 @@ export default function AgentChatDashboard() {
   // Load agent config when section is selected
   useEffect(() => {
     if (!selectedSection) return;
-    getSiteSetting(`agent_${selectedSection}`).then((config) => {
+    getAiAgentBySlug(selectedSection).then((config) => {
       const def = DEFAULT_AGENTS[selectedSection];
       const resolved = config ? { ...def, ...config } : def;
       setAgent(resolved);

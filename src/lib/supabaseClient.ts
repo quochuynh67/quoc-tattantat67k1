@@ -20,27 +20,53 @@ export default supabase;
 
 // Section helper functions
 export const createSection = async (section) => {
-  const { data, error } = await supabase.from('content_sections').insert(section);
+  const { data, error } = await supabase
+    .from('content_sections')
+    .insert(section)
+    .select()
+    .single();
   if (error) throw error;
   return data;
 };
   
 // Admin: fetch all sections including hidden ones
 export const getSectionsAll = async () => {
-  const { data, error } = await supabase.from('content_sections').select('*').order('created_at', { ascending: true });
-  if (error) throw error;
-  return data;
+  const { data, error } = await supabase
+    .from('content_sections').select('*')
+    .order('sort_order', { ascending: true, nullsFirst: false })
+    .order('created_at', { ascending: true });
+  if (!error) return data;
+  // sort_order column may not exist yet — fall back to created_at only
+  const { data: d2, error: e2 } = await supabase
+    .from('content_sections').select('*')
+    .order('created_at', { ascending: true });
+  if (e2) throw e2;
+  return d2;
 };
 
 // Public: only fetch sections that are not hidden
 export const getSections = async () => {
   const { data, error } = await supabase
-    .from('content_sections')
-    .select('*')
+    .from('content_sections').select('*')
+    .neq('hide', true)
+    .order('sort_order', { ascending: true, nullsFirst: false })
+    .order('created_at', { ascending: true });
+  if (!error) return data;
+  // sort_order column may not exist yet — fall back to created_at only
+  const { data: d2, error: e2 } = await supabase
+    .from('content_sections').select('*')
     .neq('hide', true)
     .order('created_at', { ascending: true });
-  if (error) throw error;
-  return data;
+  if (e2) throw e2;
+  return d2;
+};
+
+export const updateSectionOrder = async (updates: { id: string; sort_order: number }[]) => {
+  await Promise.all(
+    updates.map(({ id, sort_order }) =>
+      supabase.from('content_sections').update({ sort_order }).eq('id', id)
+    )
+  );
 };
 
 export const toggleSectionHide = async (id: string, hide: boolean) => {
@@ -66,7 +92,85 @@ export const updateSection = async (id, updates) => {
 };
 
 
-// Post helper functions
+// ── AI Agents ─────────────────────────────────────────────────────────────────
+// Table schema: id (bigint), agent_key (text, unique), payload (jsonb), content_section_id (FK→content_sections), created_at, updated_at
+
+export const getAiAgents = async () => {
+  const { data, error } = await supabase
+    .from('ai_agents')
+    .select('*, content_sections(id, title, slug)')
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+};
+
+// Returns full row — for admin use
+export const getAiAgentRowBySectionId = async (sectionId: string) => {
+  if (!sectionId) return null;
+  const { data, error } = await supabase
+    .from('ai_agents')
+    .select('*')
+    .eq('content_section_id', sectionId)
+    .maybeSingle();
+  if (error || !data) return null;
+  return data;
+};
+
+// Returns the payload object only — for AgentChat use
+export const getAiAgentBySectionId = async (sectionId: string) => {
+  const row = await getAiAgentRowBySectionId(sectionId);
+  return row ? (row.payload ?? null) : null;
+};
+
+// Used by AgentChat — two-step lookup (slug → section id → agent payload)
+export const getAiAgentBySlug = async (slug: string) => {
+  if (!slug) return null;
+  const { data: sec } = await supabase
+    .from('content_sections')
+    .select('id')
+    .eq('slug', slug)
+    .maybeSingle();
+  if (!sec) return null;
+  return getAiAgentBySectionId(sec.id);
+};
+
+export const upsertAiAgent = async (agentData: {
+  id?: number;
+  content_section_id: string;
+  value: { name: string; greeting: string; color: string; emoji: string };
+}) => {
+  if (agentData.id) {
+    const { data, error } = await supabase
+      .from('ai_agents')
+      .update({
+        content_section_id: agentData.content_section_id,
+        payload: agentData.value,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', agentData.id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  }
+  const { data, error } = await supabase
+    .from('ai_agents')
+    .insert({
+      agent_key: agentData.content_section_id,
+      content_section_id: agentData.content_section_id,
+      payload: agentData.value,
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+};
+
+export const deleteAiAgent = async (id: string) => {
+  const { error } = await supabase.from('ai_agents').delete().eq('id', id);
+  if (error) throw error;
+};
+
 // Post helper functions (now using content_items)
 export const getPostsBySection = async (sectionSlug) => {
   const query = sectionSlug

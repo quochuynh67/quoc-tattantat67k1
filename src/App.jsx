@@ -29,6 +29,7 @@ const AdminSections   = lazy(() => import("./pages/admin/Sections"));
 const AdminPosts      = lazy(() => import("./pages/admin/Posts"));
 const AdminVlogs      = lazy(() => import("./pages/admin/Vlogs"));
 const AdminSettings   = lazy(() => import("./pages/admin/Settings"));
+const AdminAiAgents   = lazy(() => import("./pages/admin/AiAgents"));
 
 // Trading module
 const TradingLayout   = lazy(() => import("./pages/trading/TradingLayout"));
@@ -81,6 +82,7 @@ const AppLayout = () => {
               <Route path="sections"  element={<AdminSections />} />
               <Route path="posts"     element={<AdminPosts />} />
               <Route path="vlogs"     element={<AdminVlogs />} />
+              <Route path="ai-agents" element={<AdminAiAgents />} />
               <Route path="settings"  element={<AdminSettings />} />
             </Route>
             <Route path="/trading-login" element={<TradingLogin />} />

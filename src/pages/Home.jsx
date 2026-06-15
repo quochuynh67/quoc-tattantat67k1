@@ -12,20 +12,25 @@ import VlogsMapSection from "../components/sections/VlogsMapSection";
 import NewsletterCTA from "../components/sections/NewsletterCTA";
 import AgentChatDashboard from "../components/AgentChatDashboard";
 import SEOIntroSection from "../components/sections/SEOIntroSection";
+import GenericSection from "../components/sections/GenericSection";
 import { useSiteSettings } from "../contexts/SiteSettingsContext";
 
-// Map slug → component, in display order
-const SECTION_COMPONENTS = [
-  { slug: "news",         Component: NewsSection },
-  { slug: "places",       Component: PlacesSection },
-  { slug: "food",         Component: FoodSection },
-  { slug: "beautyHealth", Component: BeautyHealthSection },
-  { slug: "agriculture",  Component: AgricultureSection },
-  { slug: "health",       Component: HealthSection },
-];
+// Slug → specific component mapping for built-in sections
+const SPECIFIC_COMPONENTS = {
+  news:         NewsSection,
+  places:       PlacesSection,
+  food:         FoodSection,
+  beautyHealth: BeautyHealthSection,
+  agriculture:  AgricultureSection,
+  health:       HealthSection,
+};
 
 const Home = () => {
-  const { canChatWithAi, visibleSectionSlugs } = useSiteSettings();
+  const { canChatWithAi, orderedSections } = useSiteSettings();
+
+  // While loading, show all built-in sections in default order
+  const sectionsToRender = orderedSections
+    ?? Object.keys(SPECIFIC_COMPONENTS).map((slug) => ({ slug, title: slug }));
 
   return (
     <div className="home-page">
@@ -39,12 +44,12 @@ const Home = () => {
 
       <HeroSection />
 
-      {/* Render only sections that are not hidden (visibleSectionSlugs=null means still loading → show all) */}
-      {SECTION_COMPONENTS
-        .filter(({ slug }) => !visibleSectionSlugs || visibleSectionSlugs.has(slug))
-        .map(({ slug, Component }) => (
-          <Component key={slug} />
-        ))}
+      {sectionsToRender.map(({ slug, title }) => {
+        const Specific = SPECIFIC_COMPONENTS[slug];
+        return Specific
+          ? <Specific key={slug} />
+          : <GenericSection key={slug} slug={slug} title={title} />;
+      })}
 
       <VlogsMapSection />
       <SEOIntroSection />

@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Box, CircularProgress, IconButton, InputBase, Paper, Typography } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import SendIcon from "@mui/icons-material/Send";
-import { getSiteSetting } from "../lib/phuTanApi";
+import { getAiAgentBySlug } from "../lib/supabaseClient";
 import { streamAgent, DEFAULT_AGENTS } from "../lib/agentApi";
 
 const Avatar = ({ name, color, size = 36 }) => (
@@ -49,7 +49,7 @@ export default function AgentChat({ section, variant = "float" }) {
 
   useEffect(() => {
     if (!section) return;
-    getSiteSetting(`agent_${section}`).then((config) => {
+    getAiAgentBySlug(section).then((config) => {
       const def = DEFAULT_AGENTS[section] ?? DEFAULT_AGENTS.news;
       const resolved = config ? { ...def, ...config } : def;
       setAgent(resolved);

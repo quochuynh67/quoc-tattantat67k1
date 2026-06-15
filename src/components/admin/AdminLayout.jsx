@@ -8,6 +8,7 @@ import SettingsIcon from "@mui/icons-material/Settings";
 import MenuIcon from "@mui/icons-material/Menu";
 import OndemandVideoIcon from "@mui/icons-material/OndemandVideo";
 import LogoutIcon from "@mui/icons-material/Logout";
+import SmartToyIcon from "@mui/icons-material/SmartToy";
 import { useAdminAuth } from "../../contexts/AdminAuthContext";
 
 const drawerWidth = 240;
@@ -46,6 +47,10 @@ const AdminLayout = () => {
         <ListItemButton component={NavLink} to="/admin/vlogs" selected={location.pathname.startsWith('/admin/vlogs')}>
           <ListItemIcon><OndemandVideoIcon /></ListItemIcon>
           <ListItemText primary="Vlogs" />
+        </ListItemButton>
+        <ListItemButton component={NavLink} to="/admin/ai-agents" selected={location.pathname.startsWith('/admin/ai-agents')}>
+          <ListItemIcon><SmartToyIcon /></ListItemIcon>
+          <ListItemText primary="AI Agents" />
         </ListItemButton>
         <ListItemButton component={NavLink} to="/admin/settings" selected={location.pathname.startsWith('/admin/settings')}>
           <ListItemIcon><SettingsIcon /></ListItemIcon>
