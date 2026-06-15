@@ -5,7 +5,7 @@ import SendIcon from "@mui/icons-material/Send";
 import SmartToyIcon from "@mui/icons-material/SmartToy";
 import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
 import { getSiteSetting } from "../lib/phuTanApi";
-import { callAgent, DEFAULT_AGENTS } from "../lib/agentApi";
+import { streamAgent, DEFAULT_AGENTS } from "../lib/agentApi";
 
 const SECTIONS = [
   { key: "news", label: "Tin tức" },
@@ -115,9 +115,25 @@ export default function AgentChatDashboard() {
     setMessages(next);
     setInput("");
     setLoading(true);
+
+    let started = false;
     try {
-      const reply = await callAgent(next, selectedSection, agent);
-      setMessages((m) => [...m, { role: "assistant", content: reply }]);
+      await streamAgent(next, selectedSection, agent, (chunk) => {
+        if (!started) {
+          started = true;
+          setLoading(false);
+          setMessages((m) => [...m, { role: "assistant", content: chunk }]);
+        } else {
+          setMessages((m) => {
+            const copy = [...m];
+            copy[copy.length - 1] = {
+              role: "assistant",
+              content: copy[copy.length - 1].content + chunk,
+            };
+            return copy;
+          });
+        }
+      });
     } catch (err) {
       const errorMsg = err instanceof Error && err.message
         ? err.message.replace(/^\[ERROR_\d+\]\s*/, "")

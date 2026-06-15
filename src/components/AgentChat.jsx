@@ -3,7 +3,7 @@ import { Box, CircularProgress, IconButton, InputBase, Paper, Typography } from 
 import CloseIcon from "@mui/icons-material/Close";
 import SendIcon from "@mui/icons-material/Send";
 import { getSiteSetting } from "../lib/phuTanApi";
-import { callAgent, DEFAULT_AGENTS } from "../lib/agentApi";
+import { streamAgent, DEFAULT_AGENTS } from "../lib/agentApi";
 
 const Avatar = ({ name, color, size = 36 }) => (
   <Box sx={{
@@ -93,9 +93,25 @@ export default function AgentChat({ section, variant = "float" }) {
     setMessages(next);
     setInput("");
     setLoading(true);
+
+    let started = false;
     try {
-      const reply = await callAgent(next, section, agent);
-      setMessages((m) => [...m, { role: "assistant", content: reply }]);
+      await streamAgent(next, section, agent, (chunk) => {
+        if (!started) {
+          started = true;
+          setLoading(false);
+          setMessages((m) => [...m, { role: "assistant", content: chunk }]);
+        } else {
+          setMessages((m) => {
+            const copy = [...m];
+            copy[copy.length - 1] = {
+              role: "assistant",
+              content: copy[copy.length - 1].content + chunk,
+            };
+            return copy;
+          });
+        }
+      });
     } catch (err) {
       const errorMsg = err instanceof Error && err.message
         ? err.message.replace(/^\[ERROR_\d+\]\s*/, "")
