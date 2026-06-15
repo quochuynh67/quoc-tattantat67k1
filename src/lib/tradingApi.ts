@@ -95,6 +95,22 @@ export async function updatePurchase(id, payload) {
   return supabase.from("trading_purchases").update(payload).eq("id", id).select().single();
 }
 
+export async function getPurchasesByFarmer(farmerId: string, startDate?: string, endDate?: string) {
+  if (!isSupabaseConfigured) return { data: [], error: null };
+  let query = supabase.from("trading_purchases").select("*").eq("farmer_id", farmerId).order("created_at", { ascending: false });
+  if (startDate) query = query.gte("created_at", startDate);
+  if (endDate) query = query.lte("created_at", endDate);
+  return query;
+}
+
+export async function getSalesByCustomer(customerId: string, startDate?: string, endDate?: string) {
+  if (!isSupabaseConfigured) return { data: [], error: null };
+  let query = supabase.from("trading_sales").select("*").eq("customer_id", customerId).order("created_at", { ascending: false });
+  if (startDate) query = query.gte("created_at", startDate);
+  if (endDate) query = query.lte("created_at", endDate);
+  return query;
+}
+
 // Sales
 export async function getSales(startDate, endDate) {
   if (!isSupabaseConfigured) return { data: [], error: { message: "Supabase not configured" } };

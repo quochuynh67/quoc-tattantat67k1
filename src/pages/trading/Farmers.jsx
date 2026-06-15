@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { getFarmers, createFarmer, updateFarmer, uploadTradingImage, deleteTradingImage } from '../../lib/tradingApi';
+import { getFarmers, createFarmer, updateFarmer, uploadTradingImage, deleteTradingImage, getPurchasesByFarmer } from '../../lib/tradingApi';
 
 const ImageSlot = ({ url, uploading, editable, onPick, onRemove }) => (
   <div
@@ -32,6 +32,41 @@ const ImageSlot = ({ url, uploading, editable, onPick, onRemove }) => (
   </div>
 );
 
+const TX_DATE_FILTERS = [
+  { label: 'Hôm nay', value: 'today' },
+  { label: '7 ngày', value: '7days' },
+  { label: '30 ngày', value: '30days' },
+  { label: 'Tất cả', value: 'all' },
+  { label: 'Ngày cụ thể', value: 'custom' },
+];
+
+const getTxDateRange = (filter, customDate) => {
+  const now = new Date();
+  const startOfDay = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
+  switch (filter) {
+    case 'today':
+      return { from: startOfDay(now).toISOString(), to: null };
+    case '7days': {
+      const d = new Date(now); d.setDate(d.getDate() - 6);
+      return { from: startOfDay(d).toISOString(), to: null };
+    }
+    case '30days': {
+      const d = new Date(now); d.setDate(d.getDate() - 29);
+      return { from: startOfDay(d).toISOString(), to: null };
+    }
+    case 'all':
+      return { from: null, to: null };
+    case 'custom': {
+      if (!customDate) return { from: startOfDay(now).toISOString(), to: null };
+      const d = new Date(customDate);
+      const end = new Date(d); end.setHours(23, 59, 59, 999);
+      return { from: startOfDay(d).toISOString(), to: end.toISOString() };
+    }
+    default:
+      return { from: null, to: null };
+  }
+};
+
 const Farmers = () => {
   const [farmers, setFarmers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -44,6 +79,13 @@ const Farmers = () => {
   const [locating, setLocating] = useState(false);
   const [uploadingIdx, setUploadingIdx] = useState(null);
   const imageRefs = useRef([]);
+
+  // Transaction list state
+  const [transactions, setTransactions] = useState([]);
+  const [txLoading, setTxLoading] = useState(false);
+  const [txDateFilter, setTxDateFilter] = useState('all');
+  const [txCustomDate, setTxCustomDate] = useState('');
+  const [txExpandedId, setTxExpandedId] = useState(null);
 
   useEffect(() => { fetchFarmers(); }, []);
 
@@ -128,6 +170,28 @@ const Farmers = () => {
     }
   };
 
+  const fetchFarmerTransactions = async (farmerId, filter, custom) => {
+    setTxLoading(true);
+    const { from, to } = getTxDateRange(filter || txDateFilter, custom || txCustomDate);
+    const { data } = await getPurchasesByFarmer(farmerId, from, to);
+    setTransactions(data || []);
+    setTxLoading(false);
+  };
+
+  const handleTxDateFilterChange = (val) => {
+    setTxDateFilter(val);
+    if (selectedFarmer && val !== 'custom') {
+      fetchFarmerTransactions(selectedFarmer.id, val, txCustomDate);
+    }
+  };
+
+  const handleTxCustomDateChange = (val) => {
+    setTxCustomDate(val);
+    if (selectedFarmer && val) {
+      fetchFarmerTransactions(selectedFarmer.id, 'custom', val);
+    }
+  };
+
   const handleView = (farmer) => {
     setSelectedFarmer(farmer);
     const imgs = farmer.images || [];
@@ -141,11 +205,16 @@ const Farmers = () => {
     });
     setIsEditing(false);
     setShowAddForm(false);
+    setTxDateFilter('all');
+    setTxCustomDate('');
+    setTxExpandedId(null);
+    fetchFarmerTransactions(farmer.id, 'all', '');
   };
 
   const handleBack = () => {
     setSelectedFarmer(null);
     setIsEditing(false);
+    setTransactions([]);
   };
 
   const renderImageSlots = (editable) => (
@@ -288,19 +357,124 @@ const Farmers = () => {
 
         {!isEditing && (
           <div className="bg-white p-4 rounded-lg border shadow-sm mt-4">
-            <h3 className="font-bold text-lg mb-3">Lịch sử giao dịch</h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-bold text-lg">Lịch sử giao dịch</h3>
+              <span className="text-sm text-gray-500">{transactions.length} phiếu</span>
+            </div>
+
+            {/* Summary stats */}
             <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg mb-3">
               <div className="text-center flex-1 border-r border-green-200">
-                <div className="text-xs text-green-800">Tổng số phiếu</div>
-                <div className="font-bold text-lg text-green-700">{selectedFarmer.transactions}</div>
+                <div className="text-xs text-green-800">Số phiếu</div>
+                <div className="font-bold text-lg text-green-700">{transactions.length}</div>
               </div>
               <div className="text-center flex-1">
                 <div className="text-xs text-green-800">Tổng giá trị</div>
-                <div className="font-bold text-lg text-green-700">{selectedFarmer.total}đ</div>
+                <div className="font-bold text-lg text-green-700">
+                  {transactions.reduce((s, t) => s + Number(t.total_amount || 0), 0).toLocaleString()}đ
+                </div>
               </div>
             </div>
-            <div className="text-center text-sm text-gray-500 py-4 italic">
-              (Chưa có dữ liệu chi tiết phiếu thu mua)
+
+            {/* Date filter */}
+            <div className="flex gap-1.5 flex-wrap mb-3">
+              {TX_DATE_FILTERS.map(f => (
+                <button
+                  key={f.value}
+                  className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                    txDateFilter === f.value
+                      ? 'bg-green-600 text-white border-green-600'
+                      : 'bg-white text-gray-600 border-gray-300 hover:border-green-400'
+                  }`}
+                  onClick={() => handleTxDateFilterChange(f.value)}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+            {txDateFilter === 'custom' && (
+              <input
+                type="date"
+                className="input mb-3 text-sm"
+                value={txCustomDate}
+                onChange={(e) => handleTxCustomDateChange(e.target.value)}
+              />
+            )}
+
+            {/* Transaction list */}
+            <div className="space-y-2">
+              {txLoading ? (
+                <div className="text-center py-4 text-gray-500"><i className="fas fa-circle-notch fa-spin mr-2"></i> Đang tải...</div>
+              ) : transactions.length === 0 ? (
+                <div className="text-center py-4 text-gray-500 italic">Không có phiếu thu mua nào.</div>
+              ) : transactions.map(tx => (
+                <div key={tx.id} className="bg-gray-50 rounded-lg overflow-hidden">
+                  <div
+                    className="p-3 cursor-pointer hover:bg-gray-100 transition-colors"
+                    onClick={() => setTxExpandedId(prev => prev === tx.id ? null : tx.id)}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center gap-2">
+                        <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                          tx.status === 'confirmed' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+                        }`}>
+                          {tx.status === 'confirmed' ? 'Confirmed' : 'Pending'}
+                        </span>
+                        <span className="text-sm text-gray-500">
+                          {new Date(tx.created_at).toLocaleDateString('vi-VN')}
+                        </span>
+                        <span className="text-xs text-gray-400">
+                          {new Date(tx.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="text-xs text-gray-400">#{tx.id.slice(0, 8)}</div>
+                        <i className={`fas fa-chevron-${txExpandedId === tx.id ? 'up' : 'down'} text-xs text-gray-400`}></i>
+                      </div>
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      {(tx.items || []).map(i => `${i.name} ${i.quantity}${i.unit}`).join(', ')}
+                    </div>
+                    <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-200">
+                      <div className="text-sm font-bold text-green-700">{Number(tx.total_amount).toLocaleString()} đ</div>
+                      <div className="flex items-center gap-1 text-xs font-medium">
+                        {Number(tx.paid_amount) >= Number(tx.total_amount) ? (
+                          <span className="text-green-600"><i className="fas fa-check-circle"></i> Đã trả đủ</span>
+                        ) : (
+                          <span className="text-orange-500"><i className="fas fa-clock"></i> Đã trả {Number(tx.paid_amount || 0).toLocaleString()}đ</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  {txExpandedId === tx.id && (
+                    <div className="px-3 pb-3 border-t border-gray-200 bg-white">
+                      <div className="pt-2 space-y-1">
+                        <div className="grid grid-cols-4 gap-1 text-xs font-semibold text-gray-500 uppercase pb-1 border-b">
+                          <span className="col-span-2">Mặt hàng</span>
+                          <span className="text-right">Số lượng</span>
+                          <span className="text-right">Thành tiền</span>
+                        </div>
+                        {(tx.items || []).map((item, idx) => (
+                          <div key={idx} className="grid grid-cols-4 gap-1 text-sm py-1.5 border-b border-gray-100 last:border-0">
+                            <div className="col-span-2">
+                              <div className="font-medium text-gray-800">{item.name}</div>
+                              <div className="text-xs text-gray-400">{Number(item.price).toLocaleString()} đ/{item.unit}</div>
+                            </div>
+                            <div className="text-right text-gray-600 self-center">{item.quantity} {item.unit}</div>
+                            <div className="text-right font-semibold text-green-700 self-center">
+                              {(Number(item.quantity) * Number(item.price)).toLocaleString()} đ
+                            </div>
+                          </div>
+                        ))}
+                        <div className="flex justify-between pt-1.5 text-sm font-bold border-t border-gray-200">
+                          <span className="text-gray-700">Tổng cộng</span>
+                          <span className="text-green-700">{Number(tx.total_amount).toLocaleString()} đ</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
         )}
