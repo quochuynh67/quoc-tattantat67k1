@@ -1,7 +1,7 @@
 // src/pages/VlogFeed.jsx
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link as RouterLink, useLocation } from "react-router-dom";
-import { Box, Button, Switch, Typography } from "@mui/material";
+import { Box, Button, Switch, Typography, Snackbar, Alert } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import PauseIcon from "@mui/icons-material/Pause";
@@ -14,6 +14,7 @@ import { MapContainer, TileLayer, Polyline, CircleMarker, Marker, Popup, useMap 
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { useVlogCache } from "../contexts/VlogCacheContext";
+import { getCurrentLocation, isInsideIframe, openCurrentPageInNewTab } from "../utils/geolocation";
 
 const SHEET_COLLAPSED = 120;
 const SHEET_EXPANDED = 380;
@@ -94,7 +95,7 @@ const OverviewLocationBtn = ({ userLocation, onRequest }) => {
   const map = useMap();
   return (
     <div
-      style={{ position: "absolute", bottom: 20, right: 16, zIndex: 1000 }}
+      style={{ position: "absolute", bottom: 20, left: 16, zIndex: 1000 }}
     >
       <button
         type="button"
@@ -225,13 +226,20 @@ const VlogFeed = () => {
   const [mapView, setMapView] = useState(false);
   const [userLocation, setUserLocation] = useState(null);
   const [mapPlayerVlog, setMapPlayerVlog] = useState(null);
+  const [locationLoading, setLocationLoading] = useState(false);
+  const [locationError, setLocationError] = useState({ open: false, message: "", code: null });
 
   const handleRequestLocation = useCallback(() => {
-    if (!navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition(
-      (pos) => setUserLocation([pos.coords.latitude, pos.coords.longitude]),
-      () => {}
-    );
+    setLocationLoading(true);
+    getCurrentLocation()
+      .then((loc) => {
+        setUserLocation([loc.latitude, loc.longitude]);
+        setLocationError({ open: false, message: "", code: null });
+      })
+      .catch((err) => {
+        setLocationError({ open: true, message: err.message, code: err.code });
+      })
+      .finally(() => setLocationLoading(false));
   }, []);
 
   const newsById = useMemo(() => {
@@ -824,6 +832,25 @@ const VlogFeed = () => {
           </Box>
         )}
       </Box>
+
+      <Snackbar
+        open={locationError.open}
+        autoHideDuration={6000}
+        onClose={() => setLocationError({ open: false, message: "", code: null })}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          onClose={() => setLocationError({ open: false, message: "", code: null })}
+          severity="error"
+          action={locationError.code === 1 && isInsideIframe() ? (
+            <Button color="inherit" size="small" onClick={openCurrentPageInNewTab}>
+              Mở trong tab mới
+            </Button>
+          ) : null}
+        >
+          {locationError.message}
+        </Alert>
+      </Snackbar>
     </main>
   );
 };

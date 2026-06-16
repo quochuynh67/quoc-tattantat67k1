@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { getPurchases, createPurchase, getFarmers, getProducts, createProduct } from '../../lib/tradingApi';
 import ProductAutocomplete from './ProductAutocomplete';
+import { getCurrentLocation, isInsideIframe, openCurrentPageInNewTab } from '../../utils/geolocation';
 
 const DATE_FILTERS = [
   { label: 'Hôm nay', value: 'today' },
@@ -61,6 +62,7 @@ const Purchases = () => {
   const [isPaidFull, setIsPaidFull] = useState(false);
   const [location, setLocation] = useState(null);
   const [locating, setLocating] = useState(false);
+  const [locationError, setLocationError] = useState(null);
 
   useEffect(() => {
     fetchData();
@@ -125,20 +127,21 @@ const Purchases = () => {
     setItems(items.map(item => item.id === id ? { ...item, [field]: value } : item));
   };
 
-  const handleGetLocation = () => {
-    if (!navigator.geolocation) return alert('Thiết bị không hỗ trợ GPS');
+  const handleGetLocation = async () => {
     setLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-        setLocating(false);
-      },
-      () => {
-        alert('Không thể lấy vị trí. Hãy cấp quyền truy cập GPS cho trình duyệt.');
-        setLocating(false);
-      },
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
+    try {
+      const loc = await getCurrentLocation();
+      setLocation({ lat: loc.latitude, lng: loc.longitude });
+      setLocationError(null);
+    } catch (err) {
+      setLocationError({
+        message: err.message,
+        code: err.code,
+        showNewTabBtn: err.code === 1 && isInsideIframe()
+      });
+    } finally {
+      setLocating(false);
+    }
   };
 
   const handleSubmit = async (status) => {
@@ -252,6 +255,22 @@ const Purchases = () => {
                 )}
               </div>
             </div>
+            {locationError && (
+              <div className="bg-red-50 border border-red-200 rounded p-2 text-sm text-red-700">
+                {locationError.message}
+                {locationError.showNewTabBtn && (
+                  <div className="mt-2">
+                    <button
+                      type="button"
+                      className="btn btn-sm bg-red-600 hover:bg-red-700 text-white"
+                      onClick={openCurrentPageInNewTab}
+                    >
+                      Mở trong tab mới
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="pt-3 border-t space-y-3">

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getFarmers, createFarmer, updateFarmer, uploadTradingImage, deleteTradingImage, getPurchasesByFarmer } from '../../lib/tradingApi';
+import { getCurrentLocation, isInsideIframe, openCurrentPageInNewTab } from '../../utils/geolocation';
 
 const ImageSlot = ({ url, uploading, editable, onPick, onRemove }) => (
   <div
@@ -79,6 +80,7 @@ const Farmers = () => {
   const [formData, setFormData] = useState({ name: '', phone: '', address: '', latitude: '', longitude: '', images: [] });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [locating, setLocating] = useState(false);
+  const [locationError, setLocationError] = useState(null);
   const [uploadingIdx, setUploadingIdx] = useState(null);
   const imageRefs = useRef([]);
 
@@ -102,20 +104,21 @@ const Farmers = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleGetLocation = () => {
-    if (!navigator.geolocation) return alert('Thiết bị không hỗ trợ GPS');
+  const handleGetLocation = async () => {
     setLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setFormData(prev => ({ ...prev, latitude: pos.coords.latitude, longitude: pos.coords.longitude }));
-        setLocating(false);
-      },
-      () => {
-        alert('Không thể lấy vị trí. Hãy cấp quyền truy cập GPS cho trình duyệt.');
-        setLocating(false);
-      },
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
+    try {
+      const loc = await getCurrentLocation();
+      setFormData(prev => ({ ...prev, latitude: loc.latitude, longitude: loc.longitude }));
+      setLocationError(null);
+    } catch (err) {
+      setLocationError({
+        message: err.message,
+        code: err.code,
+        showNewTabBtn: err.code === 1 && isInsideIframe()
+      });
+    } finally {
+      setLocating(false);
+    }
   };
 
   const handleImageSelect = async (idx, file) => {
@@ -322,6 +325,22 @@ const Farmers = () => {
                       <span className="text-gray-400 italic">Chưa có vị trí nào được chọn</span>
                     )}
                   </div>
+                  {locationError && (
+                    <div className="bg-red-50 border border-red-200 rounded p-2 text-sm text-red-700 mt-2">
+                      {locationError.message}
+                      {locationError.showNewTabBtn && (
+                        <div className="mt-2">
+                          <button
+                            type="button"
+                            className="btn btn-sm bg-red-600 hover:bg-red-700 text-white"
+                            onClick={openCurrentPageInNewTab}
+                          >
+                            Mở trong tab mới
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </>
               ) : (
                 <>
@@ -542,6 +561,22 @@ const Farmers = () => {
                     <span className="text-gray-500 italic">Chưa có vị trí nào được chọn</span>
                   )}
                 </div>
+                {locationError && (
+                  <div className="bg-red-50 border border-red-200 rounded p-2 text-sm text-red-700 mt-2">
+                    {locationError.message}
+                    {locationError.showNewTabBtn && (
+                      <div className="mt-2">
+                        <button
+                          type="button"
+                          className="btn btn-sm bg-red-600 hover:bg-red-700 text-white"
+                          onClick={openCurrentPageInNewTab}
+                        >
+                          Mở trong tab mới
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="flex gap-2 pt-3 border-t mt-4">

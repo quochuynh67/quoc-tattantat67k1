@@ -1,12 +1,13 @@
 // src/components/sections/VlogsMapSection.jsx
 import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { Link as RouterLink, useNavigate, useLocation } from "react-router-dom";
-import { Container, Button, Card, CardActionArea, CardMedia, CardContent, Typography, Box } from "@mui/material";
+import { Container, Button, Card, CardActionArea, CardMedia, CardContent, Typography, Box, Snackbar, Alert } from "@mui/material";
 import MyLocationIcon from "@mui/icons-material/MyLocation";
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { getVlogReviews } from "../../lib/phuTanApi";
+import { getCurrentLocation, isInsideIframe, openCurrentPageInNewTab } from "../../utils/geolocation";
 
 const getDistance = (lat1, lon1, lat2, lon2) => {
   const R = 6371;
@@ -85,7 +86,7 @@ const MapResizer = () => {
   return null;
 };
 
-const LocationButton = ({ userLocation, onRequestLocation }) => {
+const LocationButton = ({ userLocation, onRequestLocation, isLoading, onError }) => {
   const map = useMap();
   return (
     <Box sx={{ position: "absolute", bottom: 16, right: 16, zIndex: 1000 }}>
@@ -100,7 +101,8 @@ const LocationButton = ({ userLocation, onRequestLocation }) => {
             onRequestLocation();
           }
         }}
-        sx={{ minWidth: 0, width: 48, height: 48, borderRadius: "50%", bgcolor: "#fff", color: "#1976d2", "&:hover": { bgcolor: "#f5f5f5" }, p: 0, boxShadow: 4 }}
+        disabled={isLoading}
+        sx={{ minWidth: 0, width: 48, height: 48, borderRadius: "50%", bgcolor: "#fff", color: "#1976d2", "&:hover": { bgcolor: "#f5f5f5" }, "&:disabled": { opacity: 0.6 }, p: 0, boxShadow: 4 }}
       >
         <MyLocationIcon />
       </Button>
@@ -114,6 +116,8 @@ const VlogsMapSection = () => {
   const [mapCenter, setMapCenter] = useState(null);
   const [userLocation, setUserLocation] = useState(null);
   const [limit, setLimit] = useState(4);
+  const [locationLoading, setLocationLoading] = useState(false);
+  const [error, setError] = useState({ open: false, message: "", code: null });
 
   useEffect(() => {
     let isMounted = true;
@@ -124,12 +128,16 @@ const VlogsMapSection = () => {
   }, []);
 
   const handleRequestLocation = useCallback(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => setUserLocation([pos.coords.latitude, pos.coords.longitude]),
-        (err) => console.log("Geolocation error:", err)
-      );
-    }
+    setLocationLoading(true);
+    getCurrentLocation()
+      .then((loc) => {
+        setUserLocation([loc.latitude, loc.longitude]);
+        setError({ open: false, message: "", code: null });
+      })
+      .catch((err) => {
+        setError({ open: true, message: err.message, code: err.code });
+      })
+      .finally(() => setLocationLoading(false));
   }, []);
 
   const handleBoundsChange = useCallback((center) => {
@@ -173,7 +181,7 @@ const VlogsMapSection = () => {
             <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
             <MapTracker onBoundsChange={handleBoundsChange} />
             <UserTracker userLocation={userLocation} />
-            <LocationButton userLocation={userLocation} onRequestLocation={handleRequestLocation} />
+            <LocationButton userLocation={userLocation} onRequestLocation={handleRequestLocation} isLoading={locationLoading} />
             
             {userLocation && (
               <Marker position={userLocation} icon={userIcon} zIndexOffset={2000}>
@@ -288,6 +296,25 @@ const VlogsMapSection = () => {
             </Button>
           </Box>
         )}
+
+        <Snackbar
+          open={error.open}
+          autoHideDuration={6000}
+          onClose={() => setError({ open: false, message: "", code: null })}
+          anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        >
+          <Alert
+            onClose={() => setError({ open: false, message: "", code: null })}
+            severity="error"
+            action={error.code === 1 && isInsideIframe() ? (
+              <Button color="inherit" size="small" onClick={openCurrentPageInNewTab}>
+                Mở trong tab mới
+              </Button>
+            ) : null}
+          >
+            {error.message}
+          </Alert>
+        </Snackbar>
       </Container>
     </section>
   );
