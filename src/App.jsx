@@ -16,30 +16,30 @@ import Home from "./pages/Home";
 import VlogFeed from "./pages/VlogFeed";
 
 // Route-level lazy chunks
-const SectionList   = lazy(() => import("./pages/SectionList"));
-const VlogReview    = lazy(() => import("./pages/VlogReview"));
-const DetailPage    = lazy(() => import("./pages/DetailPage"));
-const NotFound      = lazy(() => import("./pages/NotFound"));
+const SectionList = lazy(() => import("./pages/SectionList"));
+const VlogReview = lazy(() => import("./pages/VlogReview"));
+const DetailPage = lazy(() => import("./pages/DetailPage"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 
 // Admin — separate chunk, rarely visited
-const AdminLogin      = lazy(() => import("./pages/AdminLogin"));
-const AdminLayout     = lazy(() => import("./components/admin/AdminLayout"));
-const AdminDashboard  = lazy(() => import("./pages/admin/AdminDashboard"));
-const AdminSections   = lazy(() => import("./pages/admin/Sections"));
-const AdminPosts      = lazy(() => import("./pages/admin/Posts"));
-const AdminVlogs      = lazy(() => import("./pages/admin/Vlogs"));
-const AdminSettings   = lazy(() => import("./pages/admin/Settings"));
-const AdminAiAgents   = lazy(() => import("./pages/admin/AiAgents"));
+const AdminLogin = lazy(() => import("./pages/AdminLogin"));
+const AdminLayout = lazy(() => import("./components/admin/AdminLayout"));
+const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
+const AdminSections = lazy(() => import("./pages/admin/Sections"));
+const AdminPosts = lazy(() => import("./pages/admin/Posts"));
+const AdminVlogs = lazy(() => import("./pages/admin/Vlogs"));
+const AdminSettings = lazy(() => import("./pages/admin/Settings"));
+const AdminAiAgents = lazy(() => import("./pages/admin/AiAgents"));
 
 // Trading module
-const TradingLayout   = lazy(() => import("./pages/trading/TradingLayout"));
+const TradingLayout = lazy(() => import("./pages/trading/TradingLayout"));
 const TradingDashboard = lazy(() => import("./pages/trading/Dashboard"));
-const TradingFarmers  = lazy(() => import("./pages/trading/Farmers"));
+const TradingFarmers = lazy(() => import("./pages/trading/Farmers"));
 const TradingPurchases = lazy(() => import("./pages/trading/Purchases"));
-const TradingSales    = lazy(() => import("./pages/trading/Sales"));
+const TradingSales = lazy(() => import("./pages/trading/Sales"));
 const TradingCustomers = lazy(() => import("./pages/trading/Customers"));
-const TradingProducts  = lazy(() => import("./pages/trading/Products"));
-const TradingLogin    = lazy(() => import("./pages/trading/TradingLogin"));
+const TradingProducts = lazy(() => import("./pages/trading/Products"));
+const TradingLogin = lazy(() => import("./pages/trading/TradingLogin"));
 const ProtectedTradingRoute = lazy(() => import("./components/trading/ProtectedTradingRoute"));
 
 const AppLayout = () => {
@@ -66,24 +66,24 @@ const AppLayout = () => {
         <Suspense fallback={null}>
           <Routes>
             <Route path="/" element={null} />
-            <Route path="/news"          element={<SectionList sectionKey="news" />} />
-            <Route path="/places"        element={<SectionList sectionKey="places" />} />
-            <Route path="/food"          element={<SectionList sectionKey="food" />} />
+            <Route path="/news" element={<SectionList sectionKey="news" />} />
+            <Route path="/places" element={<SectionList sectionKey="places" />} />
+            <Route path="/food" element={<SectionList sectionKey="food" />} />
             <Route path="/beauty-health" element={<SectionList sectionKey="beautyHealth" />} />
-            <Route path="/agriculture"   element={<SectionList sectionKey="agriculture" />} />
-            <Route path="/health"        element={<SectionList sectionKey="health" />} />
+            <Route path="/agriculture" element={<SectionList sectionKey="agriculture" />} />
+            <Route path="/health" element={<SectionList sectionKey="health" />} />
             {/* /vlogs is handled by always-mounted VlogFeed above — no Route needed */}
-            <Route path="/vlogs"         element={null} />
+            <Route path="/vlogs" element={null} />
             <Route path="/post-detail/:id" element={<VlogReview />} />
             <Route path="/admin-login" element={<AdminLogin />} />
             <Route path="/admin/*" element={<ProtectedAdminRoute><AdminLayout /></ProtectedAdminRoute>}>
               <Route index element={<AdminDashboard />} />
               <Route path="dashboard" element={<AdminDashboard />} />
-              <Route path="sections"  element={<AdminSections />} />
-              <Route path="posts"     element={<AdminPosts />} />
-              <Route path="vlogs"     element={<AdminVlogs />} />
+              <Route path="sections" element={<AdminSections />} />
+              <Route path="posts" element={<AdminPosts />} />
+              <Route path="vlogs" element={<AdminVlogs />} />
               <Route path="ai-agents" element={<AdminAiAgents />} />
-              <Route path="settings"  element={<AdminSettings />} />
+              <Route path="settings" element={<AdminSettings />} />
             </Route>
             <Route path="/trading-login" element={<TradingLogin />} />
             <Route path="/trading" element={<ProtectedTradingRoute><TradingLayout /></ProtectedTradingRoute>}>
@@ -95,7 +95,7 @@ const AppLayout = () => {
               <Route path="products" element={<TradingProducts />} />
             </Route>
             <Route path="/detail/:id" element={<DetailPage />} />
-            <Route path="*"           element={<NotFound />} />
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
       </main>
