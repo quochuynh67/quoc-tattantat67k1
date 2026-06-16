@@ -8,6 +8,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { getVlogReviews } from "../../lib/phuTanApi";
 import { getCurrentLocation, isInsideIframe, openCurrentPageInNewTab } from "../../utils/geolocation";
+import { getUrlParams } from "../../utils/urlParams";
 
 const getDistance = (lat1, lon1, lat2, lon2) => {
   const R = 6371;
@@ -124,6 +125,13 @@ const VlogsMapSection = () => {
     getVlogReviews().then((data) => {
       if (isMounted) setVlogs(data);
     });
+
+    // Check for lat/long in URL params
+    const { lat, long } = getUrlParams();
+    if (lat && long) {
+      setUserLocation([lat, long]);
+    }
+
     return () => { isMounted = false; };
   }, []);
 

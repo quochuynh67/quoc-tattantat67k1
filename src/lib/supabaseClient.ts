@@ -28,7 +28,7 @@ export const createSection = async (section) => {
   if (error) throw error;
   return data;
 };
-  
+
 // Admin: fetch all sections including hidden ones
 export const getSectionsAll = async () => {
   const { data, error } = await supabase
@@ -402,10 +402,10 @@ export const uploadHlsFolder = async (files, onProgress) => {
       const filePath = `videos/${folderName}/${relativePath}`;
       const { error } = await supabase.storage.from('vlogs-posts').upload(filePath, file);
       if (error) throw error;
-      
+
       uploaded++;
       if (onProgress) onProgress(uploaded, total);
-      
+
       if (file.name.endsWith('.m3u8')) {
         const { data: publicUrlData } = supabase.storage.from('vlogs-posts').getPublicUrl(filePath);
         m3u8Url = publicUrlData.publicUrl;

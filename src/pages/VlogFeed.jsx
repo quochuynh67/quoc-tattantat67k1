@@ -15,6 +15,7 @@ import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { useVlogCache } from "../contexts/VlogCacheContext";
 import { getCurrentLocation, isInsideIframe, openCurrentPageInNewTab } from "../utils/geolocation";
+import { getUrlParams } from "../utils/urlParams";
 
 const SHEET_COLLAPSED = 120;
 const SHEET_EXPANDED = 380;
@@ -252,6 +253,14 @@ const VlogFeed = () => {
   const hydratedVideoEnd = Math.min((vlogs?.length ?? 0) - 1, visibleVlogIdx + VIDEO_PRELOAD_AHEAD);
 
   useEffect(() => { ensureLoaded(); }, []);
+
+  // Initialize user location from URL params
+  useEffect(() => {
+    const { lat, long } = getUrlParams();
+    if (lat && long) {
+      setUserLocation([lat, long]);
+    }
+  }, []);
 
   // Pause all videos when navigating away (scroll feed + map player overlay)
   useEffect(() => {

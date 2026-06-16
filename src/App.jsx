@@ -6,7 +6,6 @@ import { ThemeProvider } from "./hooks/useTheme";
 import { AdminAuthProvider } from "./contexts/AdminAuthContext";
 import { VlogCacheProvider } from "./contexts/VlogCacheContext";
 import { SiteSettingsProvider } from "./contexts/SiteSettingsContext";
-import { LocationProvider } from "./contexts/LocationContext";
 import { ToastProvider } from "./contexts/ToastContext";
 import Header from "./components/layout/Header";
 import Footer from "./components/layout/Footer";
@@ -114,11 +113,9 @@ export default function App() {
           <SiteSettingsProvider>
             <AdminAuthProvider>
               <VlogCacheProvider>
-                <LocationProvider>
-                  <Router>
-                    <AppLayout />
-                  </Router>
-                </LocationProvider>
+                <Router>
+                  <AppLayout />
+                </Router>
               </VlogCacheProvider>
             </AdminAuthProvider>
           </SiteSettingsProvider>
