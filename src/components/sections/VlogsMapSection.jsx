@@ -62,7 +62,7 @@ const MapTracker = ({ onBoundsChange }) => {
 const UserTracker = ({ userLocation }) => {
   const map = useMap();
   const location = useLocation();
-  
+
   useEffect(() => {
     if (userLocation && location.pathname === "/" && map.getSize().x > 0 && map.getSize().y > 0) {
       map.flyTo(userLocation, 14, { duration: 1.5 });
@@ -74,7 +74,7 @@ const UserTracker = ({ userLocation }) => {
 const MapResizer = () => {
   const map = useMap();
   const location = useLocation();
-  
+
   useEffect(() => {
     if (location.pathname === "/") {
       const timer = setTimeout(() => {
@@ -83,7 +83,7 @@ const MapResizer = () => {
       return () => clearTimeout(timer);
     }
   }, [location.pathname, map]);
-  
+
   return null;
 };
 
@@ -174,8 +174,8 @@ const VlogsMapSection = () => {
           Kéo bản đồ để xem các địa điểm có vlog gần đó.
         </Typography>
 
-        <Box sx={{ 
-          height: 400, borderRadius: "12px", overflow: "hidden", mb: 4, 
+        <Box sx={{
+          height: 400, borderRadius: "12px", overflow: "hidden", mb: 4,
           border: "1px solid var(--color-border)", zIndex: 0, position: "relative",
           "& .leaflet-control-attribution": { display: "none !important" }
         }}>
@@ -190,7 +190,7 @@ const VlogsMapSection = () => {
             <MapTracker onBoundsChange={handleBoundsChange} />
             <UserTracker userLocation={userLocation} />
             <LocationButton userLocation={userLocation} onRequestLocation={handleRequestLocation} isLoading={locationLoading} />
-            
+
             {userLocation && (
               <Marker position={userLocation} icon={userIcon} zIndexOffset={2000}>
                 <Popup>
@@ -211,13 +211,13 @@ const VlogsMapSection = () => {
                     <div style={{ textAlign: "center", minWidth: 140 }}>
                       <img src={loc.image || vlog.poster} alt={loc.name} style={{ width: "100%", borderRadius: "6px", marginBottom: "8px", objectFit: "cover", aspectRatio: "16/9", display: "block" }} />
                       <strong style={{ display: "block", marginBottom: 4, fontSize: "0.9rem" }}>{loc.name}</strong>
-                      <Button 
+                      <Button
                         onClick={(e) => {
                           e.stopPropagation();
                           navigate(`/post-detail/${vlog.newsId}`);
                         }}
-                        size="small" 
-                        variant="contained" 
+                        size="small"
+                        variant="contained"
                         sx={{ mt: 1 }}
                       >
                         Xem Review

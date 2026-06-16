@@ -287,7 +287,7 @@ const VlogFeed = () => {
     if (!sessionInteractedRef.current) return;
     const video = videoRefs.current[vlogId];
     if (!video) return;
-    video.play().catch(() => {});
+    video.play().catch(() => { });
   }, []);
 
   const pauseVideo = useCallback((vlogId) => {
@@ -363,7 +363,7 @@ const VlogFeed = () => {
   const seekToSpot = (vlogId, location) => {
     const video = videoRefs.current[vlogId];
     manuallyPausedRef.current[vlogId] = false;
-    if (video) { video.currentTime = location.time; video.play().catch(() => {}); }
+    if (video) { video.currentTime = location.time; video.play().catch(() => { }); }
     setActiveSpotByVlog((current) => ({ ...current, [vlogId]: location.time }));
   };
 
