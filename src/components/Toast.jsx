@@ -40,6 +40,8 @@ export default function Toast({
     };
   };
 
+  const isBottomPosition = position.includes('bottom');
+
   return (
     <Snackbar
       open={open}
@@ -53,11 +55,20 @@ export default function Toast({
         },
       }}
       sx={{
-        top: position === 'top-center' ? '60px !important' : 'auto',
-        left: '50% !important',
-        transform: 'translateX(-50%)',
-        '& .MuiSnackbar-root': {
+        ...(position === 'top-center' && {
           top: '60px !important',
+          left: '50% !important',
+          transform: 'translateX(-50%)',
+        }),
+        ...(isBottomPosition && {
+          bottom: '200px !important',
+          left: '50% !important',
+          transform: 'translateX(-50%)',
+        }),
+        '& .MuiSnackbar-root': {
+          ...(position === 'top-center' && {
+            top: '60px !important',
+          }),
         },
       }}
     >

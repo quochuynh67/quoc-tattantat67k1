@@ -2,10 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { Box, Container, Typography, Alert, Paper } from '@mui/material';
 import IframeLoader from '../components/IframeLoader';
 import { useUrlParams } from '../hooks/useUrlParams';
+import { useLocation } from '../hooks/useLocation';
 import { getUrlParams, hasTokens } from '../utils/urlParams';
 
 export default function IframeEmbed() {
   const { locationToken, accessToken } = useUrlParams();
+  const { locationData, loading, error } = useLocation();
   const [iframeUrl, setIframeUrl] = useState('');
 
   useEffect(() => {
@@ -41,6 +43,29 @@ export default function IframeEmbed() {
           {JSON.stringify(getUrlParams(), null, 2)}
         </Typography>
       </Paper>
+
+      {loading && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          Fetching location data...
+        </Alert>
+      )}
+
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          Error fetching location: {error}
+        </Alert>
+      )}
+
+      {locationData && (
+        <Paper sx={{ p: 2, mb: 4, backgroundColor: '#e8f5e9' }}>
+          <Typography variant="subtitle2" gutterBottom>
+            Location Data:
+          </Typography>
+          <Typography variant="body2" component="pre" sx={{ overflow: 'auto' }}>
+            {JSON.stringify(locationData, null, 2)}
+          </Typography>
+        </Paper>
+      )}
 
       <Paper sx={{ p: 3, height: '600px' }}>
         {iframeUrl ? (

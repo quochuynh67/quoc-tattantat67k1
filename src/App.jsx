@@ -6,6 +6,8 @@ import { ThemeProvider } from "./hooks/useTheme";
 import { AdminAuthProvider } from "./contexts/AdminAuthContext";
 import { VlogCacheProvider } from "./contexts/VlogCacheContext";
 import { SiteSettingsProvider } from "./contexts/SiteSettingsContext";
+import { LocationProvider } from "./contexts/LocationContext";
+import { ToastProvider } from "./contexts/ToastContext";
 import Header from "./components/layout/Header";
 import Footer from "./components/layout/Footer";
 import ScrollRestoration from "./components/ScrollRestoration";
@@ -108,15 +110,19 @@ export default function App() {
   return (
     <HelmetProvider>
       <ThemeProvider>
-        <SiteSettingsProvider>
-          <AdminAuthProvider>
-            <VlogCacheProvider>
-              <Router>
-                <AppLayout />
-              </Router>
-            </VlogCacheProvider>
-          </AdminAuthProvider>
-        </SiteSettingsProvider>
+        <ToastProvider>
+          <SiteSettingsProvider>
+            <AdminAuthProvider>
+              <VlogCacheProvider>
+                <LocationProvider>
+                  <Router>
+                    <AppLayout />
+                  </Router>
+                </LocationProvider>
+              </VlogCacheProvider>
+            </AdminAuthProvider>
+          </SiteSettingsProvider>
+        </ToastProvider>
       </ThemeProvider>
     </HelmetProvider>
   );

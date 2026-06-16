@@ -42,3 +42,38 @@ export function hasTokens() {
   const { locationToken, accessToken } = getUrlParams();
   return !!(locationToken || accessToken);
 }
+
+/**
+ * Fetch location data from Zalo using tokens
+ * @param {string} accessToken - User access token
+ * @param {string} code - Location token (code)
+ * @returns {Promise<Object>} Location data from API
+ */
+export async function fetchLocationFromTokens(accessToken, code) {
+  try {
+    const response = await fetch(
+      'https://qwgqgqdtgwkqcbosyqtl.supabase.co/functions/v1/zalo-location',
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer sb_publishable_v8c3BSG8zSmBYRwzG7mGgg_EK45Plrj',
+          'apikey': 'sb_publishable_v8c3BSG8zSmBYRwzG7mGgg_EK45Plrj',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userAccessToken: accessToken,
+          code: code,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Failed to fetch location:', error);
+    throw error;
+  }
+}

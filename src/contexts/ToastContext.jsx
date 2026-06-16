@@ -15,7 +15,7 @@ export function ToastProvider({ children }) {
         onClose={toast.close}
         message={toast.message}
         type={toast.type}
-        position="top-center"
+        position="bottom-center"
         duration={toast.duration}
       />
     </ToastContext.Provider>
