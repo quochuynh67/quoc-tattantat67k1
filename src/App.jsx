@@ -1,6 +1,6 @@
 // src/App.jsx – root component with routing and theme provider
 import React, { lazy, Suspense } from "react";
-import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, useLocation, NavLink } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import { ThemeProvider } from "./hooks/useTheme";
 import { AdminAuthProvider } from "./contexts/AdminAuthContext";
@@ -21,6 +21,7 @@ const SectionList = lazy(() => import("./pages/SectionList"));
 const VlogReview = lazy(() => import("./pages/VlogReview"));
 const DetailPage = lazy(() => import("./pages/DetailPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const GuestSubmit = lazy(() => import("./pages/GuestSubmit"));
 
 // Admin — separate chunk, rarely visited
 const AdminLogin = lazy(() => import("./pages/AdminLogin"));
@@ -48,11 +49,18 @@ const AppLayout = () => {
   const isVlogFeed = location.pathname === "/vlogs";
   const isHome = location.pathname === "/";
   const isTrading = location.pathname.startsWith("/trading");
+  const isAdmin = location.pathname.startsWith("/admin");
+  const showSubmitFab = !isTrading && !isAdmin;
 
   return (
     <>
       <ScrollRestoration />
       {!isVlogFeed && !isTrading && <Header />}
+      {showSubmitFab && (
+        <NavLink to="/submit" className="submit-fab-button" title="Đăng bài / video">
+          ✍️
+        </NavLink>
+      )}
       <main style={{ minHeight: isVlogFeed || isTrading ? "100vh" : "80vh", padding: isTrading ? 0 : undefined }}>
         {/* Home: always mounted, hidden when not active */}
         <div style={{ display: isHome ? "block" : "none" }}>
@@ -76,6 +84,7 @@ const AppLayout = () => {
             {/* /vlogs is handled by always-mounted VlogFeed above — no Route needed */}
             <Route path="/vlogs" element={null} />
             <Route path="/post-detail/:id" element={<VlogReview />} />
+            <Route path="/submit" element={<GuestSubmit />} />
             <Route path="/admin-login" element={<AdminLogin />} />
             <Route path="/admin/*" element={<ProtectedAdminRoute><AdminLayout /></ProtectedAdminRoute>}>
               <Route index element={<AdminDashboard />} />

@@ -8,7 +8,7 @@ import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import EditIcon from "@mui/icons-material/Edit";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
-import { getPostsBySection, createPost, updatePost, deletePost, getSections, uploadVideoForVlog, uploadPostVideo, getVlogByPost, supabase } from "../../lib/supabaseClient";
+import { getPostsBySection, createPost, updatePost, deletePost, getSections, uploadPostImage, getVlogByPost, supabase } from "../../lib/supabaseClient";
 
 export default function AdminPosts() {
   const [posts, setPosts] = useState([]);
@@ -33,9 +33,12 @@ export default function AdminPosts() {
     hide: false,
   });
 
+  const [imageSourceMode, setImageSourceMode] = useState("url");
+  const [pendingImageFile, setPendingImageFile] = useState(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+
   const [vlogDialogOpen, setVlogDialogOpen] = useState(false);
   const [currentVlog, setCurrentVlog] = useState(null);
-  const [uploadingVideo, setUploadingVideo] = useState(false); // Deprecated, retained for potential future use.
 
   const handleViewVlog = async (postId) => {
     try {
@@ -104,10 +107,21 @@ export default function AdminPosts() {
       is_featured: !!post.is_featured,
       hide: !!post.hide,
     });
+    setImageSourceMode("url");
     setOpen(true);
   };
 
+  const handleImageFilePick = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const localUrl = URL.createObjectURL(file);
+    setPendingImageFile(file);
+    setForm((prev) => ({ ...prev, image_url: localUrl }));
+  };
+
   const resetForm = () => {
+    setImageSourceMode("url");
+    setPendingImageFile(null);
     setForm({
       title: "",
       section_slug: "",
@@ -131,13 +145,26 @@ export default function AdminPosts() {
       return;
     }
 
+    let finalImageUrl = form.image_url;
+    if (pendingImageFile) {
+      setUploadingImage(true);
+      try {
+        finalImageUrl = await uploadPostImage(pendingImageFile);
+      } catch (e) {
+        alert("Lỗi tải ảnh lên: " + e.message);
+        setUploadingImage(false);
+        return;
+      }
+      setUploadingImage(false);
+    }
+
     const payload = {
       title: form.title,
       section_slug: form.section_slug,
       excerpt: form.excerpt || null,
       description: form.description || null,
       content: form.content || null,
-      image_url: form.image_url || null,
+      image_url: finalImageUrl || null,
       category: form.category || null,
       address: form.address || null,
       rating: form.rating !== "" ? Number(form.rating) : null,
@@ -251,6 +278,7 @@ export default function AdminPosts() {
             <TableRow>
               <TableCell sx={{ fontWeight: 600 }}>Tiêu đề</TableCell>
               <TableCell sx={{ fontWeight: 600 }}>Chuyên mục</TableCell>
+              <TableCell sx={{ fontWeight: 600 }}>Người đăng</TableCell>
               <TableCell sx={{ fontWeight: 600 }}>Đặc sắc</TableCell>
               <TableCell sx={{ fontWeight: 600 }}>Hiển thị</TableCell>
               <TableCell align="right" sx={{ fontWeight: 600, pr: 3 }}>Thao tác</TableCell>
@@ -259,7 +287,7 @@ export default function AdminPosts() {
           <TableBody>
             {filteredPosts.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} align="center" sx={{ py: 6, color: "text.secondary" }}>
+                <TableCell colSpan={6} align="center" sx={{ py: 6, color: "text.secondary" }}>
                   Không tìm thấy bài viết nào phù hợp.
                 </TableCell>
               </TableRow>
@@ -279,6 +307,13 @@ export default function AdminPosts() {
                     <Typography variant="body2" sx={{ display: "inline-block", bgcolor: "primary.light", color: "primary.contrastText", px: 1.5, py: 0.5, borderRadius: 1.5, fontSize: "0.75rem", fontWeight: 600 }}>
                       {sections.find(sec => sec.slug === post.section_slug)?.title || post.section_slug}
                     </Typography>
+                  </TableCell>
+                  <TableCell>
+                    {post.uploader_phone ? (
+                      <Chip label={post.uploader_phone} size="small" color="warning" variant="outlined" sx={{ fontWeight: 600, fontSize: "0.72rem" }} />
+                    ) : (
+                      <Typography variant="caption" sx={{ color: "text.secondary", fontWeight: 600 }}>Admin</Typography>
+                    )}
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2" sx={{ color: post.is_featured ? "warning.main" : "text.disabled", fontWeight: 600 }}>
@@ -375,12 +410,31 @@ export default function AdminPosts() {
             {/* Right side: Media, location, metadata */}
             <Grid size={{ xs: 12, md: 5 }}>
               <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>
-                <TextField label="Image URL" value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} fullWidth variant="outlined" />
-                {form.image_url && (
-                  <Box sx={{ borderRadius: 2, overflow: "hidden", border: "1px solid", borderColor: "divider", height: "140px", display: "flex", justifyContent: "center", bgcolor: "#f5f5f5" }}>
-                    <img src={form.image_url} alt="Post preview" style={{ height: "100%", width: "100%", objectFit: "cover" }} onError={(e) => { e.target.src = "https://placehold.co/400x200?text=Không+thể+tải+ảnh"; }} />
+                <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2 }}>
+                  <Typography variant="caption" sx={{ fontWeight: 600, color: "text.secondary", display: "block", mb: 1 }}>Hình ảnh bài viết</Typography>
+                  <Box sx={{ display: "flex", gap: 1, mb: 1.5 }}>
+                    <Button size="small" variant={imageSourceMode === "url" ? "contained" : "outlined"} onClick={() => setImageSourceMode("url")} sx={{ textTransform: "none", borderRadius: 1.5 }}>Dán Link URL</Button>
+                    <Button size="small" variant={imageSourceMode === "file" ? "contained" : "outlined"} onClick={() => setImageSourceMode("file")} sx={{ textTransform: "none", borderRadius: 1.5 }}>Tải File Lên</Button>
                   </Box>
-                )}
+                  {imageSourceMode === "url" ? (
+                    <TextField label="Image URL" value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} fullWidth variant="outlined" size="small" />
+                  ) : (
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                      <Button component="label" variant="contained" startIcon={<CloudUploadIcon />} size="small" sx={{ textTransform: "none", borderRadius: 1.5, whiteSpace: "nowrap" }}>
+                        Chọn ảnh
+                        <input type="file" accept="image/*" hidden onChange={handleImageFilePick} />
+                      </Button>
+                      <Typography variant="caption" sx={{ color: pendingImageFile ? "warning.main" : "text.secondary" }}>
+                        {pendingImageFile ? `${pendingImageFile.name} (sẽ upload khi lưu)` : "Chưa chọn file"}
+                      </Typography>
+                    </Box>
+                  )}
+                  {form.image_url && (
+                    <Box sx={{ mt: 1.5, borderRadius: 1.5, overflow: "hidden", height: "120px", border: "1px solid", borderColor: "divider" }}>
+                      <img src={form.image_url} alt="Post preview" style={{ height: "100%", width: "100%", objectFit: "cover" }} onError={(e) => { e.target.src = "https://placehold.co/400x200?text=Không+thể+tải+ảnh"; }} />
+                    </Box>
+                  )}
+                </Paper>
                 <TextField label="Địa chỉ" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} fullWidth variant="outlined" />
 
                 <Grid container spacing={2}>
@@ -433,7 +487,9 @@ export default function AdminPosts() {
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2, pt: 1 }}>
           <Button onClick={() => setOpen(false)} sx={{ textTransform: "none", fontWeight: 600 }}>Hủy bỏ</Button>
-          <Button onClick={handleSubmit} variant="contained" sx={{ px: 3, borderRadius: 2, textTransform: "none", fontWeight: 600 }}>{editing ? "Cập nhật" : "Tạo bài viết"}</Button>
+          <Button onClick={handleSubmit} disabled={uploadingImage} variant="contained" sx={{ px: 3, borderRadius: 2, textTransform: "none", fontWeight: 600 }}>
+            {uploadingImage ? "Đang upload ảnh..." : (editing ? "Cập nhật" : "Tạo bài viết")}
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>

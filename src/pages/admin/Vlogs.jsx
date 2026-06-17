@@ -1,6 +1,6 @@
 // src/pages/admin/Vlogs.jsx
 import React, { useEffect, useState, useRef } from "react";
-import { Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Grid, FormControlLabel, Switch, Divider, Card, CardContent, FormControl, InputLabel, Select, MenuItem } from "@mui/material";
+import { Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Grid, FormControlLabel, Switch, Divider, Card, CardContent, FormControl, InputLabel, Select, MenuItem, Chip } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import AddIcon from "@mui/icons-material/Add";
@@ -331,6 +331,7 @@ export default function AdminVlogs() {
           <TableHead sx={{ bgcolor: "action.hover" }}>
             <TableRow>
               <TableCell sx={{ fontWeight: 600 }}>Vlog Title</TableCell>
+              <TableCell sx={{ fontWeight: 600 }}>Người đăng</TableCell>
               <TableCell sx={{ fontWeight: 600 }}>Host</TableCell>
               <TableCell sx={{ fontWeight: 600 }}>Linked Post</TableCell>
               <TableCell sx={{ fontWeight: 600 }}>Timeline Stages</TableCell>
@@ -340,7 +341,7 @@ export default function AdminVlogs() {
           <TableBody>
             {filteredVlogs.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} align="center" sx={{ py: 6, color: "text.secondary" }}>
+                <TableCell colSpan={6} align="center" sx={{ py: 6, color: "text.secondary" }}>
                   Không tìm thấy vlog nào phù hợp.
                 </TableCell>
               </TableRow>
@@ -354,6 +355,13 @@ export default function AdminVlogs() {
                     <Typography variant="caption" sx={{ color: "text.secondary" }}>
                       {vlog.subtitle}
                     </Typography>
+                  </TableCell>
+                  <TableCell>
+                    {vlog.uploader_phone ? (
+                      <Chip label={vlog.uploader_phone} size="small" color="warning" variant="outlined" sx={{ fontWeight: 600, fontSize: "0.72rem" }} />
+                    ) : (
+                      <Typography variant="caption" sx={{ color: "text.secondary", fontWeight: 600 }}>Admin</Typography>
+                    )}
                   </TableCell>
                   <TableCell>{vlog.host || "N/A"}</TableCell>
                   <TableCell>

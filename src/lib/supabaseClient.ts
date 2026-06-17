@@ -346,6 +346,21 @@ export const uploadVideoForVlog = async (file) => {
   return publicUrlData.publicUrl;
 };
 
+export const uploadPostImage = async (file) => {
+  try {
+    await supabase.storage.createBucket('vlogs-posts', { public: true });
+  } catch (e) {
+    // ignore if already exists
+  }
+  const fileExt = file.name.split('.').pop();
+  const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
+  const filePath = `images/posts/${fileName}`;
+  const { error } = await supabase.storage.from('vlogs-posts').upload(filePath, file);
+  if (error) throw error;
+  const { data: publicUrlData } = supabase.storage.from('vlogs-posts').getPublicUrl(filePath);
+  return publicUrlData.publicUrl;
+};
+
 export const uploadTimelineImage = async (file) => {
   try {
     await supabase.storage.createBucket('vlogs-posts', { public: true });
