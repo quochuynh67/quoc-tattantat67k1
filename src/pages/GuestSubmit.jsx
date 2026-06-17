@@ -68,14 +68,12 @@ export default function GuestSubmit() {
         setPendingImageFile(null);
       }
 
-      const { error: dbErr } = await supabase.from("content_items").insert({
+      const { error: dbErr } = await supabase.from("content_items_guest").insert({
         title: postForm.title.trim(),
         section_slug: postForm.section_slug,
         excerpt: postForm.excerpt.trim() || null,
         description: postForm.description.trim() || null,
         image_url: finalImageUrl,
-        hide: true,
-        is_featured: false,
         uploader_phone: phone.trim(),
         published_date: new Date().toISOString().split("T")[0],
       });
@@ -171,7 +169,8 @@ export default function GuestSubmit() {
           label="Số điện thoại *"
           placeholder="0901 234 567"
           value={phone}
-          onChange={(e) => { setPhone(e.target.value); setPhoneError(""); }}
+          onChange={(e) => { setPhone(e.target.value.replace(/[^\d+]/g, "")); setPhoneError(""); }}
+          inputProps={{ inputMode: "tel", maxLength: 15 }}
           onBlur={() => setPhoneError(validatePhone(phone))}
           error={!!phoneError}
           helperText={phoneError || "Dùng để liên hệ và định danh bạn là người đăng bài."}

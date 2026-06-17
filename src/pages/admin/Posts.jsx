@@ -2,7 +2,9 @@
 import React, { useEffect, useState } from "react";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
-import { Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Grid, FormControl, InputLabel, Select, MenuItem, FormControlLabel, Switch, List, ListItem, ListItemText, Tooltip, Chip } from "@mui/material";
+import { Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Grid, FormControl, InputLabel, Select, MenuItem, FormControlLabel, Switch, List, ListItem, ListItemText, Tooltip, Chip, Alert, Tabs, Tab } from "@mui/material";
+import CheckIcon from "@mui/icons-material/Check";
+import CloseIcon from "@mui/icons-material/Close";
 import DeleteIcon from "@mui/icons-material/Delete";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import EditIcon from "@mui/icons-material/Edit";
@@ -59,6 +61,62 @@ export default function AdminPosts() {
   // If video functionality is needed in the future, it can be reimplemented.
 
 
+  const [mainTab, setMainTab] = useState(0);
+  const [guestPosts, setGuestPosts] = useState([]);
+  const [guestActionLoading, setGuestActionLoading] = useState(null);
+
+  const fetchGuestPosts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("content_items_guest")
+        .select("*")
+        .order("submitted_at", { ascending: false });
+      if (error) throw error;
+      setGuestPosts(data || []);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleApproveGuest = async (guest) => {
+    setGuestActionLoading(guest.id);
+    try {
+      const { error: insertErr } = await supabase.from("content_items").insert({
+        title: guest.title,
+        section_slug: guest.section_slug,
+        excerpt: guest.excerpt || null,
+        description: guest.description || null,
+        image_url: guest.image_url || null,
+        uploader_phone: guest.uploader_phone || null,
+        published_date: guest.published_date || new Date().toISOString().split("T")[0],
+        hide: true,
+        is_featured: false,
+      });
+      if (insertErr) throw insertErr;
+      const { error: delErr } = await supabase.from("content_items_guest").delete().eq("id", guest.id);
+      if (delErr) throw delErr;
+      await Promise.all([fetchGuestPosts(), fetchPosts()]);
+    } catch (e) {
+      alert("Lỗi khi duyệt bài: " + e.message);
+    } finally {
+      setGuestActionLoading(null);
+    }
+  };
+
+  const handleRejectGuest = async (guest) => {
+    if (!window.confirm(`Từ chối và xóa bài "${guest.title}"?`)) return;
+    setGuestActionLoading(guest.id);
+    try {
+      const { error } = await supabase.from("content_items_guest").delete().eq("id", guest.id);
+      if (error) throw error;
+      await fetchGuestPosts();
+    } catch (e) {
+      alert("Lỗi khi từ chối: " + e.message);
+    } finally {
+      setGuestActionLoading(null);
+    }
+  };
+
   // Filtering states
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSection, setSelectedSection] = useState("all");
@@ -88,6 +146,7 @@ export default function AdminPosts() {
   useEffect(() => {
     fetchPosts();
     fetchSections();
+    fetchGuestPosts();
   }, []);
 
   const openEdit = (post) => {
@@ -236,17 +295,39 @@ export default function AdminPosts() {
         Posts Management
       </Typography>
 
-      {/* Filter and Search Bar */}
-      <Paper variant="outlined" sx={{ p: 2.5, mb: 3, borderRadius: 3, display: "flex", flexWrap: "wrap", gap: 2, alignItems: "center" }}>
-        <TextField
-          label="Tìm kiếm bài viết..."
-          placeholder="Tìm theo tiêu đề, nội dung, tóm tắt..."
-          variant="outlined"
-          size="small"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          sx={{ flexGrow: 1, minWidth: "220px" }}
+      <Tabs
+        value={mainTab}
+        onChange={(_, v) => setMainTab(v)}
+        sx={{ mb: 3, borderBottom: "1px solid", borderColor: "divider" }}
+      >
+        <Tab label="Bài viết" sx={{ textTransform: "none", fontWeight: 600 }} />
+        <Tab
+          label={
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              Chờ duyệt (Guest)
+              {guestPosts.length > 0 && (
+                <Chip label={guestPosts.length} size="small" color="warning" sx={{ fontWeight: 700, height: 20, fontSize: "0.7rem" }} />
+              )}
+            </Box>
+          }
+          sx={{ textTransform: "none", fontWeight: 600 }}
         />
+      </Tabs>
+
+      {/* TAB 0: Posts */}
+      {mainTab === 0 && (
+        <>
+          {/* Filter and Search Bar */}
+          <Paper variant="outlined" sx={{ p: 2.5, mb: 3, borderRadius: 3, display: "flex", flexWrap: "wrap", gap: 2, alignItems: "center" }}>
+            <TextField
+              label="Tìm kiếm bài viết..."
+              placeholder="Tìm theo tiêu đề, nội dung, tóm tắt..."
+              variant="outlined"
+              size="small"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              sx={{ flexGrow: 1, minWidth: "220px" }}
+            />
             <FormControl fullWidth size="small" variant="outlined" sx={{ minWidth: "200px" }}>
               <InputLabel id="filter-section-label">Lọc theo Chuyên mục</InputLabel>
               <Select
@@ -262,93 +343,164 @@ export default function AdminPosts() {
                 ))}
               </Select>
             </FormControl>
-        <Button 
-          variant="contained" 
-          onClick={() => { setEditing(null); resetForm(); setOpen(true); }}
-          sx={{ px: 3, py: 1, borderRadius: 2, textTransform: "none", fontWeight: 600, height: "40px" }}
-        >
-          Add Post
-        </Button>
-      </Paper>
+            <Button
+              variant="contained"
+              onClick={() => { setEditing(null); resetForm(); setOpen(true); }}
+              sx={{ px: 3, py: 1, borderRadius: 2, textTransform: "none", fontWeight: 600, height: "40px" }}
+            >
+              Add Post
+            </Button>
+          </Paper>
 
-      {/* Posts Table */}
-      <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 3, overflow: "hidden" }}>
-        <Table>
-          <TableHead sx={{ bgcolor: "action.hover" }}>
-            <TableRow>
-              <TableCell sx={{ fontWeight: 600 }}>Tiêu đề</TableCell>
-              <TableCell sx={{ fontWeight: 600 }}>Chuyên mục</TableCell>
-              <TableCell sx={{ fontWeight: 600 }}>Người đăng</TableCell>
-              <TableCell sx={{ fontWeight: 600 }}>Đặc sắc</TableCell>
-              <TableCell sx={{ fontWeight: 600 }}>Hiển thị</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 600, pr: 3 }}>Thao tác</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredPosts.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} align="center" sx={{ py: 6, color: "text.secondary" }}>
-                  Không tìm thấy bài viết nào phù hợp.
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredPosts.map((post) => (
-                <TableRow
-                  key={post.id}
-                  hover
-                  sx={{
-                    '&:last-child td, &:last-child th': { border: 0 },
-                    opacity: post.hide ? 0.55 : 1,
-                    transition: 'opacity 0.2s',
-                  }}
-                >
-                  <TableCell sx={{ fontWeight: 500 }}>{post.title}</TableCell>
-                  <TableCell>
-                    <Typography variant="body2" sx={{ display: "inline-block", bgcolor: "primary.light", color: "primary.contrastText", px: 1.5, py: 0.5, borderRadius: 1.5, fontSize: "0.75rem", fontWeight: 600 }}>
-                      {sections.find(sec => sec.slug === post.section_slug)?.title || post.section_slug}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    {post.uploader_phone ? (
-                      <Chip label={post.uploader_phone} size="small" color="warning" variant="outlined" sx={{ fontWeight: 600, fontSize: "0.72rem" }} />
-                    ) : (
-                      <Typography variant="caption" sx={{ color: "text.secondary", fontWeight: 600 }}>Admin</Typography>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2" sx={{ color: post.is_featured ? "warning.main" : "text.disabled", fontWeight: 600 }}>
-                      {post.is_featured ? "★ Có" : "Không"}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Tooltip title={!post.hide ? "Đang hiển thị – nhấn để ẩn" : "Đang ẩn – nhấn để hiện"} arrow>
-                      <Chip
-                        icon={!post.hide ? <VisibilityIcon sx={{ fontSize: '1rem !important' }} /> : <VisibilityOffIcon sx={{ fontSize: '1rem !important' }} />}
-                        label={!post.hide ? "Hiện" : "Ẩn"}
-                        size="small"
-                        onClick={() => handleToggleHide(post)}
-                        color={!post.hide ? "success" : "default"}
-                        variant={!post.hide ? "filled" : "outlined"}
-                        sx={{ cursor: 'pointer', fontWeight: 600, fontSize: '0.72rem', transition: 'all 0.2s' }}
-                      />
-                    </Tooltip>
-                  </TableCell>
-                  <TableCell align="right" sx={{ pr: 3 }}>
-                    <Box sx={{ display: "flex", gap: 1, justifyContent: "flex-end" }}>
-                      <IconButton onClick={() => openEdit(post)} size="small" color="primary" sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2 }}>
-                        <EditIcon />
-                      </IconButton>
-                      <IconButton onClick={() => handleDelete(post.id)} size="small" color="error" sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2 }}>
-                        <DeleteIcon />
-                      </IconButton>
-                    </Box>
-                  </TableCell>
+          {/* Posts Table */}
+          <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 3, overflow: "hidden" }}>
+            <Table>
+              <TableHead sx={{ bgcolor: "action.hover" }}>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 600 }}>Tiêu đề</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Chuyên mục</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Người đăng</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Đặc sắc</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Hiển thị</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600, pr: 3 }}>Thao tác</TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+              </TableHead>
+              <TableBody>
+                {filteredPosts.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} align="center" sx={{ py: 6, color: "text.secondary" }}>
+                      Không tìm thấy bài viết nào phù hợp.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredPosts.map((post) => (
+                    <TableRow
+                      key={post.id}
+                      hover
+                      sx={{
+                        "&:last-child td, &:last-child th": { border: 0 },
+                        opacity: post.hide ? 0.55 : 1,
+                        transition: "opacity 0.2s",
+                      }}
+                    >
+                      <TableCell sx={{ fontWeight: 500 }}>{post.title}</TableCell>
+                      <TableCell>
+                        <Typography variant="body2" sx={{ display: "inline-block", bgcolor: "primary.light", color: "primary.contrastText", px: 1.5, py: 0.5, borderRadius: 1.5, fontSize: "0.75rem", fontWeight: 600 }}>
+                          {sections.find((sec) => sec.slug === post.section_slug)?.title || post.section_slug}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        {post.uploader_phone ? (
+                          <Chip label={post.uploader_phone} size="small" color="warning" variant="outlined" sx={{ fontWeight: 600, fontSize: "0.72rem" }} />
+                        ) : (
+                          <Typography variant="caption" sx={{ color: "text.secondary", fontWeight: 600 }}>Admin</Typography>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" sx={{ color: post.is_featured ? "warning.main" : "text.disabled", fontWeight: 600 }}>
+                          {post.is_featured ? "★ Có" : "Không"}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Tooltip title={!post.hide ? "Đang hiển thị – nhấn để ẩn" : "Đang ẩn – nhấn để hiện"} arrow>
+                          <Chip
+                            icon={!post.hide ? <VisibilityIcon sx={{ fontSize: "1rem !important" }} /> : <VisibilityOffIcon sx={{ fontSize: "1rem !important" }} />}
+                            label={!post.hide ? "Hiện" : "Ẩn"}
+                            size="small"
+                            onClick={() => handleToggleHide(post)}
+                            color={!post.hide ? "success" : "default"}
+                            variant={!post.hide ? "filled" : "outlined"}
+                            sx={{ cursor: "pointer", fontWeight: 600, fontSize: "0.72rem", transition: "all 0.2s" }}
+                          />
+                        </Tooltip>
+                      </TableCell>
+                      <TableCell align="right" sx={{ pr: 3 }}>
+                        <Box sx={{ display: "flex", gap: 1, justifyContent: "flex-end" }}>
+                          <IconButton onClick={() => openEdit(post)} size="small" color="primary" sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2 }}>
+                            <EditIcon />
+                          </IconButton>
+                          <IconButton onClick={() => handleDelete(post.id)} size="small" color="error" sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2 }}>
+                            <DeleteIcon />
+                          </IconButton>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </>
+      )}
+
+      {/* TAB 1: Guest Submissions */}
+      {mainTab === 1 && (
+        <>
+          {guestPosts.length === 0 ? (
+            <Alert severity="info" sx={{ borderRadius: 2 }}>Không có bài viết nào đang chờ duyệt.</Alert>
+          ) : (
+            <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 3, overflow: "hidden" }}>
+              <Table>
+                <TableHead sx={{ bgcolor: "action.hover" }}>
+                  <TableRow>
+                    <TableCell sx={{ fontWeight: 600 }}>Tiêu đề</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>Chuyên mục</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>Số điện thoại</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>Ngày gửi</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 600, pr: 3 }}>Thao tác</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {guestPosts.map((g) => (
+                    <TableRow key={g.id} hover sx={{ "&:last-child td": { border: 0 } }}>
+                      <TableCell sx={{ fontWeight: 500, maxWidth: 280, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.title}</TableCell>
+                      <TableCell>
+                        <Chip label={sections.find((s) => s.slug === g.section_slug)?.title || g.section_slug || "—"} size="small" variant="outlined" />
+                      </TableCell>
+                      <TableCell>
+                        <Chip label={g.uploader_phone || "—"} size="small" color="warning" variant="outlined" sx={{ fontWeight: 600, fontSize: "0.72rem" }} />
+                      </TableCell>
+                      <TableCell sx={{ whiteSpace: "nowrap", color: "text.secondary", fontSize: "0.8rem" }}>
+                        {g.submitted_at ? new Date(g.submitted_at).toLocaleDateString("vi-VN") : "—"}
+                      </TableCell>
+                      <TableCell align="right" sx={{ pr: 3 }}>
+                        <Box sx={{ display: "flex", gap: 1, justifyContent: "flex-end" }}>
+                          <Tooltip title="Duyệt – chuyển vào danh sách bài viết (ẩn)" arrow>
+                            <span>
+                              <IconButton
+                                size="small"
+                                color="success"
+                                disabled={guestActionLoading === g.id}
+                                onClick={() => handleApproveGuest(g)}
+                                sx={{ border: "1px solid", borderColor: "success.main", borderRadius: 2 }}
+                              >
+                                <CheckIcon fontSize="small" />
+                              </IconButton>
+                            </span>
+                          </Tooltip>
+                          <Tooltip title="Từ chối và xóa" arrow>
+                            <span>
+                              <IconButton
+                                size="small"
+                                color="error"
+                                disabled={guestActionLoading === g.id}
+                                onClick={() => handleRejectGuest(g)}
+                                sx={{ border: "1px solid", borderColor: "error.main", borderRadius: 2 }}
+                              >
+                                <CloseIcon fontSize="small" />
+                              </IconButton>
+                            </span>
+                          </Tooltip>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </>
+      )}
 
       {/* Dialog for Add/Edit Post */}
       <Dialog open={open} onClose={() => setOpen(false)} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 4, p: 1 } }}>
