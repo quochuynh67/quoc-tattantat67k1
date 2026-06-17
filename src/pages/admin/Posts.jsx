@@ -64,6 +64,7 @@ export default function AdminPosts() {
   const [mainTab, setMainTab] = useState(0);
   const [guestPosts, setGuestPosts] = useState([]);
   const [guestActionLoading, setGuestActionLoading] = useState(null);
+  const [guestDetailPost, setGuestDetailPost] = useState(null);
 
   const fetchGuestPosts = async () => {
     try {
@@ -465,11 +466,15 @@ export default function AdminPosts() {
                       </TableCell>
                       <TableCell align="right" sx={{ pr: 3 }}>
                         <Box sx={{ display: "flex", gap: 1, justifyContent: "flex-end" }}>
+                          <Tooltip title="Xem chi tiết" arrow>
+                            <IconButton size="small" onClick={() => setGuestDetailPost(g)} sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2 }}>
+                              <VisibilityIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
                           <Tooltip title="Duyệt – chuyển vào danh sách bài viết (ẩn)" arrow>
                             <span>
                               <IconButton
-                                size="small"
-                                color="success"
+                                size="small" color="success"
                                 disabled={guestActionLoading === g.id}
                                 onClick={() => handleApproveGuest(g)}
                                 sx={{ border: "1px solid", borderColor: "success.main", borderRadius: 2 }}
@@ -481,8 +486,7 @@ export default function AdminPosts() {
                           <Tooltip title="Từ chối và xóa" arrow>
                             <span>
                               <IconButton
-                                size="small"
-                                color="error"
+                                size="small" color="error"
                                 disabled={guestActionLoading === g.id}
                                 onClick={() => handleRejectGuest(g)}
                                 sx={{ border: "1px solid", borderColor: "error.main", borderRadius: 2 }}
@@ -501,6 +505,59 @@ export default function AdminPosts() {
           )}
         </>
       )}
+
+      {/* Guest Post Detail Dialog */}
+      <Dialog open={!!guestDetailPost} onClose={() => setGuestDetailPost(null)} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 4 } }}>
+        {guestDetailPost && (
+          <>
+            <DialogTitle sx={{ fontWeight: 700, pb: 1 }}>
+              Chi tiết bài viết chờ duyệt
+            </DialogTitle>
+            <DialogContent dividers sx={{ p: 3 }}>
+              {guestDetailPost.image_url && (
+                <Box sx={{ mb: 2.5, borderRadius: 2, overflow: "hidden", height: 200, border: "1px solid", borderColor: "divider" }}>
+                  <img src={guestDetailPost.image_url} alt="preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                </Box>
+              )}
+              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mb: 2 }}>
+                <Chip label={sections.find((s) => s.slug === guestDetailPost.section_slug)?.title || guestDetailPost.section_slug || "Chưa chọn"} color="primary" size="small" />
+                <Chip label={guestDetailPost.uploader_phone || "—"} color="warning" size="small" variant="outlined" />
+                <Chip label={guestDetailPost.submitted_at ? new Date(guestDetailPost.submitted_at).toLocaleDateString("vi-VN") : "—"} size="small" variant="outlined" />
+              </Box>
+              <Typography variant="h5" fontWeight={700} gutterBottom>{guestDetailPost.title}</Typography>
+              {guestDetailPost.excerpt && (
+                <Typography variant="body1" color="text.secondary" sx={{ mb: 2, fontStyle: "italic" }}>{guestDetailPost.excerpt}</Typography>
+              )}
+              {guestDetailPost.description && (
+                <Box
+                  sx={{ mt: 1, p: 2, borderRadius: 2, border: "1px solid", borderColor: "divider", bgcolor: "background.default", "& img": { maxWidth: "100%" } }}
+                  dangerouslySetInnerHTML={{ __html: guestDetailPost.description }}
+                />
+              )}
+            </DialogContent>
+            <DialogActions sx={{ px: 3, py: 2, gap: 1 }}>
+              <Button onClick={() => setGuestDetailPost(null)} sx={{ textTransform: "none" }}>Đóng</Button>
+              <Box sx={{ flex: 1 }} />
+              <Button
+                variant="outlined" color="error" startIcon={<CloseIcon />}
+                disabled={guestActionLoading === guestDetailPost.id}
+                onClick={() => { handleRejectGuest(guestDetailPost); setGuestDetailPost(null); }}
+                sx={{ textTransform: "none", fontWeight: 600, borderRadius: 2 }}
+              >
+                Từ chối
+              </Button>
+              <Button
+                variant="contained" color="success" startIcon={<CheckIcon />}
+                disabled={guestActionLoading === guestDetailPost.id}
+                onClick={() => { handleApproveGuest(guestDetailPost); setGuestDetailPost(null); }}
+                sx={{ textTransform: "none", fontWeight: 600, borderRadius: 2 }}
+              >
+                Duyệt bài
+              </Button>
+            </DialogActions>
+          </>
+        )}
+      </Dialog>
 
       {/* Dialog for Add/Edit Post */}
       <Dialog open={open} onClose={() => setOpen(false)} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 4, p: 1 } }}>

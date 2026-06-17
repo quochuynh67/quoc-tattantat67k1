@@ -1,10 +1,13 @@
 // src/pages/admin/Vlogs.jsx
 import React, { useEffect, useState, useRef } from "react";
-import { Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Grid, FormControlLabel, Switch, Divider, Card, CardContent, FormControl, InputLabel, Select, MenuItem, Chip } from "@mui/material";
+import { Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Grid, FormControlLabel, Switch, Divider, Card, CardContent, FormControl, InputLabel, Select, MenuItem, Chip, Alert, Tabs, Tab, Autocomplete, Tooltip } from "@mui/material";
+import CheckIcon from "@mui/icons-material/Check";
+import CloseIcon from "@mui/icons-material/Close";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import AddIcon from "@mui/icons-material/Add";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
+import VisibilityIcon from "@mui/icons-material/Visibility";
 import { getVlogs, createVlog, updateVlog, deleteVlog, getSections, uploadVlogFile, uploadHlsFolder, uploadTimelineImage, supabase } from "../../lib/supabaseClient";
 
 const formatDuration = (seconds) => {
@@ -52,6 +55,90 @@ export default function AdminVlogs() {
   // Timeline locations (giai đoạn) state inside dialog
   const [locations, setLocations] = useState([]);
 
+  const [mainTab, setMainTab] = useState(0);
+  const [guestVlogs, setGuestVlogs] = useState([]);
+  const [guestActionLoading, setGuestActionLoading] = useState(null);
+  const [guestDetailVlog, setGuestDetailVlog] = useState(null);
+
+  const getYouTubeId = (url) => {
+    const m = url?.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s?]+)/);
+    return m?.[1] || null;
+  };
+
+  const fetchGuestVlogs = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("vlog_reviews_guest")
+        .select("*")
+        .order("submitted_at", { ascending: false });
+      if (error) throw error;
+      setGuestVlogs(data || []);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleApproveGuestVlog = async (g) => {
+    setGuestActionLoading(g.id);
+    try {
+      const { data: vlogData, error: insertErr } = await supabase
+        .from("vlog_reviews")
+        .insert({
+          title: g.title,
+          subtitle: g.subtitle || null,
+          video_url: g.video_url,
+          poster_url: g.poster_url || null,
+          host: g.host || null,
+          duration_label: g.duration_label || null,
+          content_item_id: g.content_item_id || null,
+          uploader_phone: g.uploader_phone || null,
+          is_published: false,
+          display_order: 0,
+        })
+        .select()
+        .single();
+      if (insertErr) throw insertErr;
+
+      const locations = Array.isArray(g.locations_json) ? g.locations_json : [];
+      if (locations.length > 0) {
+        const { error: locErr } = await supabase.from("vlog_locations").insert(
+          locations.map((loc) => ({
+            vlog_review_id: vlogData.id,
+            time_seconds: Number(loc.time_seconds) || 0,
+            name: loc.name || "",
+            note: loc.note || null,
+            image_url: loc.image_url || null,
+            latitude: loc.latitude !== "" && loc.latitude !== null ? Number(loc.latitude) : null,
+            longitude: loc.longitude !== "" && loc.longitude !== null ? Number(loc.longitude) : null,
+          }))
+        );
+        if (locErr) throw locErr;
+      }
+
+      const { error: delErr } = await supabase.from("vlog_reviews_guest").delete().eq("id", g.id);
+      if (delErr) throw delErr;
+      await Promise.all([fetchGuestVlogs(), fetchVlogs()]);
+    } catch (e) {
+      alert("Lỗi khi duyệt vlog: " + e.message);
+    } finally {
+      setGuestActionLoading(null);
+    }
+  };
+
+  const handleRejectGuestVlog = async (g) => {
+    if (!window.confirm(`Từ chối và xóa vlog "${g.title}"?`)) return;
+    setGuestActionLoading(g.id);
+    try {
+      const { error } = await supabase.from("vlog_reviews_guest").delete().eq("id", g.id);
+      if (error) throw error;
+      await fetchGuestVlogs();
+    } catch (e) {
+      alert("Lỗi khi từ chối: " + e.message);
+    } finally {
+      setGuestActionLoading(null);
+    }
+  };
+
   // Filtering states
   const [searchTerm, setSearchTerm] = useState("");
   const [filterPostId, setFilterPostId] = useState("");
@@ -79,6 +166,7 @@ export default function AdminVlogs() {
   useEffect(() => {
     fetchVlogs();
     fetchPostsAndSections();
+    fetchGuestVlogs();
   }, []);
 
   const openEdit = (vlog) => {
@@ -287,6 +375,230 @@ export default function AdminVlogs() {
         Vlogs Management
       </Typography>
 
+      <Tabs
+        value={mainTab}
+        onChange={(_, v) => setMainTab(v)}
+        sx={{ mb: 3, borderBottom: "1px solid", borderColor: "divider" }}
+      >
+        <Tab label="Vlogs" sx={{ textTransform: "none", fontWeight: 600 }} />
+        <Tab
+          label={
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              Chờ duyệt (Guest)
+              {guestVlogs.length > 0 && (
+                <Chip label={guestVlogs.length} size="small" color="warning" sx={{ fontWeight: 700, height: 20, fontSize: "0.7rem" }} />
+              )}
+            </Box>
+          }
+          sx={{ textTransform: "none", fontWeight: 600 }}
+        />
+      </Tabs>
+
+      {/* TAB 1: Guest Vlogs */}
+      {mainTab === 1 && (
+        <>
+          {guestVlogs.length === 0 ? (
+            <Alert severity="info" sx={{ borderRadius: 2 }}>Không có vlog nào đang chờ duyệt.</Alert>
+          ) : (
+            <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 3, overflow: "hidden" }}>
+              <Table>
+                <TableHead sx={{ bgcolor: "action.hover" }}>
+                  <TableRow>
+                    <TableCell sx={{ fontWeight: 600 }}>Tiêu đề</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>Số điện thoại</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>Host</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>Giai đoạn</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>Ngày gửi</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 600, pr: 3 }}>Thao tác</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {guestVlogs.map((g) => (
+                    <TableRow key={g.id} hover sx={{ "&:last-child td": { border: 0 } }}>
+                      <TableCell>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>{g.title}</Typography>
+                        {g.subtitle && <Typography variant="caption" color="text.secondary">{g.subtitle}</Typography>}
+                      </TableCell>
+                      <TableCell>
+                        <Chip label={g.uploader_phone || "—"} size="small" color="warning" variant="outlined" sx={{ fontWeight: 600, fontSize: "0.72rem" }} />
+                      </TableCell>
+                      <TableCell>{g.host || "—"}</TableCell>
+                      <TableCell>
+                        <Chip
+                          label={`${Array.isArray(g.locations_json) ? g.locations_json.length : 0} giai đoạn`}
+                          size="small" color="success" variant="outlined"
+                          sx={{ fontWeight: 600, fontSize: "0.72rem" }}
+                        />
+                      </TableCell>
+                      <TableCell sx={{ whiteSpace: "nowrap", color: "text.secondary", fontSize: "0.8rem" }}>
+                        {g.submitted_at ? new Date(g.submitted_at).toLocaleDateString("vi-VN") : "—"}
+                      </TableCell>
+                      <TableCell align="right" sx={{ pr: 3 }}>
+                        <Box sx={{ display: "flex", gap: 1, justifyContent: "flex-end" }}>
+                          <Tooltip title="Xem chi tiết" arrow>
+                            <IconButton size="small" onClick={() => setGuestDetailVlog(g)} sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2 }}>
+                              <VisibilityIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Duyệt – chuyển vào danh sách Vlog (ẩn)" arrow>
+                            <span>
+                              <IconButton size="small" color="success" disabled={guestActionLoading === g.id} onClick={() => handleApproveGuestVlog(g)} sx={{ border: "1px solid", borderColor: "success.main", borderRadius: 2 }}>
+                                <CheckIcon fontSize="small" />
+                              </IconButton>
+                            </span>
+                          </Tooltip>
+                          <Tooltip title="Từ chối và xóa" arrow>
+                            <span>
+                              <IconButton size="small" color="error" disabled={guestActionLoading === g.id} onClick={() => handleRejectGuestVlog(g)} sx={{ border: "1px solid", borderColor: "error.main", borderRadius: 2 }}>
+                                <CloseIcon fontSize="small" />
+                              </IconButton>
+                            </span>
+                          </Tooltip>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </>
+      )}
+
+      {/* Guest Vlog Detail Dialog */}
+      <Dialog open={!!guestDetailVlog} onClose={() => setGuestDetailVlog(null)} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 4 } }}>
+        {guestDetailVlog && (
+          <>
+            <DialogTitle sx={{ fontWeight: 700, pb: 1 }}>Chi tiết vlog chờ duyệt</DialogTitle>
+            <DialogContent dividers sx={{ p: 3 }}>
+              {/* Smart video player */}
+              {(() => {
+                const url = guestDetailVlog.video_url;
+                if (!url || url.startsWith("[")) {
+                  return guestDetailVlog.poster_url ? (
+                    <Box sx={{ mb: 2.5, borderRadius: 2, overflow: "hidden", height: 200, border: "1px solid", borderColor: "divider" }}>
+                      <img src={guestDetailVlog.poster_url} alt="poster" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    </Box>
+                  ) : null;
+                }
+                const ytId = getYouTubeId(url);
+                if (ytId) {
+                  return (
+                    <Box sx={{ mb: 2.5, borderRadius: 2, overflow: "hidden", border: "1px solid", borderColor: "divider", position: "relative", paddingTop: "56.25%" }}>
+                      <iframe
+                        src={`https://www.youtube.com/embed/${ytId}`}
+                        title="YouTube video"
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                        style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%" }}
+                      />
+                    </Box>
+                  );
+                }
+                if (/\.(mp4|webm|ogg|m3u8)(\?|$)/i.test(url) || url.includes("supabase")) {
+                  return (
+                    <Box sx={{ mb: 2.5, borderRadius: 2, overflow: "hidden", bgcolor: "#000", border: "1px solid", borderColor: "divider" }}>
+                      <video
+                        src={url} controls playsInline
+                        poster={guestDetailVlog.poster_url || undefined}
+                        style={{ width: "100%", display: "block", maxHeight: 360, objectFit: "contain" }}
+                      />
+                    </Box>
+                  );
+                }
+                return (
+                  <Box sx={{ mb: 2.5, p: 2, borderRadius: 2, bgcolor: "action.hover", border: "1px solid", borderColor: "divider" }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, display: "block", mb: 0.5 }}>Video URL (mở để xem)</Typography>
+                    <a href={url} target="_blank" rel="noopener noreferrer" style={{ wordBreak: "break-all", fontSize: "0.8rem" }}>{url}</a>
+                  </Box>
+                );
+              })()}
+
+              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mb: 2 }}>
+                <Chip label={guestDetailVlog.uploader_phone || "—"} color="warning" size="small" variant="outlined" />
+                {guestDetailVlog.host && <Chip label={`Host: ${guestDetailVlog.host}`} size="small" variant="outlined" />}
+                {guestDetailVlog.duration_label && <Chip label={guestDetailVlog.duration_label} size="small" variant="outlined" />}
+                <Chip label={guestDetailVlog.submitted_at ? new Date(guestDetailVlog.submitted_at).toLocaleDateString("vi-VN") : "—"} size="small" variant="outlined" />
+              </Box>
+
+              <Typography variant="h5" fontWeight={700}>{guestDetailVlog.title}</Typography>
+              {guestDetailVlog.subtitle && (
+                <Typography variant="body1" color="text.secondary" sx={{ mt: 0.5, mb: 1.5 }}>{guestDetailVlog.subtitle}</Typography>
+              )}
+
+              {/* Linked post */}
+              {guestDetailVlog.content_item_id && (() => {
+                const linkedPost = posts.find((p) => p.id === guestDetailVlog.content_item_id);
+                return linkedPost ? (
+                  <Box sx={{ mt: 1.5, mb: 1, p: 1.5, borderRadius: 2, border: "1px solid", borderColor: "primary.light", bgcolor: "primary.50", display: "flex", gap: 1, alignItems: "center" }}>
+                    <Typography variant="caption" sx={{ fontWeight: 700, color: "primary.main", whiteSpace: "nowrap" }}>Liên kết bài viết:</Typography>
+                    <Typography variant="caption" sx={{ fontWeight: 600 }}>{linkedPost.title}</Typography>
+                  </Box>
+                ) : null;
+              })()}
+
+              {/* Timeline stages */}
+              {Array.isArray(guestDetailVlog.locations_json) && guestDetailVlog.locations_json.length > 0 && (
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1.5 }}>
+                    Giai đoạn hành trình ({guestDetailVlog.locations_json.length})
+                  </Typography>
+                  <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+                    {[...guestDetailVlog.locations_json]
+                      .sort((a, b) => Number(a.time_seconds) - Number(b.time_seconds))
+                      .map((loc, i) => (
+                        <Paper key={i} variant="outlined" sx={{ p: 1.5, borderRadius: 2, display: "flex", gap: 2, alignItems: "flex-start" }}>
+                          {loc.image_url && (
+                            <Box sx={{ width: 64, height: 64, flexShrink: 0, borderRadius: 1.5, overflow: "hidden", border: "1px solid", borderColor: "divider" }}>
+                              <img src={loc.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                            </Box>
+                          )}
+                          <Box sx={{ flex: 1, minWidth: 0 }}>
+                            <Box sx={{ display: "flex", gap: 1, alignItems: "center", mb: 0.5 }}>
+                              <Chip label={`${loc.time_seconds}s`} size="small" color="primary" sx={{ fontWeight: 700, fontSize: "0.7rem", height: 20 }} />
+                              <Typography variant="subtitle2" fontWeight={600} noWrap>{loc.name || "—"}</Typography>
+                            </Box>
+                            {loc.note && <Typography variant="caption" color="text.secondary">{loc.note}</Typography>}
+                            {(loc.latitude || loc.longitude) && (
+                              <Typography variant="caption" color="text.disabled" sx={{ display: "block" }}>
+                                {loc.latitude}, {loc.longitude}
+                              </Typography>
+                            )}
+                          </Box>
+                        </Paper>
+                      ))}
+                  </Box>
+                </Box>
+              )}
+            </DialogContent>
+            <DialogActions sx={{ px: 3, py: 2, gap: 1 }}>
+              <Button onClick={() => setGuestDetailVlog(null)} sx={{ textTransform: "none" }}>Đóng</Button>
+              <Box sx={{ flex: 1 }} />
+              <Button
+                variant="outlined" color="error" startIcon={<CloseIcon />}
+                disabled={guestActionLoading === guestDetailVlog.id}
+                onClick={() => { handleRejectGuestVlog(guestDetailVlog); setGuestDetailVlog(null); }}
+                sx={{ textTransform: "none", fontWeight: 600, borderRadius: 2 }}
+              >
+                Từ chối
+              </Button>
+              <Button
+                variant="contained" color="success" startIcon={<CheckIcon />}
+                disabled={guestActionLoading === guestDetailVlog.id}
+                onClick={() => { handleApproveGuestVlog(guestDetailVlog); setGuestDetailVlog(null); }}
+                sx={{ textTransform: "none", fontWeight: 600, borderRadius: 2 }}
+              >
+                Duyệt vlog
+              </Button>
+            </DialogActions>
+          </>
+        )}
+      </Dialog>
+
+      {/* TAB 0: Vlogs list + dialog */}
+      {mainTab === 0 && <>
+
       {/* Filter and Control Bar */}
       <Paper variant="outlined" sx={{ p: 2.5, mb: 3, borderRadius: 3, display: "flex", flexWrap: "wrap", gap: 2, alignItems: "center" }}>
         <TextField
@@ -429,22 +741,16 @@ export default function AdminVlogs() {
                   </Grid>
                 </Grid>
 
-                <FormControl fullWidth variant="outlined" size="small">
-                  <InputLabel id="post-select-label">Liên kết tới bài viết (Post)</InputLabel>
-                  <Select
-                    labelId="post-select-label"
-                    label="Liên kết tới bài viết (Post)"
-                    value={form.content_item_id || ""}
-                    onChange={(e) => setForm({ ...form, content_item_id: e.target.value })}
-                  >
-                    <MenuItem value=""><em>Không liên kết bài viết</em></MenuItem>
-                    {posts.map((p) => (
-                      <MenuItem key={p.id} value={p.id}>
-                        {p.title}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+                <Autocomplete
+                  options={posts}
+                  getOptionLabel={(p) => p.title || ""}
+                  isOptionEqualToValue={(opt, val) => opt.id === val.id}
+                  value={posts.find((p) => p.id === form.content_item_id) || null}
+                  onChange={(_, newVal) => setForm({ ...form, content_item_id: newVal?.id || "" })}
+                  renderInput={(params) => (
+                    <TextField {...params} label="Liên kết tới bài viết (Post)" variant="outlined" size="small" placeholder="Tìm theo tiêu đề..." />
+                  )}
+                />
                 <Card variant="outlined" sx={{ p: 2, borderRadius: 3, border: "1px solid", borderColor: "divider" }}>
                   <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: "text.primary" }}>Video Stream (HLS .m3u8)</Typography>
                   <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1.5 }}>
@@ -795,6 +1101,7 @@ export default function AdminVlogs() {
           </Button>
         </DialogActions>
       </Dialog>
+      </>}
     </Box>
   );
 }
