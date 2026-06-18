@@ -8,7 +8,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import AddIcon from "@mui/icons-material/Add";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import VisibilityIcon from "@mui/icons-material/Visibility";
-import { getVlogs, createVlog, updateVlog, deleteVlog, getSections, uploadVlogFile, uploadHlsFolder, uploadTimelineImage, supabase } from "../../lib/supabaseClient";
+import { getVlogs, createVlog, updateVlog, deleteVlog, getSections, uploadVlogFile, uploadHlsFolder, uploadTimelineImage, moveGuestFileToMain, deleteGuestFile, supabase } from "../../lib/supabaseClient";
 
 const formatDuration = (seconds) => {
   if (isNaN(seconds) || seconds <= 0) return "";
@@ -81,13 +81,25 @@ export default function AdminVlogs() {
   const handleApproveGuestVlog = async (g) => {
     setGuestActionLoading(g.id);
     try {
+      // Move files from guest bucket to main bucket before inserting
+      const finalVideoUrl = g.video_url ? await moveGuestFileToMain(g.video_url) : null;
+      const finalPosterUrl = g.poster_url ? await moveGuestFileToMain(g.poster_url) : null;
+
+      const locations = Array.isArray(g.locations_json) ? g.locations_json : [];
+      const movedLocations = await Promise.all(
+        locations.map(async (loc) => ({
+          ...loc,
+          image_url: loc.image_url ? await moveGuestFileToMain(loc.image_url) : null,
+        }))
+      );
+
       const { data: vlogData, error: insertErr } = await supabase
         .from("vlog_reviews")
         .insert({
           title: g.title,
           subtitle: g.subtitle || null,
-          video_url: g.video_url,
-          poster_url: g.poster_url || null,
+          video_url: finalVideoUrl,
+          poster_url: finalPosterUrl,
           host: g.host || null,
           duration_label: g.duration_label || null,
           content_item_id: g.content_item_id || null,
@@ -99,10 +111,9 @@ export default function AdminVlogs() {
         .single();
       if (insertErr) throw insertErr;
 
-      const locations = Array.isArray(g.locations_json) ? g.locations_json : [];
-      if (locations.length > 0) {
+      if (movedLocations.length > 0) {
         const { error: locErr } = await supabase.from("vlog_locations").insert(
-          locations.map((loc) => ({
+          movedLocations.map((loc) => ({
             vlog_review_id: vlogData.id,
             time_seconds: Number(loc.time_seconds) || 0,
             name: loc.name || "",
@@ -131,6 +142,13 @@ export default function AdminVlogs() {
     try {
       const { error } = await supabase.from("vlog_reviews_guest").delete().eq("id", g.id);
       if (error) throw error;
+
+      // Delete uploaded files from guest bucket
+      const fileUrls = [g.video_url, g.poster_url].filter(Boolean);
+      const locations = Array.isArray(g.locations_json) ? g.locations_json : [];
+      locations.forEach((loc) => { if (loc.image_url) fileUrls.push(loc.image_url); });
+      await Promise.allSettled(fileUrls.map((url) => deleteGuestFile(url)));
+
       await fetchGuestVlogs();
     } catch (e) {
       alert("Lỗi khi từ chối: " + e.message);

@@ -15,8 +15,8 @@ import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutlineOutlin
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import {
-  getSections, uploadPostImage, uploadVlogFile,
-  uploadHlsFolder, uploadTimelineImage, supabase,
+  getSections, uploadGuestPostImage, uploadGuestPosterImage,
+  uploadGuestHlsFolder, uploadGuestTimelineImage, supabase,
 } from "../lib/supabaseClient";
 
 const VN_PHONE_RE = /^(0|\+84)(3[2-9]|5[6-9]|7[0-9]|8[0-9]|9[0-9])\d{7}$/;
@@ -84,7 +84,7 @@ export default function GuestSubmit() {
     try {
       let finalImageUrl = postForm.image_url.trim() || null;
       if (pendingImageFile) {
-        finalImageUrl = await uploadPostImage(pendingImageFile);
+        finalImageUrl = await uploadGuestPostImage(pendingImageFile);
         setPendingImageFile(null);
       }
       const { error: dbErr } = await supabase.from("content_items_guest").insert({
@@ -120,7 +120,7 @@ export default function GuestSubmit() {
 
       if (pendingFolderFiles) {
         setUploadProgress(0);
-        finalVideoUrl = await uploadHlsFolder(pendingFolderFiles, (uploaded, total) => {
+        finalVideoUrl = await uploadGuestHlsFolder(pendingFolderFiles, (uploaded, total) => {
           setUploadProgress(Math.round((uploaded / total) * 100));
         });
         setPendingFolderFiles(null);
@@ -128,14 +128,14 @@ export default function GuestSubmit() {
 
       let finalPosterUrl = vlogForm.poster_url.trim() || null;
       if (pendingPosterFile) {
-        finalPosterUrl = await uploadVlogFile(pendingPosterFile);
+        finalPosterUrl = await uploadGuestPosterImage(pendingPosterFile);
         setPendingPosterFile(null);
       }
 
       const sortedLocations = [...locations].sort((a, b) => Number(a.time_seconds) - Number(b.time_seconds));
       for (let i = 0; i < sortedLocations.length; i++) {
         if (sortedLocations[i].pending_image_file) {
-          sortedLocations[i].image_url = await uploadTimelineImage(sortedLocations[i].pending_image_file);
+          sortedLocations[i].image_url = await uploadGuestTimelineImage(sortedLocations[i].pending_image_file);
           delete sortedLocations[i].pending_image_file;
         }
       }

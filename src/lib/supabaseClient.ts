@@ -376,6 +376,186 @@ export const uploadTimelineImage = async (file) => {
   return publicUrlData.publicUrl;
 };
 
+// ── Guest bucket upload functions (vlogs-posts-guest) ───────────────────────
+// Guests upload to a separate bucket to avoid RLS restrictions on vlogs-posts.
+// When admin approves, files are moved to the main bucket via moveGuestFileToMain.
+
+const GUEST_BUCKET = 'vlogs-posts-guest';
+const MAIN_BUCKET = 'vlogs-posts';
+
+const extractGuestPath = (url: string): string | null => {
+  const marker = `/storage/v1/object/public/${GUEST_BUCKET}/`;
+  const idx = url.indexOf(marker);
+  if (idx === -1) return null;
+  return decodeURIComponent(url.slice(idx + marker.length).split('?')[0]);
+};
+
+// Recursively list all file paths under a folder in a bucket
+const listAllFilesInFolder = async (bucket: string, folderPath: string): Promise<string[]> => {
+  const { data, error } = await supabase.storage.from(bucket).list(folderPath, { limit: 1000 });
+  if (error || !data) return [];
+  const files: string[] = [];
+  for (const item of data) {
+    const itemPath = `${folderPath}/${item.name}`;
+    if (item.id === null) {
+      // subfolder — recurse
+      const sub = await listAllFilesInFolder(bucket, itemPath);
+      files.push(...sub);
+    } else {
+      files.push(itemPath);
+    }
+  }
+  return files;
+};
+
+// Extract hls-xxx root folder path from an m3u8 URL path
+const hlsFolderPath = (guestPath: string): string | null => {
+  const parts = guestPath.split('/');
+  const idx = parts.findIndex(p => p.startsWith('hls-'));
+  if (idx === -1) return null;
+  return parts.slice(0, idx + 1).join('/');
+};
+
+export const deleteGuestFile = async (guestUrl: string): Promise<void> => {
+  const guestPath = extractGuestPath(guestUrl);
+  if (!guestPath) return;
+
+  // For HLS, delete the entire hls-xxx folder including all .ts segments
+  if (guestPath.endsWith('.m3u8')) {
+    const folder = hlsFolderPath(guestPath);
+    if (folder) {
+      const allFiles = await listAllFilesInFolder(GUEST_BUCKET, folder);
+      if (allFiles.length > 0) {
+        await supabase.storage.from(GUEST_BUCKET).remove(allFiles);
+      }
+      return;
+    }
+  }
+
+  await supabase.storage.from(GUEST_BUCKET).remove([guestPath]);
+};
+
+export const moveGuestFileToMain = async (guestUrl: string): Promise<string> => {
+  const guestPath = extractGuestPath(guestUrl);
+  if (!guestPath) return guestUrl; // not a guest bucket URL
+
+  // HLS: move the entire hls-xxx folder (m3u8 + all .ts segments)
+  if (guestPath.endsWith('.m3u8')) {
+    const folder = hlsFolderPath(guestPath);
+    if (folder) {
+      const allFiles = await listAllFilesInFolder(GUEST_BUCKET, folder);
+
+      // Move files in chunks of 5 to avoid overwhelming the connection
+      const chunkSize = 5;
+      for (let i = 0; i < allFiles.length; i += chunkSize) {
+        await Promise.all(allFiles.slice(i, i + chunkSize).map(async (filePath) => {
+          const { data: blob, error: dlErr } = await supabase.storage.from(GUEST_BUCKET).download(filePath);
+          if (dlErr) throw new Error(`Download HLS segment failed: ${dlErr.message}`);
+          const { error: ulErr } = await supabase.storage.from(MAIN_BUCKET).upload(filePath, blob, { upsert: true });
+          if (ulErr) throw new Error(`Upload HLS segment failed: ${ulErr.message}`);
+        }));
+      }
+
+      // Delete entire folder from guest bucket
+      if (allFiles.length > 0) {
+        await supabase.storage.from(GUEST_BUCKET).remove(allFiles);
+      }
+
+      const { data: urlData } = supabase.storage.from(MAIN_BUCKET).getPublicUrl(guestPath);
+      return urlData.publicUrl;
+    }
+  }
+
+  // Single file: download → upload to correct folder → delete from guest
+  const { data: blob, error: downloadErr } = await supabase.storage.from(GUEST_BUCKET).download(guestPath);
+  if (downloadErr) throw new Error(`Download guest file failed: ${downloadErr.message}`);
+
+  const { error: uploadErr } = await supabase.storage.from(MAIN_BUCKET).upload(guestPath, blob, { upsert: true });
+  if (uploadErr) throw new Error(`Upload to main bucket failed: ${uploadErr.message}`);
+
+  const { data: publicUrlData } = supabase.storage.from(MAIN_BUCKET).getPublicUrl(guestPath);
+
+  await supabase.storage.from(GUEST_BUCKET).remove([guestPath]);
+
+  return publicUrlData.publicUrl;
+};
+
+export const uploadGuestVlogFile = async (file) => {
+  try { await supabase.storage.createBucket(GUEST_BUCKET, { public: true }); } catch (_) {}
+  const fileExt = file.name.split('.').pop();
+  const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
+  const filePath = `videos/${fileName}`;
+  const { error } = await supabase.storage.from(GUEST_BUCKET).upload(filePath, file);
+  if (error) throw error;
+  const { data: publicUrlData } = supabase.storage.from(GUEST_BUCKET).getPublicUrl(filePath);
+  return publicUrlData.publicUrl;
+};
+
+export const uploadGuestPostImage = async (file) => {
+  try { await supabase.storage.createBucket(GUEST_BUCKET, { public: true }); } catch (_) {}
+  const fileExt = file.name.split('.').pop();
+  const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
+  const filePath = `images/posts/${fileName}`;
+  const { error } = await supabase.storage.from(GUEST_BUCKET).upload(filePath, file);
+  if (error) throw error;
+  const { data: publicUrlData } = supabase.storage.from(GUEST_BUCKET).getPublicUrl(filePath);
+  return publicUrlData.publicUrl;
+};
+
+export const uploadGuestPosterImage = async (file) => {
+  try { await supabase.storage.createBucket(GUEST_BUCKET, { public: true }); } catch (_) {}
+  const fileExt = file.name.split('.').pop();
+  const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
+  const filePath = `images/posters/${fileName}`;
+  const { error } = await supabase.storage.from(GUEST_BUCKET).upload(filePath, file);
+  if (error) throw error;
+  const { data: publicUrlData } = supabase.storage.from(GUEST_BUCKET).getPublicUrl(filePath);
+  return publicUrlData.publicUrl;
+};
+
+export const uploadGuestTimelineImage = async (file) => {
+  try { await supabase.storage.createBucket(GUEST_BUCKET, { public: true }); } catch (_) {}
+  const fileExt = file.name.split('.').pop();
+  const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
+  const filePath = `images/timeline-stages/${fileName}`;
+  const { error } = await supabase.storage.from(GUEST_BUCKET).upload(filePath, file);
+  if (error) throw error;
+  const { data: publicUrlData } = supabase.storage.from(GUEST_BUCKET).getPublicUrl(filePath);
+  return publicUrlData.publicUrl;
+};
+
+export const uploadGuestHlsFolder = async (files, onProgress) => {
+  try { await supabase.storage.createBucket(GUEST_BUCKET, { public: true }); } catch (_) {}
+
+  const folderName = `hls-${Date.now()}`;
+  let m3u8Url = '';
+  let uploaded = 0;
+  const total = files.length;
+  const fileArray = Array.from(files);
+  const chunkSize = 5;
+
+  for (let i = 0; i < fileArray.length; i += chunkSize) {
+    const chunk = (fileArray as File[]).slice(i, i + chunkSize);
+    await Promise.all(chunk.map(async (file: File) => {
+      const relativePath = (file as any).webkitRelativePath || file.name;
+      const filePath = `videos/${folderName}/${relativePath}`;
+      const { error } = await supabase.storage.from(GUEST_BUCKET).upload(filePath, file);
+      if (error) throw error;
+
+      uploaded++;
+      if (onProgress) onProgress(uploaded, total);
+
+      if (file.name.endsWith('.m3u8')) {
+        const { data: publicUrlData } = supabase.storage.from(GUEST_BUCKET).getPublicUrl(filePath);
+        m3u8Url = publicUrlData.publicUrl;
+      }
+    }));
+  }
+
+  if (!m3u8Url) throw new Error('Không tìm thấy file .m3u8 trong thư mục!');
+  return m3u8Url;
+};
+
 // Upload entire HLS folder
 // Visitor counter
 export const getVisitorCount = async (): Promise<number> => {
