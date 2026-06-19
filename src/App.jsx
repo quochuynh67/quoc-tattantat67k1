@@ -5,7 +5,7 @@ import { HelmetProvider } from "react-helmet-async";
 import { ThemeProvider } from "./hooks/useTheme";
 import { AdminAuthProvider } from "./contexts/AdminAuthContext";
 import { VlogCacheProvider } from "./contexts/VlogCacheContext";
-import { SiteSettingsProvider } from "./contexts/SiteSettingsContext";
+import { SiteSettingsProvider, useSiteSettings } from "./contexts/SiteSettingsContext";
 import { ToastProvider } from "./contexts/ToastContext";
 import Header from "./components/layout/Header";
 import Footer from "./components/layout/Footer";
@@ -46,11 +46,12 @@ const ProtectedTradingRoute = lazy(() => import("./components/trading/ProtectedT
 
 const AppLayout = () => {
   const location = useLocation();
+  const { canChatWithAi } = useSiteSettings();
   const isVlogFeed = location.pathname === "/vlogs";
   const isHome = location.pathname === "/";
   const isTrading = location.pathname.startsWith("/trading");
   const isAdmin = location.pathname.startsWith("/admin");
-  const showSubmitFab = !isTrading && !isAdmin;
+  const showSubmitFab = !isTrading && !isAdmin && canChatWithAi;
 
   return (
     <>
