@@ -230,6 +230,47 @@ export const getVlogByPost = async (postId) => {
 
 
 
+// ── Vlog Categories ───────────────────────────────────────────────────────────
+
+export const getVlogCategories = async () => {
+  const { data, error } = await supabase
+    .from('vlog_categories')
+    .select('*')
+    .order('display_order', { ascending: true });
+  if (error) throw error;
+  return data || [];
+};
+
+export const createVlogCategory = async (category: { slug: string; name: string; color: string; description?: string; display_order?: number }) => {
+  const { data, error } = await supabase
+    .from('vlog_categories')
+    .insert(category)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+};
+
+export const updateVlogCategory = async (id: number, updates: Partial<{ slug: string; name: string; color: string; description: string; display_order: number }>) => {
+  const { data, error } = await supabase
+    .from('vlog_categories')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+};
+
+export const deleteVlogCategory = async (id: number) => {
+  const { data, error } = await supabase
+    .from('vlog_categories')
+    .delete()
+    .eq('id', id);
+  if (error) throw error;
+  return data;
+};
+
 // Vlog helper functions
 export const getVlogs = async () => {
   const { data, error } = await supabase

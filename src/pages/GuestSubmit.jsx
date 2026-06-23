@@ -16,7 +16,7 @@ import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import {
   getSections, uploadGuestPostImage, uploadGuestPosterImage,
-  uploadGuestHlsFolder, uploadGuestTimelineImage, supabase,
+  uploadGuestHlsFolder, uploadGuestTimelineImage, supabase, getVlogCategories,
 } from "../lib/supabaseClient";
 
 const VN_PHONE_RE = /^(0|\+84)(3[2-9]|5[6-9]|7[0-9]|8[0-9]|9[0-9])\d{7}$/;
@@ -31,7 +31,7 @@ const formatDuration = (seconds) => {
 };
 
 const EMPTY_POST = { title: "", section_slug: "", excerpt: "", description: "", image_url: "" };
-const EMPTY_VLOG = { title: "", subtitle: "", host: "", video_url: "", poster_url: "", content_item_id: "", duration_label: "" };
+const EMPTY_VLOG = { title: "", subtitle: "", host: "", video_url: "", poster_url: "", content_item_id: "", duration_label: "", category_slug: "" };
 
 export default function GuestSubmit() {
   const [tab, setTab] = useState(0);
@@ -39,6 +39,7 @@ export default function GuestSubmit() {
   const [phoneError, setPhoneError] = useState("");
   const [sections, setSections] = useState([]);
   const [posts, setPosts] = useState([]);
+  const [vlogCategories, setVlogCategories] = useState([]);
 
   // Post form
   const [postForm, setPostForm] = useState(EMPTY_POST);
@@ -64,6 +65,7 @@ export default function GuestSubmit() {
   useEffect(() => {
     getSections().then((data) => setSections(data || [])).catch(() => {});
     supabase.from("content_items").select("id, title").then(({ data }) => setPosts(data || []));
+    getVlogCategories().then((data) => setVlogCategories(data || [])).catch(() => {});
   }, []);
 
   const validatePhone = (val) => {
@@ -148,6 +150,7 @@ export default function GuestSubmit() {
         host: vlogForm.host.trim() || phone.trim(),
         duration_label: vlogForm.duration_label || null,
         content_item_id: vlogForm.content_item_id || null,
+        category_slug: vlogForm.category_slug || null,
         uploader_phone: phone.trim(),
         locations_json: sortedLocations.map(({ pending_image_file, ...loc }) => loc),
       });
@@ -347,6 +350,28 @@ export default function GuestSubmit() {
                       <TextField {...params} label="Liên kết bài viết (tùy chọn)" variant="outlined" size="small" placeholder="Tìm theo tiêu đề..." />
                     )}
                   />
+
+                  {vlogCategories.length > 0 && (
+                    <FormControl fullWidth variant="outlined" size="small">
+                      <InputLabel id="guest-cat-label">Danh mục video</InputLabel>
+                      <Select
+                        labelId="guest-cat-label"
+                        label="Danh mục video"
+                        value={vlogForm.category_slug}
+                        onChange={(e) => setVlogForm({ ...vlogForm, category_slug: e.target.value })}
+                      >
+                        <MenuItem value=""><em>Chọn danh mục (tùy chọn)</em></MenuItem>
+                        {vlogCategories.map((cat) => (
+                          <MenuItem key={cat.slug} value={cat.slug}>
+                            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                              <Box sx={{ width: 12, height: 12, borderRadius: "50%", bgcolor: cat.color, flexShrink: 0 }} />
+                              <span>{cat.name}</span>
+                            </Box>
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  )}
 
                   {/* Video source */}
                   <Card variant="outlined" sx={{ p: 2, borderRadius: 2 }}>

@@ -8,7 +8,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import AddIcon from "@mui/icons-material/Add";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import VisibilityIcon from "@mui/icons-material/Visibility";
-import { getVlogs, createVlog, updateVlog, deleteVlog, getSections, uploadVlogFile, uploadHlsFolder, uploadTimelineImage, moveGuestFileToMain, deleteGuestFile, supabase } from "../../lib/supabaseClient";
+import { getVlogs, createVlog, updateVlog, deleteVlog, getSections, uploadVlogFile, uploadHlsFolder, uploadTimelineImage, moveGuestFileToMain, deleteGuestFile, supabase, getVlogCategories, createVlogCategory, updateVlogCategory, deleteVlogCategory } from "../../lib/supabaseClient";
 
 const formatDuration = (seconds) => {
   if (isNaN(seconds) || seconds <= 0) return "";
@@ -48,6 +48,7 @@ export default function AdminVlogs() {
     host: "",
     duration_label: "",
     content_item_id: "",
+    category_slug: "",
     is_published: true,
     display_order: 0,
   });
@@ -59,6 +60,14 @@ export default function AdminVlogs() {
   const [guestVlogs, setGuestVlogs] = useState([]);
   const [guestActionLoading, setGuestActionLoading] = useState(null);
   const [guestDetailVlog, setGuestDetailVlog] = useState(null);
+
+  // Categories state
+  const [categories, setCategories] = useState([]);
+  const [catDialog, setCatDialog] = useState(false);
+  const [editingCat, setEditingCat] = useState(null);
+  const [catForm, setCatForm] = useState({ slug: "", name: "", color: "#1976d2", description: "", display_order: 0 });
+  const [catLoading, setCatLoading] = useState(false);
+  const [filterCategorySlug, setFilterCategorySlug] = useState("");
 
   const getYouTubeId = (url) => {
     const m = url?.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s?]+)/);
@@ -172,10 +181,18 @@ export default function AdminVlogs() {
 
   const fetchPostsAndSections = async () => {
     try {
-      // Fetch all posts (content_items) to allow linking
       const { data, error } = await supabase.from("content_items").select("id, title");
       if (error) throw error;
       setPosts(data || []);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const fetchCategories = async () => {
+    try {
+      const data = await getVlogCategories();
+      setCategories(data || []);
     } catch (e) {
       console.error(e);
     }
@@ -185,6 +202,7 @@ export default function AdminVlogs() {
     fetchVlogs();
     fetchPostsAndSections();
     fetchGuestVlogs();
+    fetchCategories();
   }, []);
 
   const openEdit = (vlog) => {
@@ -198,6 +216,7 @@ export default function AdminVlogs() {
       host: vlog.host || "",
       duration_label: vlog.duration_label || "",
       content_item_id: vlog.content_item_id || "",
+      category_slug: vlog.category_slug || "",
       is_published: vlog.is_published !== false,
       display_order: vlog.display_order || 0,
     });
@@ -221,6 +240,7 @@ export default function AdminVlogs() {
       host: "",
       duration_label: "",
       content_item_id: "",
+      category_slug: "",
       is_published: true,
       display_order: 0,
     });
@@ -348,6 +368,7 @@ export default function AdminVlogs() {
       host: form.host || null,
       duration_label: form.duration_label || null,
       content_item_id: form.content_item_id || null,
+      category_slug: form.category_slug || null,
       is_published: form.is_published,
       display_order: Number(form.display_order) || 0,
     };
@@ -384,8 +405,65 @@ export default function AdminVlogs() {
     const matchesSearch = (vlog.title || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
                           (vlog.subtitle || "").toLowerCase().includes(searchTerm.toLowerCase());
     const matchesPost = filterPostId ? vlog.content_item_id === filterPostId : true;
-    return matchesSearch && matchesPost;
+    const matchesCategory = filterCategorySlug ? vlog.category_slug === filterCategorySlug : true;
+    return matchesSearch && matchesPost && matchesCategory;
   });
+
+  // Category dialog helpers
+  const openCatCreate = () => {
+    setEditingCat(null);
+    setCatForm({ slug: "", name: "", color: "#1976d2", description: "", display_order: categories.length + 1 });
+    setCatDialog(true);
+  };
+
+  const openCatEdit = (cat) => {
+    setEditingCat(cat);
+    setCatForm({ slug: cat.slug, name: cat.name, color: cat.color || "#1976d2", description: cat.description || "", display_order: cat.display_order || 0 });
+    setCatDialog(true);
+  };
+
+  const handleCatSubmit = async () => {
+    if (!catForm.slug.trim() || !catForm.name.trim()) {
+      alert("Vui lòng điền slug và tên danh mục!");
+      return;
+    }
+    setCatLoading(true);
+    try {
+      if (editingCat) {
+        await updateVlogCategory(editingCat.id, {
+          slug: catForm.slug.trim(),
+          name: catForm.name.trim(),
+          color: catForm.color,
+          description: catForm.description.trim() || null,
+          display_order: Number(catForm.display_order) || 0,
+        });
+      } else {
+        await createVlogCategory({
+          slug: catForm.slug.trim(),
+          name: catForm.name.trim(),
+          color: catForm.color,
+          description: catForm.description.trim() || undefined,
+          display_order: Number(catForm.display_order) || 0,
+        });
+      }
+      await fetchCategories();
+      setCatDialog(false);
+    } catch (e) {
+      alert("Lỗi: " + e.message);
+    } finally {
+      setCatLoading(false);
+    }
+  };
+
+  const handleCatDelete = async (cat) => {
+    if (!window.confirm(`Xóa danh mục "${cat.name}"? Các vlog thuộc danh mục này sẽ không còn danh mục.`)) return;
+    try {
+      await deleteVlogCategory(cat.id);
+      await fetchCategories();
+    } catch (e) {
+      alert("Lỗi: " + e.message);
+    }
+  };
 
   return (
     <Box sx={{ p: 3 }}>
@@ -406,6 +484,15 @@ export default function AdminVlogs() {
               {guestVlogs.length > 0 && (
                 <Chip label={guestVlogs.length} size="small" color="warning" sx={{ fontWeight: 700, height: 20, fontSize: "0.7rem" }} />
               )}
+            </Box>
+          }
+          sx={{ textTransform: "none", fontWeight: 600 }}
+        />
+        <Tab
+          label={
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              Danh mục
+              <Chip label={categories.length} size="small" color="primary" variant="outlined" sx={{ fontWeight: 700, height: 20, fontSize: "0.7rem" }} />
             </Box>
           }
           sx={{ textTransform: "none", fontWeight: 600 }}
@@ -614,6 +701,129 @@ export default function AdminVlogs() {
         )}
       </Dialog>
 
+      {/* TAB 2: Category Management */}
+      {mainTab === 2 && (
+        <>
+          <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 2 }}>
+            <Button variant="contained" startIcon={<AddIcon />} onClick={openCatCreate} sx={{ textTransform: "none", fontWeight: 600, borderRadius: 2 }}>
+              Thêm danh mục
+            </Button>
+          </Box>
+          {categories.length === 0 ? (
+            <Alert severity="info" sx={{ borderRadius: 2 }}>Chưa có danh mục nào. Bấm "Thêm danh mục" để tạo mới.</Alert>
+          ) : (
+            <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 3, overflow: "hidden" }}>
+              <Table>
+                <TableHead sx={{ bgcolor: "action.hover" }}>
+                  <TableRow>
+                    <TableCell sx={{ fontWeight: 600 }}>Màu</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>Tên danh mục</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>Slug</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>Mô tả</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>Thứ tự</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>Số vlog</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 600, pr: 3 }}>Thao tác</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {categories.map((cat) => (
+                    <TableRow key={cat.id} hover sx={{ "&:last-child td": { border: 0 } }}>
+                      <TableCell>
+                        <Box sx={{ width: 28, height: 28, borderRadius: 1.5, bgcolor: cat.color, border: "2px solid", borderColor: "divider" }} />
+                      </TableCell>
+                      <TableCell>
+                        <Chip label={cat.name} size="small" sx={{ bgcolor: cat.color, color: "#fff", fontWeight: 700, fontSize: "0.8rem" }} />
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="caption" sx={{ fontFamily: "monospace", bgcolor: "action.hover", px: 1, py: 0.5, borderRadius: 1 }}>
+                          {cat.slug}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="caption" color="text.secondary">{cat.description || "—"}</Typography>
+                      </TableCell>
+                      <TableCell>{cat.display_order}</TableCell>
+                      <TableCell>
+                        <Chip
+                          label={`${vlogs.filter((v) => v.category_slug === cat.slug).length} vlog`}
+                          size="small" variant="outlined"
+                          sx={{ fontWeight: 600, fontSize: "0.72rem" }}
+                        />
+                      </TableCell>
+                      <TableCell align="right" sx={{ pr: 3 }}>
+                        <Box sx={{ display: "flex", gap: 1, justifyContent: "flex-end" }}>
+                          <IconButton size="small" color="primary" onClick={() => openCatEdit(cat)} sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2 }}>
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                          <IconButton size="small" color="error" onClick={() => handleCatDelete(cat)} sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2 }}>
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+
+          {/* Category create/edit dialog */}
+          <Dialog open={catDialog} onClose={() => setCatDialog(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 4 } }}>
+            <DialogTitle sx={{ fontWeight: 700 }}>{editingCat ? "Sửa danh mục" : "Thêm danh mục mới"}</DialogTitle>
+            <DialogContent sx={{ mt: 1 }}>
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5, pt: 1 }}>
+                <Grid container spacing={2}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <TextField
+                      label="Tên danh mục *" fullWidth value={catForm.name}
+                      onChange={(e) => setCatForm({ ...catForm, name: e.target.value })}
+                      placeholder="Chill, Bất động sản..."
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <TextField
+                      label="Slug (mã định danh) *" fullWidth value={catForm.slug}
+                      onChange={(e) => setCatForm({ ...catForm, slug: e.target.value.toLowerCase().replace(/\s+/g, "-") })}
+                      placeholder="chill, real-estate..."
+                      inputProps={{ style: { fontFamily: "monospace" } }}
+                      helperText="Chữ thường, không dấu, dùng dấu gạch ngang"
+                    />
+                  </Grid>
+                </Grid>
+                <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
+                  <TextField
+                    label="Màu sắc" type="color" value={catForm.color}
+                    onChange={(e) => setCatForm({ ...catForm, color: e.target.value })}
+                    sx={{ width: 120 }} size="small"
+                    inputProps={{ style: { height: 40, cursor: "pointer" } }}
+                  />
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <Chip label={catForm.name || "Xem trước"} sx={{ bgcolor: catForm.color, color: "#fff", fontWeight: 700 }} />
+                    <Typography variant="caption" color="text.secondary">Xem trước chip</Typography>
+                  </Box>
+                </Box>
+                <TextField
+                  label="Mô tả" fullWidth multiline rows={2} value={catForm.description}
+                  onChange={(e) => setCatForm({ ...catForm, description: e.target.value })}
+                  placeholder="Mô tả ngắn về danh mục này..."
+                />
+                <TextField
+                  label="Thứ tự hiển thị" type="number" value={catForm.display_order}
+                  onChange={(e) => setCatForm({ ...catForm, display_order: e.target.value })}
+                  sx={{ width: 160 }} size="small"
+                />
+              </Box>
+            </DialogContent>
+            <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>
+              <Button onClick={() => setCatDialog(false)} sx={{ textTransform: "none" }}>Hủy</Button>
+              <Button variant="contained" onClick={handleCatSubmit} disabled={catLoading} sx={{ textTransform: "none", fontWeight: 600, borderRadius: 2, px: 3 }}>
+                {catLoading ? "Đang lưu..." : editingCat ? "Cập nhật" : "Tạo danh mục"}
+              </Button>
+            </DialogActions>
+          </Dialog>
+        </>
+      )}
+
       {/* TAB 0: Vlogs list + dialog */}
       {mainTab === 0 && <>
 
@@ -629,7 +839,7 @@ export default function AdminVlogs() {
           sx={{ flexGrow: 1, minWidth: "220px" }}
         />
         
-        <FormControl size="small" sx={{ minWidth: "200px" }}>
+        <FormControl size="small" sx={{ minWidth: "180px" }}>
           <InputLabel id="filter-post-label">Lọc theo bài viết</InputLabel>
           <Select
             labelId="filter-post-label"
@@ -641,6 +851,26 @@ export default function AdminVlogs() {
             {posts.map((p) => (
               <MenuItem key={p.id} value={p.id}>
                 {p.title}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        <FormControl size="small" sx={{ minWidth: "160px" }}>
+          <InputLabel id="filter-cat-label">Lọc theo danh mục</InputLabel>
+          <Select
+            labelId="filter-cat-label"
+            label="Lọc theo danh mục"
+            value={filterCategorySlug}
+            onChange={(e) => setFilterCategorySlug(e.target.value)}
+          >
+            <MenuItem value=""><em>Tất cả</em></MenuItem>
+            {categories.map((cat) => (
+              <MenuItem key={cat.slug} value={cat.slug}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Box sx={{ width: 12, height: 12, borderRadius: "50%", bgcolor: cat.color, flexShrink: 0 }} />
+                  {cat.name}
+                </Box>
               </MenuItem>
             ))}
           </Select>
@@ -661,6 +891,7 @@ export default function AdminVlogs() {
           <TableHead sx={{ bgcolor: "action.hover" }}>
             <TableRow>
               <TableCell sx={{ fontWeight: 600 }}>Vlog Title</TableCell>
+              <TableCell sx={{ fontWeight: 600 }}>Danh mục</TableCell>
               <TableCell sx={{ fontWeight: 600 }}>Người đăng</TableCell>
               <TableCell sx={{ fontWeight: 600 }}>Host</TableCell>
               <TableCell sx={{ fontWeight: 600 }}>Linked Post</TableCell>
@@ -671,7 +902,7 @@ export default function AdminVlogs() {
           <TableBody>
             {filteredVlogs.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} align="center" sx={{ py: 6, color: "text.secondary" }}>
+                <TableCell colSpan={7} align="center" sx={{ py: 6, color: "text.secondary" }}>
                   Không tìm thấy vlog nào phù hợp.
                 </TableCell>
               </TableRow>
@@ -685,6 +916,16 @@ export default function AdminVlogs() {
                     <Typography variant="caption" sx={{ color: "text.secondary" }}>
                       {vlog.subtitle}
                     </Typography>
+                  </TableCell>
+                  <TableCell>
+                    {(() => {
+                      const cat = categories.find((c) => c.slug === vlog.category_slug);
+                      return cat ? (
+                        <Chip label={cat.name} size="small" sx={{ bgcolor: cat.color, color: "#fff", fontWeight: 700, fontSize: "0.72rem" }} />
+                      ) : (
+                        <Typography variant="caption" color="text.disabled">—</Typography>
+                      );
+                    })()}
                   </TableCell>
                   <TableCell>
                     {vlog.uploader_phone ? (
@@ -769,6 +1010,40 @@ export default function AdminVlogs() {
                     <TextField {...params} label="Liên kết tới bài viết (Post)" variant="outlined" size="small" placeholder="Tìm theo tiêu đề..." />
                   )}
                 />
+
+                <FormControl fullWidth variant="outlined" size="small">
+                  <InputLabel id="cat-select-label">Danh mục Vlog</InputLabel>
+                  <Select
+                    labelId="cat-select-label"
+                    label="Danh mục Vlog"
+                    value={form.category_slug}
+                    onChange={(e) => setForm({ ...form, category_slug: e.target.value })}
+                  >
+                    <MenuItem value=""><em>Không phân loại</em></MenuItem>
+                    {categories.map((cat) => (
+                      <MenuItem key={cat.slug} value={cat.slug}>
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                          <Box sx={{ width: 14, height: 14, borderRadius: "50%", bgcolor: cat.color, flexShrink: 0 }} />
+                          <span>{cat.name}</span>
+                          {cat.description && (
+                            <Typography variant="caption" color="text.secondary" sx={{ ml: 0.5 }}>— {cat.description}</Typography>
+                          )}
+                        </Box>
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+
+                {form.category_slug && (() => {
+                  const cat = categories.find((c) => c.slug === form.category_slug);
+                  return cat ? (
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <Chip label={cat.name} sx={{ bgcolor: cat.color, color: "#fff", fontWeight: 700 }} size="small" />
+                      <Typography variant="caption" color="text.secondary">Đã chọn danh mục</Typography>
+                    </Box>
+                  ) : null;
+                })()}
+
                 <Card variant="outlined" sx={{ p: 2, borderRadius: 3, border: "1px solid", borderColor: "divider" }}>
                   <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: "text.primary" }}>Video Stream (HLS .m3u8)</Typography>
                   <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1.5 }}>

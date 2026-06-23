@@ -14,6 +14,7 @@ import { MapContainer, TileLayer, Polyline, CircleMarker, Marker, Popup, useMap 
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { useVlogCache } from "../contexts/VlogCacheContext";
+import { getVlogCategories } from "../lib/supabaseClient";
 import { getCurrentLocation, isInsideIframe, openCurrentPageInNewTab } from "../utils/geolocation";
 import { getUrlParams } from "../utils/urlParams";
 
@@ -51,15 +52,37 @@ const createPreviewIcon = (number, imageUrl, isActive, isVisited, altText = "") 
   });
 };
 
-const createThumbIcon = (imageUrl, altText = "") =>
-  L.divIcon({
-    html: `<div style="width:40px;height:40px;border-radius:8px;overflow:hidden;border:2px solid #82f3cf;box-shadow:0 4px 14px rgba(0,0,0,0.7);background:#1a1c24;">
-      <img src="${imageUrl}" alt="${altText.replace(/"/g, "&quot;")}" style="width:100%;height:100%;object-fit:cover;display:block;" />
-    </div>`,
+const CAT_SHAPES = {
+  "chill":       { icon: "🌿", shadow: "rgba(16,185,129,0.45)" },
+  "real-estate": { icon: "🏠", shadow: "rgba(59,130,246,0.45)" },
+  "helps":       { icon: "🤝", shadow: "rgba(245,158,11,0.45)" },
+  "news":        { icon: "📰", shadow: "rgba(239,68,68,0.45)"  },
+};
+
+const createThumbIcon = (imageUrl, altText = "", catColor = "#82f3cf", catSlug = "") => {
+  const shape = CAT_SHAPES[catSlug] || { icon: "", shadow: "rgba(130,243,207,0.4)" };
+  return L.divIcon({
+    html: `
+      <div style="position:relative;width:44px;height:44px;">
+        <div style="
+          width:44px;height:44px;border-radius:10px;overflow:hidden;
+          border:3px solid ${catColor};
+          box-shadow:0 4px 14px ${shape.shadow};
+          background:#1a1c24;
+        ">
+          <img src="${imageUrl}" alt="${altText.replace(/"/g, "&quot;")}"
+            style="width:100%;height:100%;object-fit:cover;display:block;" />
+        </div>
+        ${shape.icon
+          ? `<div style="position:absolute;bottom:-5px;right:-5px;width:18px;height:18px;border-radius:50%;background:${catColor};border:2px solid #0d0f18;display:flex;align-items:center;justify-content:center;font-size:10px;line-height:1;">${shape.icon}</div>`
+          : `<div style="position:absolute;bottom:-4px;right:-4px;width:12px;height:12px;border-radius:50%;background:${catColor};border:2px solid #0d0f18;"></div>`
+        }
+      </div>`,
     className: "",
-    iconSize: [40, 40],
-    iconAnchor: [20, 40],
+    iconSize: [44, 44],
+    iconAnchor: [22, 49],
   });
+};
 
 const FitAllVlogsInView = ({ vlogs }) => {
   const map = useMap();
@@ -229,6 +252,8 @@ const VlogFeed = () => {
   const [mapPlayerVlog, setMapPlayerVlog] = useState(null);
   const [locationLoading, setLocationLoading] = useState(false);
   const [locationError, setLocationError] = useState({ open: false, message: "", code: null });
+  const [categories, setCategories] = useState([]);
+  const [mapCategorySlug, setMapCategorySlug] = useState("");
 
   const handleRequestLocation = useCallback(() => {
     setLocationLoading(true);
@@ -249,10 +274,29 @@ const VlogFeed = () => {
     return map;
   }, [newsItems]);
 
+  const displayedVlogs = vlogs || [];
+
+  const filteredMapVlogs = useMemo(() => {
+    if (!vlogs) return [];
+    if (!mapCategorySlug) return vlogs;
+    return vlogs.filter((v) => v.categorySlug === mapCategorySlug);
+  }, [vlogs, mapCategorySlug]);
+
+  // Count vlogs per category for badge display
+  const categoryCounts = useMemo(() => {
+    const counts = {};
+    (vlogs || []).forEach((v) => { if (v.categorySlug) counts[v.categorySlug] = (counts[v.categorySlug] || 0) + 1; });
+    return counts;
+  }, [vlogs]);
+
   const hydratedVideoStart = Math.max(0, visibleVlogIdx - VIDEO_PRELOAD_BEHIND);
-  const hydratedVideoEnd = Math.min((vlogs?.length ?? 0) - 1, visibleVlogIdx + VIDEO_PRELOAD_AHEAD);
+  const hydratedVideoEnd = Math.min((displayedVlogs?.length ?? 0) - 1, visibleVlogIdx + VIDEO_PRELOAD_AHEAD);
 
   useEffect(() => { ensureLoaded(); }, []);
+
+  useEffect(() => {
+    getVlogCategories().then((data) => setCategories(data || [])).catch(() => {});
+  }, []);
 
   // Initialize user location from URL params
   useEffect(() => {
@@ -298,12 +342,12 @@ const VlogFeed = () => {
 
   // Auto-play/pause via IntersectionObserver
   useEffect(() => {
-    if (!isActive || !vlogs || vlogs.length === 0) return;
+    if (!isActive || !displayedVlogs || displayedVlogs.length === 0) return;
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           const idx = Number(entry.target.dataset.idx);
-          const vlog = vlogs[idx];
+          const vlog = displayedVlogs[idx];
           if (!vlog) return;
           const video = videoRefs.current[vlog.id];
           if (!video) return;
@@ -318,7 +362,7 @@ const VlogFeed = () => {
     );
     slideRefs.current.forEach((el) => { if (el) observer.observe(el); });
     return () => observer.disconnect();
-  }, [isActive, pauseVideo, playVideo, vlogs]);
+  }, [isActive, pauseVideo, playVideo, displayedVlogs]);
 
   const handlePlay = useCallback((vlogId) => {
     sessionInteractedRef.current = true; // Unlock autoplay for scroll/transitions
@@ -351,14 +395,14 @@ const VlogFeed = () => {
     manuallyPausedRef.current[vlog.id] = false;
     handlePauseOrEnd(vlog.id);
 
-    if (!autoNext || idx >= vlogs.length - 1) return;
+    if (!autoNext || idx >= displayedVlogs.length - 1) return;
 
-    const nextVlog = vlogs[idx + 1];
+    const nextVlog = displayedVlogs[idx + 1];
     manuallyPausedRef.current[nextVlog.id] = false;
     slideRefs.current[idx + 1]?.scrollIntoView({ behavior: "smooth", block: "start" });
     setVisibleVlogIdx(idx + 1);
     window.setTimeout(() => playVideo(nextVlog.id), 360);
-  }, [autoNext, handlePauseOrEnd, playVideo, setVisibleVlogIdx, vlogs]);
+  }, [autoNext, handlePauseOrEnd, playVideo, setVisibleVlogIdx, displayedVlogs]);
 
   const seekToSpot = (vlogId, location) => {
     const video = videoRefs.current[vlogId];
@@ -403,7 +447,7 @@ const VlogFeed = () => {
 
   /* ── Visible vlog tracker ────────────────────────────── */
   useEffect(() => {
-    if (!vlogs || vlogs.length === 0) return;
+    if (!displayedVlogs || displayedVlogs.length === 0) return;
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -414,9 +458,9 @@ const VlogFeed = () => {
     );
     slideRefs.current.forEach((el) => { if (el) observer.observe(el); });
     return () => observer.disconnect();
-  }, [vlogs]);
+  }, [displayedVlogs]);
 
-  const currentVlog = vlogs?.[visibleVlogIdx] || null;
+  const currentVlog = displayedVlogs?.[visibleVlogIdx] || null;
 
   useEffect(() => {
     if (!isActive || !currentVlog || mapView) return;
@@ -461,6 +505,7 @@ const VlogFeed = () => {
     );
   }
 
+
   return (
     <main className="vlog-scroll-root">
       <Box className="vlog-scroll-shell">
@@ -473,12 +518,10 @@ const VlogFeed = () => {
               className="vlog-scroll-back"
               onClick={() => {
                 if (!mapView) {
-                  // Entering map — pause all and block IO from resuming them
                   Object.values(videoRefs.current).forEach((v) => { if (v && !v.paused) v.pause(); });
                   vlogs?.forEach((v) => { manuallyPausedRef.current[v.id] = true; });
                   setPlayingByVlog({});
                 } else {
-                  // Leaving map via toggle — unlock all so IO can resume current slide
                   vlogs?.forEach((v) => { manuallyPausedRef.current[v.id] = false; });
                   setMapPlayerVlog(null);
                 }
@@ -492,15 +535,72 @@ const VlogFeed = () => {
             {!mapView && (
               <Box className="vlog-auto-next-toggle" component="label">
                 <span>Tự chuyển</span>
-                <Switch
-                  size="small"
-                  checked={autoNext}
-                  onChange={(e) => setAutoNext(e.target.checked)}
-                />
+                <Switch size="small" checked={autoNext} onChange={(e) => setAutoNext(e.target.checked)} />
               </Box>
             )}
           </Box>
         </Box>
+
+        {/* ── Map category chips — absolute, below header, only in map mode ── */}
+        {mapView && categories.length > 0 && (
+          <div style={{
+            position: "absolute", top: 66, left: "50%", transform: "translateX(-50%)",
+            zIndex: 7, display: "flex", gap: 6,
+            background: "rgba(13,15,24,0.82)", backdropFilter: "blur(10px)",
+            borderRadius: 24, padding: "6px 10px",
+            boxShadow: "0 2px 16px rgba(0,0,0,0.5)",
+            maxWidth: "calc(100% - 32px)", overflowX: "auto",
+            scrollbarWidth: "none", pointerEvents: "auto",
+          }}>
+            <button
+              type="button"
+              onClick={() => setMapCategorySlug("")}
+              style={{
+                padding: "4px 12px", borderRadius: 16, border: "none", cursor: "pointer",
+                fontSize: "0.7rem", fontWeight: 700, whiteSpace: "nowrap",
+                background: !mapCategorySlug ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.1)",
+                color: !mapCategorySlug ? "#111" : "rgba(255,255,255,0.65)",
+              }}
+            >
+              Tất cả
+            </button>
+            {categories.map((cat) => {
+              const count = categoryCounts[cat.slug] || 0;
+              const active = mapCategorySlug === cat.slug;
+              return (
+                <button
+                  key={cat.slug}
+                  type="button"
+                  onClick={() => setMapCategorySlug(active ? "" : cat.slug)}
+                  style={{
+                    padding: "4px 10px", borderRadius: 16, border: "none", cursor: "pointer",
+                    fontSize: "0.7rem", fontWeight: 700, whiteSpace: "nowrap",
+                    display: "flex", alignItems: "center", gap: 5,
+                    background: active ? cat.color : "rgba(255,255,255,0.1)",
+                    color: active ? "#fff" : count > 0 ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.4)",
+                    opacity: count === 0 && !active ? 0.65 : 1,
+                  }}
+                >
+                  <span style={{
+                    width: 7, height: 7, borderRadius: "50%", flexShrink: 0,
+                    background: active ? "rgba(255,255,255,0.7)" : cat.color,
+                  }} />
+                  {cat.name}
+                  {count > 0 && (
+                    <span style={{
+                      background: active ? "rgba(255,255,255,0.25)" : "rgba(255,255,255,0.12)",
+                      color: active ? "#fff" : "rgba(255,255,255,0.7)",
+                      borderRadius: 10, fontSize: "0.6rem", fontWeight: 800,
+                      padding: "1px 5px", lineHeight: 1.4,
+                    }}>
+                      {count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         {/* ── MAP OVERVIEW ─────────────────────────────────────── */}
         {mapView && (
@@ -518,7 +618,7 @@ const VlogFeed = () => {
                 url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
                 maxZoom={19}
               />
-              <FitAllVlogsInView vlogs={vlogs} />
+              <FitAllVlogsInView vlogs={filteredMapVlogs} />
               <OverviewUserTracker userLocation={userLocation} />
               <OverviewLocationBtn userLocation={userLocation} onRequest={handleRequestLocation} />
 
@@ -532,14 +632,16 @@ const VlogFeed = () => {
                 </Marker>
               )}
 
-              {vlogs.map((vlog) =>
-                (vlog.locations || [])
+              {filteredMapVlogs.map((vlog) => {
+                const catColor = vlog.category?.color || "#82f3cf";
+                const catSlug = vlog.categorySlug || "";
+                return (vlog.locations || [])
                   .filter((l) => l.latitude && l.longitude)
                   .map((loc, i) => (
                     <Marker
                       key={`overview-${vlog.id}-${loc.time}-${i}`}
                       position={[loc.latitude, loc.longitude]}
-                      icon={createThumbIcon(loc.image || vlog.poster, loc.name || vlog.title)}
+                      icon={createThumbIcon(loc.image || vlog.poster, loc.name || vlog.title, catColor, catSlug)}
                     >
                       <Popup>
                         <div className="vlog-map-popup">
@@ -548,6 +650,15 @@ const VlogFeed = () => {
                             alt={loc.name || vlog.title}
                             className="vlog-map-popup-img"
                           />
+                          {vlog.category && (
+                            <span style={{
+                              display: "inline-block", marginBottom: 4, padding: "2px 8px",
+                              borderRadius: 10, fontSize: "0.65rem", fontWeight: 700,
+                              background: vlog.category.color, color: "#fff",
+                            }}>
+                              {vlog.category.name}
+                            </span>
+                          )}
                           <strong className="vlog-map-popup-name">{loc.name || vlog.title}</strong>
                           <span className="vlog-map-popup-sub">{vlog.title}</span>
                           <button
@@ -560,8 +671,8 @@ const VlogFeed = () => {
                         </div>
                       </Popup>
                     </Marker>
-                  ))
-              )}
+                  ));
+              })}
             </MapContainer>
           </Box>
         )}
@@ -641,7 +752,7 @@ const VlogFeed = () => {
           sx={{ pb: `${sheetHeight}px`, display: mapView ? "none" : undefined }}
           onScroll={handleFeedScroll}
         >
-          {vlogs.map((vlog, idx) => {
+          {displayedVlogs.map((vlog, idx) => {
             const news = newsById.get(String(vlog.newsId));
             const isPlaying = !!playingByVlog[vlog.id];
             const isVisible = idx === visibleVlogIdx;

@@ -179,6 +179,8 @@ const normalizeVlog = (row: any) => ({
   poster: row.poster_url,
   host: row.host,
   durationLabel: row.duration_label,
+  categorySlug: row.category_slug || null,
+  category: row.vlog_categories || null,
   locations: (row.vlog_locations || []).map((location: any) => ({
     time: location.time_seconds,
     name: location.name,
@@ -198,7 +200,7 @@ export async function getVlogReviews() {
 
   const { data, error } = await supabase
     .from("vlog_reviews")
-    .select("*, vlog_locations(*)")
+    .select("*, vlog_locations(*), vlog_categories(slug, name, color)")
     .eq("is_published", true)
     .order("created_at", { ascending: false })
     .order("display_order", { ascending: true })
