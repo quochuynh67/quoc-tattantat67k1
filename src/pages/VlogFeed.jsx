@@ -90,7 +90,10 @@ const FitAllVlogsInView = ({ vlogs }) => {
     const coords = vlogs.flatMap((v) =>
       (v.locations || []).filter((l) => l.latitude && l.longitude).map((l) => [l.latitude, l.longitude])
     );
-    if (coords.length === 0) return;
+    if (coords.length === 0) {
+      map.setView([10.6385, 105.2343], 13, { animate: false });
+      return;
+    }
     map.fitBounds(coords, { padding: [48, 48], maxZoom: 14, animate: false });
   }, [vlogs, map]);
   return null;
@@ -635,43 +638,49 @@ const VlogFeed = () => {
               {filteredMapVlogs.map((vlog) => {
                 const catColor = vlog.category?.color || "#82f3cf";
                 const catSlug = vlog.categorySlug || "";
-                return (vlog.locations || [])
-                  .filter((l) => l.latitude && l.longitude)
-                  .map((loc, i) => (
+                const geoLocs = (vlog.locations || []).filter((l) => l.latitude && l.longitude);
+
+                const popupContent = (img, title, sub) => (
+                  <div className="vlog-map-popup">
+                    <img src={img} alt={title} className="vlog-map-popup-img" />
+                    {vlog.category && (
+                      <span style={{
+                        display: "inline-block", marginBottom: 4, padding: "2px 8px",
+                        borderRadius: 10, fontSize: "0.65rem", fontWeight: 700,
+                        background: vlog.category.color, color: "#fff",
+                      }}>
+                        {vlog.category.name}
+                      </span>
+                    )}
+                    <strong className="vlog-map-popup-name">{title}</strong>
+                    <span className="vlog-map-popup-sub">{sub}</span>
+                    <button type="button" className="vlog-map-popup-btn" onClick={() => setMapPlayerVlog(vlog)}>
+                      ▶ Xem Vlog
+                    </button>
+                  </div>
+                );
+
+                if (geoLocs.length === 0) {
+                  return (
                     <Marker
-                      key={`overview-${vlog.id}-${loc.time}-${i}`}
-                      position={[loc.latitude, loc.longitude]}
-                      icon={createThumbIcon(loc.image || vlog.poster, loc.name || vlog.title, catColor, catSlug)}
+                      key={`overview-${vlog.id}-noloc`}
+                      position={[10.6385, 105.2343]}
+                      icon={createThumbIcon(vlog.poster, vlog.title, catColor, catSlug)}
                     >
-                      <Popup>
-                        <div className="vlog-map-popup">
-                          <img
-                            src={loc.image || vlog.poster}
-                            alt={loc.name || vlog.title}
-                            className="vlog-map-popup-img"
-                          />
-                          {vlog.category && (
-                            <span style={{
-                              display: "inline-block", marginBottom: 4, padding: "2px 8px",
-                              borderRadius: 10, fontSize: "0.65rem", fontWeight: 700,
-                              background: vlog.category.color, color: "#fff",
-                            }}>
-                              {vlog.category.name}
-                            </span>
-                          )}
-                          <strong className="vlog-map-popup-name">{loc.name || vlog.title}</strong>
-                          <span className="vlog-map-popup-sub">{vlog.title}</span>
-                          <button
-                            type="button"
-                            className="vlog-map-popup-btn"
-                            onClick={() => setMapPlayerVlog(vlog)}
-                          >
-                            ▶ Xem Vlog
-                          </button>
-                        </div>
-                      </Popup>
+                      <Popup>{popupContent(vlog.poster, vlog.title, "Chưa có vị trí cụ thể")}</Popup>
                     </Marker>
-                  ));
+                  );
+                }
+
+                return geoLocs.map((loc, i) => (
+                  <Marker
+                    key={`overview-${vlog.id}-${loc.time}-${i}`}
+                    position={[loc.latitude, loc.longitude]}
+                    icon={createThumbIcon(loc.image || vlog.poster, loc.name || vlog.title, catColor, catSlug)}
+                  >
+                    <Popup>{popupContent(loc.image || vlog.poster, loc.name || vlog.title, vlog.title)}</Popup>
+                  </Marker>
+                ));
               })}
             </MapContainer>
           </Box>
