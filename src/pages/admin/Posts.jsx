@@ -10,6 +10,8 @@ import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import EditIcon from "@mui/icons-material/Edit";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
+import MyLocationIcon from "@mui/icons-material/MyLocation";
+import CircularProgress from "@mui/material/CircularProgress";
 import { getPostsBySection, createPost, updatePost, deletePost, getSections, uploadPostImage, getVlogByPost, supabase } from "../../lib/supabaseClient";
 
 export default function AdminPosts() {
@@ -28,6 +30,8 @@ export default function AdminPosts() {
     image_url: "",
     category: "",
     address: "",
+    latitude: "",
+    longitude: "",
     rating: "",
     severity: "",
     published_date: new Date().toISOString().split('T')[0],
@@ -38,6 +42,30 @@ export default function AdminPosts() {
   const [imageSourceMode, setImageSourceMode] = useState("url");
   const [pendingImageFile, setPendingImageFile] = useState(null);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [geoLoading, setGeoLoading] = useState(false);
+
+  const handleGetLocation = () => {
+    if (!navigator.geolocation) {
+      alert("Trình duyệt không hỗ trợ định vị GPS.");
+      return;
+    }
+    setGeoLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setForm((prev) => ({
+          ...prev,
+          latitude: pos.coords.latitude.toFixed(6),
+          longitude: pos.coords.longitude.toFixed(6),
+        }));
+        setGeoLoading(false);
+      },
+      (err) => {
+        alert("Không lấy được vị trí: " + err.message);
+        setGeoLoading(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
 
   const [vlogDialogOpen, setVlogDialogOpen] = useState(false);
   const [currentVlog, setCurrentVlog] = useState(null);
@@ -90,6 +118,9 @@ export default function AdminPosts() {
         image_url: guest.image_url || null,
         uploader_phone: guest.uploader_phone || null,
         published_date: guest.published_date || new Date().toISOString().split("T")[0],
+        latitude: guest.latitude !== "" && guest.latitude !== null && guest.latitude !== undefined ? Number(guest.latitude) : null,
+        longitude: guest.longitude !== "" && guest.longitude !== null && guest.longitude !== undefined ? Number(guest.longitude) : null,
+        severity: guest.severity || null,
         hide: true,
         is_featured: false,
       });
@@ -162,6 +193,8 @@ export default function AdminPosts() {
       image_url: post.image_url || "",
       category: post.category || "",
       address: post.address || "",
+      latitude: post.latitude !== null && post.latitude !== undefined ? post.latitude : "",
+      longitude: post.longitude !== null && post.longitude !== undefined ? post.longitude : "",
       rating: post.rating !== null && post.rating !== undefined ? post.rating : "",
       severity: post.severity || "",
       published_date: post.published_date || "",
@@ -192,6 +225,8 @@ export default function AdminPosts() {
       image_url: "",
       category: "",
       address: "",
+      latitude: "",
+      longitude: "",
       rating: "",
       severity: "",
       published_date: new Date().toISOString().split('T')[0],
@@ -228,6 +263,8 @@ export default function AdminPosts() {
       image_url: finalImageUrl || null,
       category: form.category || null,
       address: form.address || null,
+      latitude: form.latitude !== "" && form.latitude !== null ? Number(form.latitude) : null,
+      longitude: form.longitude !== "" && form.longitude !== null ? Number(form.longitude) : null,
       rating: form.rating !== "" ? Number(form.rating) : null,
       severity: form.severity || null,
       published_date: form.published_date || null,
@@ -655,6 +692,59 @@ export default function AdminPosts() {
                 </Paper>
                 <TextField label="Địa chỉ" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} fullWidth variant="outlined" />
 
+                {/* Lat / Long for map display */}
+                <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2, bgcolor: "action.hover" }}>
+                  <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1 }}>
+                    <Typography variant="caption" sx={{ fontWeight: 600, color: "text.secondary" }}>
+                      📍 Tọa độ bản đồ (Vĩ độ / Kinh độ)
+                    </Typography>
+                    <Tooltip title="Tự động lấy vị trí GPS hiện tại của bạn" arrow>
+                      <span>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          color="primary"
+                          startIcon={geoLoading ? <CircularProgress size={13} color="inherit" /> : <MyLocationIcon sx={{ fontSize: 15 }} />}
+                          onClick={handleGetLocation}
+                          disabled={geoLoading}
+                          sx={{ textTransform: "none", borderRadius: 1.5, fontSize: "0.72rem", py: 0.3, px: 1 }}
+                        >
+                          {geoLoading ? "Đang lấy..." : "Vị trí hiện tại"}
+                        </Button>
+                      </span>
+                    </Tooltip>
+                  </Box>
+                  <Box sx={{ display: "flex", gap: 1.5 }}>
+                    <TextField
+                      label="Vĩ độ (Latitude)"
+                      type="number"
+                      inputProps={{ step: 0.000001 }}
+                      placeholder="Ví dụ: 10.4597"
+                      value={form.latitude}
+                      onChange={(e) => setForm({ ...form, latitude: e.target.value })}
+                      fullWidth
+                      variant="outlined"
+                      size="small"
+                    />
+                    <TextField
+                      label="Kinh độ (Longitude)"
+                      type="number"
+                      inputProps={{ step: 0.000001 }}
+                      placeholder="Ví dụ: 105.1267"
+                      value={form.longitude}
+                      onChange={(e) => setForm({ ...form, longitude: e.target.value })}
+                      fullWidth
+                      variant="outlined"
+                      size="small"
+                    />
+                  </Box>
+                  {form.latitude && form.longitude && (
+                    <Typography variant="caption" sx={{ color: "success.main", mt: 0.5, display: "block" }}>
+                      ✓ Bài viết sẽ hiển thị trên bản đồ tại ({Number(form.latitude).toFixed(5)}, {Number(form.longitude).toFixed(5)})
+                    </Typography>
+                  )}
+                </Paper>
+
                 <Grid container spacing={2}>
                   <Grid size={{ xs: 6 }}>
                     <TextField 
@@ -668,14 +758,20 @@ export default function AdminPosts() {
                     />
                   </Grid>
                   <Grid size={{ xs: 6 }}>
-                    <TextField 
-                      label="Mức độ (Severity)" 
-                      value={form.severity} 
-                      onChange={(e) => setForm({ ...form, severity: e.target.value })} 
-                      placeholder="normal/medium/urgent"
-                      fullWidth 
-                      variant="outlined" 
-                    />
+                    <FormControl fullWidth variant="outlined">
+                      <InputLabel id="severity-select-label">Mức độ (Severity)</InputLabel>
+                      <Select
+                        labelId="severity-select-label"
+                        label="Mức độ (Severity)"
+                        value={form.severity || ""}
+                        onChange={(e) => setForm({ ...form, severity: e.target.value })}
+                      >
+                        <MenuItem value=""><em>-- Không chọn --</em></MenuItem>
+                        <MenuItem value="normal">Bình thường</MenuItem>
+                        <MenuItem value="warning">Cần thiết / Quan trọng</MenuItem>
+                        <MenuItem value="urgent">Khẩn cấp / Nguy hiểm</MenuItem>
+                      </Select>
+                    </FormControl>
                   </Grid>
                 </Grid>
 

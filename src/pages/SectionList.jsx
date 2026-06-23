@@ -139,6 +139,13 @@ const SectionList = ({ sectionKey }) => {
                   className="list-card-media"
                 />
                 <CardContent className="list-card-content">
+                  {item.severity && (
+                    <Box sx={{ mb: 1 }}>
+                      {item.severity === "urgent" && <span className="severity-badge urgent">Khẩn cấp</span>}
+                      {item.severity === "warning" && <span className="severity-badge warning">Quan trọng</span>}
+                      {item.severity === "normal" && <span className="severity-badge normal">Bình thường</span>}
+                    </Box>
+                  )}
                   <Typography variant="h6" component="h2" className="list-card-title">
                     {getTitle(item, pageSection.kind)}
                   </Typography>

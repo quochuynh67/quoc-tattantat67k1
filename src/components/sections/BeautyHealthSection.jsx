@@ -81,6 +81,13 @@ const BeautyHealthSection = () => {
               >
                 <CardMedia component="img" image={item.image} alt={item.name || item.title} sx={{ height: 200, objectFit: "cover" }} />
                 <CardContent sx={{ flexGrow: 1, padding: "var(--spacing-sm)", display: "flex", flexDirection: "column", gap: 1 }}>
+                  {item.severity && (
+                    <Box sx={{ mb: 0 }}>
+                      {item.severity === "urgent" && <span className="severity-badge urgent">Khẩn cấp</span>}
+                      {item.severity === "warning" && <span className="severity-badge warning">Quan trọng</span>}
+                      {item.severity === "normal" && <span className="severity-badge normal">Bình thường</span>}
+                    </Box>
+                  )}
                   <Chip
                     label={item.category}
                     size="small"

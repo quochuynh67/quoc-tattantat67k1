@@ -81,6 +81,13 @@ const PlacesSection = () => {
               >
                 <CardMedia component="img" image={place.image} alt={place.name || place.title} sx={{ height: 200, objectFit: "cover" }} />
                 <CardContent sx={{ flexGrow: 1, padding: "var(--spacing-sm)", display: "flex", flexDirection: "column" }}>
+                  {place.severity && (
+                    <Box sx={{ mb: 1 }}>
+                      {place.severity === "urgent" && <span className="severity-badge urgent">Khẩn cấp</span>}
+                      {place.severity === "warning" && <span className="severity-badge warning">Quan trọng</span>}
+                      {place.severity === "normal" && <span className="severity-badge normal">Bình thường</span>}
+                    </Box>
+                  )}
                   <Typography
                     variant="h6"
                     component="h3"

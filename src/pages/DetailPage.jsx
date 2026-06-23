@@ -55,6 +55,13 @@ export default function DetailPage() {
           <CardMedia component="img" image={item.image} alt={getTitle()} />
         )}
         <CardContent>
+          {item.severity && (
+            <Box sx={{ mb: 1.5 }}>
+              {item.severity === "urgent" && <span className="severity-badge urgent">Khẩn cấp</span>}
+              {item.severity === "warning" && <span className="severity-badge warning">Quan trọng</span>}
+              {item.severity === "normal" && <span className="severity-badge normal">Bình thường</span>}
+            </Box>
+          )}
           <Typography variant="h4" gutterBottom>
             {getTitle()}
           </Typography>

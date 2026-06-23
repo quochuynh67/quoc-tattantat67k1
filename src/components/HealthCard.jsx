@@ -3,9 +3,11 @@ import { Link as RouterLink } from "react-router-dom";
 import { Box, Typography } from "@mui/material";
 
 const SEVERITY = {
+  urgent:  { bg: "#fff5f5", border: "#fc8181", dot: "#e53e3e" },
   error:   { bg: "#fff5f5", border: "#fc8181", dot: "#e53e3e" },
   warning: { bg: "#fffbeb", border: "#f6ad55", dot: "#dd6b20" },
   info:    { bg: "#ebf8ff", border: "#63b3ed", dot: "#3182ce" },
+  normal:  { bg: "#ebf8ff", border: "#63b3ed", dot: "#3182ce" },
   success: { bg: "#f0fff4", border: "#68d391", dot: "#38a169" },
 };
 

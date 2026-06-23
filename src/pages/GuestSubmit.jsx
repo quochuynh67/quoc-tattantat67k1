@@ -14,6 +14,7 @@ import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutlineOutlined";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
+import MyLocationIcon from "@mui/icons-material/MyLocation";
 import {
   getSections, uploadGuestPostImage, uploadGuestPosterImage,
   uploadGuestHlsFolder, uploadGuestTimelineImage, supabase, getVlogCategories,
@@ -30,7 +31,7 @@ const formatDuration = (seconds) => {
   return `${m}:${s.toString().padStart(2, "0")}`;
 };
 
-const EMPTY_POST = { title: "", section_slug: "", excerpt: "", description: "", image_url: "" };
+const EMPTY_POST = { title: "", section_slug: "", excerpt: "", description: "", image_url: "", latitude: "", longitude: "", severity: "" };
 const EMPTY_VLOG = { title: "", subtitle: "", host: "", video_url: "", poster_url: "", content_item_id: "", duration_label: "", category_slug: "" };
 
 export default function GuestSubmit() {
@@ -45,6 +46,30 @@ export default function GuestSubmit() {
   const [postForm, setPostForm] = useState(EMPTY_POST);
   const [imageSourceMode, setImageSourceMode] = useState("url");
   const [pendingImageFile, setPendingImageFile] = useState(null);
+  const [geoLoading, setGeoLoading] = useState(false);
+
+  const handleGetLocation = () => {
+    if (!navigator.geolocation) {
+      alert("Trình duyệt không hỗ trợ định vị GPS.");
+      return;
+    }
+    setGeoLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setPostForm((prev) => ({
+          ...prev,
+          latitude: pos.coords.latitude.toFixed(6),
+          longitude: pos.coords.longitude.toFixed(6),
+        }));
+        setGeoLoading(false);
+      },
+      (err) => {
+        alert("Không lấy được vị trí: " + err.message);
+        setGeoLoading(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
 
   // Vlog form
   const [vlogForm, setVlogForm] = useState(EMPTY_VLOG);
@@ -97,6 +122,9 @@ export default function GuestSubmit() {
         image_url: finalImageUrl,
         uploader_phone: phone.trim(),
         published_date: new Date().toISOString().split("T")[0],
+        latitude: postForm.latitude !== "" && postForm.latitude !== null ? Number(postForm.latitude) : null,
+        longitude: postForm.longitude !== "" && postForm.longitude !== null ? Number(postForm.longitude) : null,
+        severity: postForm.severity || null,
       });
       if (dbErr) throw dbErr;
       setSuccess(true);
@@ -314,6 +342,79 @@ export default function GuestSubmit() {
                   </Box>
                 )}
               </Paper>
+
+              {/* Location for map display */}
+              <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, bgcolor: "action.hover" }}>
+                <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", mb: 0.5 }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                    📍 Vị trí trên bản đồ{" "}
+                    <Typography component="span" variant="caption" color="text.secondary">(tùy chọn)</Typography>
+                  </Typography>
+                  <Tooltip title="Tự động lấy tọa độ GPS từ thiết bị của bạn" arrow>
+                    <span>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        color="primary"
+                        startIcon={geoLoading ? <CircularProgress size={13} color="inherit" /> : <MyLocationIcon sx={{ fontSize: 15 }} />}
+                        onClick={handleGetLocation}
+                        disabled={geoLoading}
+                        sx={{ textTransform: "none", borderRadius: 1.5, fontSize: "0.75rem", py: 0.3, px: 1 }}
+                      >
+                        {geoLoading ? "Đang lấy..." : "Vị trí hiện tại"}
+                      </Button>
+                    </span>
+                  </Tooltip>
+                </Box>
+                <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1.5 }}>
+                  Nếu bài viết có liên quan đến một địa điểm cụ thể (cầu cứu, cảnh báo, sự kiện...), nhập tọa độ để hiển thị trên bản đồ.
+                </Typography>
+                <Box sx={{ display: "flex", gap: 1.5 }}>
+                  <TextField
+                    label="Vĩ độ (Latitude)"
+                    type="number"
+                    inputProps={{ step: 0.000001 }}
+                    placeholder="Ví dụ: 10.4597"
+                    value={postForm.latitude}
+                    onChange={(e) => setPostForm({ ...postForm, latitude: e.target.value })}
+                    fullWidth
+                    variant="outlined"
+                    size="small"
+                  />
+                  <TextField
+                    label="Kinh độ (Longitude)"
+                    type="number"
+                    inputProps={{ step: 0.000001 }}
+                    placeholder="Ví dụ: 105.1267"
+                    value={postForm.longitude}
+                    onChange={(e) => setPostForm({ ...postForm, longitude: e.target.value })}
+                    fullWidth
+                    variant="outlined"
+                    size="small"
+                  />
+                </Box>
+                {postForm.latitude && postForm.longitude && (
+                  <Typography variant="caption" sx={{ color: "success.main", mt: 0.5, display: "block" }}>
+                    ✓ Bài viết sẽ xuất hiện trên bản đồ tại ({Number(postForm.latitude).toFixed(5)}, {Number(postForm.longitude).toFixed(5)})
+                  </Typography>
+                )}
+              </Paper>
+
+              {/* Severity Option */}
+              <FormControl fullWidth variant="outlined">
+                <InputLabel id="guest-severity-label">Mức độ cần thiết (Urgency)</InputLabel>
+                <Select
+                  labelId="guest-severity-label"
+                  label="Mức độ cần thiết (Urgency)"
+                  value={postForm.severity || ""}
+                  onChange={(e) => setPostForm({ ...postForm, severity: e.target.value })}
+                >
+                  <MenuItem value=""><em>-- Không chọn (Bình thường) --</em></MenuItem>
+                  <MenuItem value="warning">Cần thiết / Quan trọng (VD: Cần cứu trợ, Tìm đồ...)</MenuItem>
+                  <MenuItem value="urgent">Khẩn cấp / Nguy hiểm (VD: Sạt lở, Bão lụt...)</MenuItem>
+                </Select>
+              </FormControl>
+
               <Divider />
               <Button variant="contained" size="large" onClick={handleSubmitPost} disabled={loading}
                 sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600, py: 1.5 }}
