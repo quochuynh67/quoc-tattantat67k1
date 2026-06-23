@@ -6,7 +6,7 @@ import MyLocationIcon from "@mui/icons-material/MyLocation";
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { getVlogReviews } from "../../lib/phuTanApi";
+import { getVlogReviews, getSectionItems } from "../../lib/phuTanApi";
 import { getVlogCategories } from "../../lib/supabaseClient";
 import { getCurrentLocation, isInsideIframe, openCurrentPageInNewTab } from "../../utils/geolocation";
 import { getUrlParams } from "../../utils/urlParams";
@@ -56,6 +56,39 @@ const createCategoryThumbIcon = (imageUrl, altText = "", catColor = "#82f3cf", c
     className: "",
     iconSize: [44, 44],
     iconAnchor: [22, 49],
+  });
+};
+
+// ── Post markers (tinh-thuong-men-thuong) ─────────────────────────────────
+const SEVERITY_STYLES = {
+  urgent:  { bg: "#ef4444", border: "#b91c1c", shadow: "rgba(239,68,68,0.7)",  icon: "🆘", pulse: true  },
+  warning: { bg: "#f59e0b", border: "#b45309", shadow: "rgba(245,158,11,0.6)", icon: "⚠️", pulse: false },
+  normal:  { bg: "#22c55e", border: "#15803d", shadow: "rgba(34,197,94,0.5)",  icon: "📌", pulse: false },
+};
+const SEVERITY_DEFAULT = { bg: "#60a5fa", border: "#2563eb", shadow: "rgba(96,165,250,0.5)", icon: "📌", pulse: false };
+
+const createPostMarkerIcon = (severity) => {
+  const s = SEVERITY_STYLES[severity] || SEVERITY_DEFAULT;
+  const pulseRing = s.pulse
+    ? `<div style="position:absolute;inset:-6px;border-radius:50%;border:3px solid ${s.bg};opacity:0.6;animation:post-marker-pulse 1.4s infinite ease-out;"></div>`
+    : "";
+  return L.divIcon({
+    html: `
+      <div style="position:relative;width:32px;height:32px;">
+        ${pulseRing}
+        <div style="
+          width:32px;height:32px;border-radius:50%;
+          background:${s.bg};
+          border:3px solid ${s.border};
+          box-shadow:0 2px 10px ${s.shadow};
+          display:flex;align-items:center;justify-content:center;
+          font-size:14px;line-height:1;
+          ${s.pulse ? 'animation:post-marker-flash 1.4s infinite;' : ''}
+        ">${s.icon}</div>
+      </div>`,
+    className: "",
+    iconSize:   [32, 32],
+    iconAnchor: [16, 32],
   });
 };
 
@@ -136,6 +169,7 @@ const LocationButton = ({ userLocation, onRequestLocation, isLoading, onError })
 const VlogsMapSection = () => {
   const navigate = useNavigate();
   const [vlogs, setVlogs] = useState([]);
+  const [mapPosts, setMapPosts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [mapCategorySlug, setMapCategorySlug] = useState("");
   const [mapCenter, setMapCenter] = useState(null);
@@ -151,6 +185,16 @@ const VlogsMapSection = () => {
     });
     getVlogCategories().then((data) => {
       if (isMounted) setCategories(data || []);
+    }).catch(() => {});
+
+    // Fetch posts from tinh-thuong-men-thuong and keep only those with coords
+    getSectionItems("tinh-thuong-men-thuong").then((data) => {
+      if (!isMounted) return;
+      const withCoords = (data || []).filter(
+        (p) => p.latitude != null && p.longitude != null &&
+               p.latitude !== "" && p.longitude !== ""
+      );
+      setMapPosts(withCoords);
     }).catch(() => {});
 
     const { lat, long } = getUrlParams();
@@ -205,11 +249,34 @@ const VlogsMapSection = () => {
       <Container maxWidth={false} className="section-container">
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
           <Typography variant="h4" component="h2" sx={{ fontFamily: "var(--font-display)", color: "primary.main" }}>
-            Khám phá Vlog trên bản đồ
+            Khám phá Vlog &amp; Bài viết trên bản đồ
           </Typography>
+          {mapPosts.length > 0 && (
+            <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", justifyContent: "flex-end" }}>
+              {["urgent","warning","normal"].filter(sv => mapPosts.some(p => p.severity === sv)).map(sv => {
+                const labels = { urgent: "Khẩn cấp", warning: "Quan trọng", normal: "Bình thường" };
+                const colors = { urgent: "#ef4444", warning: "#f59e0b", normal: "#22c55e" };
+                const count = mapPosts.filter(p => p.severity === sv).length;
+                return (
+                  <Box key={sv} sx={{ display: "flex", alignItems: "center", gap: 0.5,
+                    background: colors[sv] + "22", borderRadius: 8, px: 1, py: 0.3,
+                    border: `1px solid ${colors[sv]}55`, fontSize: "0.7rem", fontWeight: 700, color: colors[sv] }}>
+                    <span style={{ fontSize: 10 }}>●</span> {labels[sv]} ({count})
+                  </Box>
+                );
+              })}
+              {mapPosts.some(p => !p.severity) && (
+                <Box sx={{ display: "flex", alignItems: "center", gap: 0.5,
+                  background: "#60a5fa22", borderRadius: 8, px: 1, py: 0.3,
+                  border: "1px solid #60a5fa55", fontSize: "0.7rem", fontWeight: 700, color: "#60a5fa" }}>
+                  <span style={{ fontSize: 10 }}>●</span> Bài viết ({mapPosts.filter(p => !p.severity).length})
+                </Box>
+              )}
+            </Box>
+          )}
         </Box>
         <Typography variant="body1" gutterBottom sx={{ fontFamily: "var(--font-body)", color: "var(--color-text-subtle)", mb: 4 }}>
-          Kéo bản đồ để xem các địa điểm có vlog gần đó.
+          Kéo bản đồ để xem vlog và bài viết liên quan — bao gồm cả cảnh báo và cầu cứu khẩn cấp từ cộng đồng.
         </Typography>
 
         <Box sx={{
@@ -366,6 +433,49 @@ const VlogsMapSection = () => {
                   <Popup>{popupContent(loc.image || vlog.poster, loc.name || vlog.title, vlog.title)}</Popup>
                 </Marker>
               ));
+            })}
+
+            {/* ── Posts from tinh-thuong-men-thuong with coords ── */}
+            {mapPosts.map((post) => {
+              const sv = post.severity;
+              const svStyle = SEVERITY_STYLES[sv] || SEVERITY_DEFAULT;
+              const svLabel = sv === "urgent" ? "🆘 Khẩn cấp" : sv === "warning" ? "⚠️ Quan trọng" : sv === "normal" ? "📌 Bình thường" : "📌 Bài viết";
+              return (
+                <Marker
+                  key={`post-${post.id}`}
+                  position={[Number(post.latitude), Number(post.longitude)]}
+                  icon={createPostMarkerIcon(sv)}
+                  zIndexOffset={sv === "urgent" ? 1500 : sv === "warning" ? 1000 : 500}
+                >
+                  <Popup>
+                    <div className="vlog-map-popup" style={{ minWidth: 180 }}>
+                      {post.image && (
+                        <img src={post.image} alt={post.title} className="vlog-map-popup-img" />
+                      )}
+                      <span style={{
+                        display: "inline-block", margin: "6px 12px 2px",
+                        padding: "2px 8px", borderRadius: 10,
+                        fontSize: "0.65rem", fontWeight: 700,
+                        background: svStyle.bg, color: "#fff",
+                      }}>
+                        {svLabel}
+                      </span>
+                      <strong className="vlog-map-popup-name">{post.title}</strong>
+                      {post.excerpt && (
+                        <span className="vlog-map-popup-sub" style={{ WebkitLineClamp: 2 }}>{post.excerpt}</span>
+                      )}
+                      <button
+                        type="button"
+                        className="vlog-map-popup-btn"
+                        style={{ background: svStyle.bg }}
+                        onClick={(e) => { e.stopPropagation(); navigate(`/detail/${post.id}`); }}
+                      >
+                        ▶ Xem bài viết
+                      </button>
+                    </div>
+                  </Popup>
+                </Marker>
+              );
             })}
           </MapContainer>
         </Box>

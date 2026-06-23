@@ -38,9 +38,12 @@ const fromContentItem = (row: any) => ({
   address: row.address,
   rating: row.rating ? Number(row.rating) : undefined,
   severity: row.severity,
+  latitude: row.latitude != null ? Number(row.latitude) : null,
+  longitude: row.longitude != null ? Number(row.longitude) : null,
   date: row.published_date,
   metadata: row.metadata || {},
 });
+
 
 const HERO_LS_KEY = "phutan_hero_v1";
 const HERO_LS_TTL = 30 * 60 * 1000; // 30 min
