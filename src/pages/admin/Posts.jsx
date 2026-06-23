@@ -11,6 +11,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import MyLocationIcon from "@mui/icons-material/MyLocation";
+import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import CircularProgress from "@mui/material/CircularProgress";
 import { getPostsBySection, createPost, updatePost, deletePost, getSections, uploadPostImage, getVlogByPost, supabase } from "../../lib/supabaseClient";
 
@@ -19,7 +20,7 @@ export default function AdminPosts() {
   const [sections, setSections] = useState([]);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
-  
+
   // Fully mapped database model fields
   const [form, setForm] = useState({
     title: "",
@@ -84,7 +85,7 @@ export default function AdminPosts() {
       alert('Error fetching vlog: ' + e.message);
     }
   };
-// Removed video upload handler as posts no longer handle videos directly.
+  // Removed video upload handler as posts no longer handle videos directly.
   // The uploadPostVideo function and related state have been deprecated.
   // If video functionality is needed in the future, it can be reimplemented.
 
@@ -331,6 +332,20 @@ export default function AdminPosts() {
     return matchesSearch && matchesSection && matchesPhone;
   });
 
+  // ── Bài tinh-thuong-men-thuong quá 7 ngày cần nhắc admin ────────────────
+  const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+  const expiredTinhThuong = useMemo(() => {
+    const now = Date.now();
+    return posts.filter((post) => {
+      if (post.section_slug !== "tinh-thuong-men-thuong") return false;
+      if (post.hide) return false; // already hidden — no need to alert
+      const dateStr = post.published_date || post.created_at || post.updated_at;
+      if (!dateStr) return false;
+      const age = now - new Date(dateStr).getTime();
+      return age > ONE_WEEK_MS;
+    });
+  }, [posts]);
+
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" gutterBottom sx={{ fontWeight: 700, mb: 3 }}>
@@ -353,6 +368,18 @@ export default function AdminPosts() {
             </Box>
           }
           sx={{ textTransform: "none", fontWeight: 600 }}
+        />
+        <Tab
+          label={
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <WarningAmberIcon sx={{ fontSize: 16 }} />
+              Quá hạn (T/T Mế)
+              {expiredTinhThuong.length > 0 && (
+                <Chip label={expiredTinhThuong.length} size="small" color="error" sx={{ fontWeight: 700, height: 20, fontSize: "0.7rem" }} />
+              )}
+            </Box>
+          }
+          sx={{ textTransform: "none", fontWeight: 600, color: expiredTinhThuong.length > 0 ? "error.main" : "inherit" }}
         />
       </Tabs>
 
@@ -552,6 +579,114 @@ export default function AdminPosts() {
         </>
       )}
 
+      {/* TAB 2: Expired tinh-thuong-men-thuong posts */}
+      {mainTab === 2 && (
+        <>
+          <Alert
+            severity="error"
+            icon={<WarningAmberIcon />}
+            sx={{ mb: 3, borderRadius: 2, fontWeight: 600 }}
+          >
+            <strong>Cảnh báo:</strong> Các bài viết dưới đây thuộc chuyên mục <em>Tình Thương Mến Thương</em> đã đăng quá <strong>7 ngày</strong>.
+            Chúng sẽ không còn hiển thị trên bản đồ trang chủ. Hãy xém xét ẩn hoặc xóa để giữ thông tin luôn cập nhật.
+          </Alert>
+
+          {expiredTinhThuong.length === 0 ? (
+            <Alert severity="success" sx={{ borderRadius: 2 }}>
+              Không có bài viết nào quá hạn. Tuyệt vời!
+            </Alert>
+          ) : (
+            <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 3, overflow: "hidden" }}>
+              <Table>
+                <TableHead sx={{ bgcolor: "error.lighter" || "rgba(239,68,68,0.08)" }}>
+                  <TableRow>
+                    <TableCell sx={{ fontWeight: 700, color: "error.dark" }}>Tiêu đề</TableCell>
+                    <TableCell sx={{ fontWeight: 700, color: "error.dark" }}>Mức độ</TableCell>
+                    <TableCell sx={{ fontWeight: 700, color: "error.dark" }}>Ngày đăng</TableCell>
+                    <TableCell sx={{ fontWeight: 700, color: "error.dark" }}>Số ngày quá</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 700, color: "error.dark", pr: 3 }}>Thao tác</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {expiredTinhThuong.map((post) => {
+                    const dateStr = post.published_date || post.created_at || post.updated_at;
+                    const daysOld = Math.floor((Date.now() - new Date(dateStr).getTime()) / (24 * 60 * 60 * 1000));
+                    const svColors = { urgent: "#ef4444", warning: "#f59e0b", normal: "#22c55e" };
+                    const svLabels = { urgent: "Khẩn cấp", warning: "Quan trọng", normal: "Bình thường" };
+                    return (
+                      <TableRow
+                        key={post.id}
+                        sx={{
+                          bgcolor: post.severity === "urgent" ? "rgba(239,68,68,0.06)" : "inherit",
+                          "&:last-child td": { border: 0 },
+                        }}
+                      >
+                        <TableCell sx={{ fontWeight: 600, maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {post.title}
+                        </TableCell>
+                        <TableCell>
+                          {post.severity ? (
+                            <Chip
+                              label={svLabels[post.severity] || post.severity}
+                              size="small"
+                              sx={{ fontWeight: 700, bgcolor: svColors[post.severity] + "22", color: svColors[post.severity], border: `1px solid ${svColors[post.severity]}55` }}
+                            />
+                          ) : (
+                            <Typography variant="caption" color="text.secondary">—</Typography>
+                          )}
+                        </TableCell>
+                        <TableCell sx={{ whiteSpace: "nowrap", color: "text.secondary", fontSize: "0.82rem" }}>
+                          {dateStr ? new Date(dateStr).toLocaleDateString("vi-VN") : "—"}
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={`${daysOld} ngày`}
+                            size="small"
+                            color={daysOld > 14 ? "error" : "warning"}
+                            sx={{ fontWeight: 700 }}
+                          />
+                        </TableCell>
+                        <TableCell align="right" sx={{ pr: 3 }}>
+                          <Box sx={{ display: "flex", gap: 1, justifyContent: "flex-end" }}>
+                            <Tooltip title="Chỉnh sửa bài" arrow>
+                              <IconButton
+                                size="small" color="primary"
+                                onClick={() => { openEdit(post); setMainTab(0); }}
+                                sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2 }}
+                              >
+                                <EditIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Ẩn bài (giữ lại nội dung)" arrow>
+                              <IconButton
+                                size="small" color="warning"
+                                onClick={() => handleToggleHide(post)}
+                                sx={{ border: "1px solid", borderColor: "warning.main", borderRadius: 2 }}
+                              >
+                                <VisibilityOffIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Xóa vĩnh viễn" arrow>
+                              <IconButton
+                                size="small" color="error"
+                                onClick={() => handleDelete(post.id)}
+                                sx={{ border: "1px solid", borderColor: "error.main", borderRadius: 2 }}
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </>
+      )}
+
       {/* Guest Post Detail Dialog */}
       <Dialog open={!!guestDetailPost} onClose={() => setGuestDetailPost(null)} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 4 } }}>
         {guestDetailPost && (
@@ -614,7 +749,7 @@ export default function AdminPosts() {
             <Grid size={{ xs: 12, md: 7 }}>
               <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>
                 <TextField label="Tiêu đề" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} fullWidth variant="outlined" />
-                
+
                 <FormControl fullWidth variant="outlined" size="small">
                   <InputLabel id="section-select-label">Chuyên mục</InputLabel>
                   <Select
@@ -635,19 +770,19 @@ export default function AdminPosts() {
                 </FormControl>
 
                 <TextField label="Phân loại phụ (Category)" placeholder="Ví dụ: ẩm thực, giải trí..." value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} fullWidth variant="outlined" />
-                
+
                 <TextField label="Tóm tắt ngắn (Excerpt)" value={form.excerpt} onChange={(e) => setForm({ ...form, excerpt: e.target.value })} multiline rows={2} fullWidth variant="outlined" />
-                
+
                 <Box sx={{ mt: 1, mb: 1 }}>
                   <Typography variant="body2" sx={{ mb: 1, color: "text.secondary" }}>Mô tả chi tiết (Description)</Typography>
-                  <ReactQuill 
-                    theme="snow" 
-                    value={form.description || ""} 
-                    onChange={(value) => setForm({ ...form, description: value })} 
-                    style={{ height: "200px", marginBottom: "50px" }} 
+                  <ReactQuill
+                    theme="snow"
+                    value={form.description || ""}
+                    onChange={(value) => setForm({ ...form, description: value })}
+                    style={{ height: "200px", marginBottom: "50px" }}
                   />
                 </Box>
-                
+
                 <TextField
                   label="Nội dung đầy đủ (Content HTML)"
                   placeholder="<p>Nhập HTML trực tiếp tại đây...</p>"
@@ -747,14 +882,14 @@ export default function AdminPosts() {
 
                 <Grid container spacing={2}>
                   <Grid size={{ xs: 6 }}>
-                    <TextField 
-                      label="Đánh giá (Rating)" 
-                      type="number" 
-                      inputProps={{ step: 0.1, min: 0, max: 5 }} 
-                      value={form.rating} 
-                      onChange={(e) => setForm({ ...form, rating: e.target.value })} 
-                      fullWidth 
-                      variant="outlined" 
+                    <TextField
+                      label="Đánh giá (Rating)"
+                      type="number"
+                      inputProps={{ step: 0.1, min: 0, max: 5 }}
+                      value={form.rating}
+                      onChange={(e) => setForm({ ...form, rating: e.target.value })}
+                      fullWidth
+                      variant="outlined"
                     />
                   </Grid>
                   <Grid size={{ xs: 6 }}>
@@ -775,14 +910,14 @@ export default function AdminPosts() {
                   </Grid>
                 </Grid>
 
-                <TextField 
-                  label="Ngày đăng" 
-                  type="date" 
-                  InputLabelProps={{ shrink: true }} 
-                  value={form.published_date} 
-                  onChange={(e) => setForm({ ...form, published_date: e.target.value })} 
-                  fullWidth 
-                  variant="outlined" 
+                <TextField
+                  label="Ngày đăng"
+                  type="date"
+                  InputLabelProps={{ shrink: true }}
+                  value={form.published_date}
+                  onChange={(e) => setForm({ ...form, published_date: e.target.value })}
+                  fullWidth
+                  variant="outlined"
                 />
 
                 <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2, display: "flex", flexDirection: "column", gap: 0.5 }}>

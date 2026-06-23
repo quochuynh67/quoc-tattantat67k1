@@ -187,15 +187,25 @@ const VlogsMapSection = () => {
       if (isMounted) setCategories(data || []);
     }).catch(() => {});
 
-    // Fetch posts from tinh-thuong-men-thuong and keep only those with coords
+    // Fetch posts from tinh-thuong-men-thuong — only show on map if ≤ 7 days old AND has coords
     getSectionItems("tinh-thuong-men-thuong").then((data) => {
       if (!isMounted) return;
-      const withCoords = (data || []).filter(
-        (p) => p.latitude != null && p.longitude != null &&
-               p.latitude !== "" && p.longitude !== ""
-      );
+      const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+      const now = Date.now();
+      const withCoords = (data || []).filter((p) => {
+        if (p.latitude == null || p.longitude == null) return false;
+        if (p.latitude === "" || p.longitude === "") return false;
+        // Age check: use date field (published_date), fall back to nothing (show if no date)
+        const dateStr = p.date;
+        if (dateStr) {
+          const age = now - new Date(dateStr).getTime();
+          if (age > ONE_WEEK_MS) return false; // older than 7 days → hide from map
+        }
+        return true;
+      });
       setMapPosts(withCoords);
     }).catch(() => {});
+
 
     const { lat, long } = getUrlParams();
     if (lat && long) {
