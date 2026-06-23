@@ -1,7 +1,7 @@
 // src/contexts/VlogCacheContext.jsx
 // Persists vlog data + UI state so navigating to a detail page and
 // pressing back does not trigger a new API fetch or lose scroll position.
-import React, { createContext, useContext, useRef, useState } from "react";
+import React, { createContext, useCallback, useContext, useRef, useState } from "react";
 import { getVlogReviews, getSectionItems } from "../lib/phuTanApi";
 
 const VlogCacheContext = createContext(null);
@@ -41,13 +41,27 @@ export const VlogCacheProvider = ({ children }) => {
         getVlogReviews(),
         getSectionItems("news"),
       ]);
-      // Shuffle once on load — order is random each session but stable across navigation
       setVlogs(shuffleArray(vlogData));
       setNewsItems(newsData);
     } finally {
       setLoading(false);
     }
   };
+
+  const refreshVlogs = useCallback(async () => {
+    setVlogs(null);
+    setLoading(true);
+    try {
+      const [vlogData, newsData] = await Promise.all([
+        getVlogReviews(),
+        getSectionItems("news"),
+      ]);
+      setVlogs(shuffleArray(vlogData));
+      setNewsItems(newsData);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   return (
     <VlogCacheContext.Provider
@@ -56,6 +70,7 @@ export const VlogCacheProvider = ({ children }) => {
         newsItems,
         loading,
         ensureLoaded,
+        refreshVlogs,
         activeSpotByVlog,
         setActiveSpotByVlog,
         visibleVlogIdx,

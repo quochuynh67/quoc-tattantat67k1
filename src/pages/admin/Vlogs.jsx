@@ -9,6 +9,8 @@ import AddIcon from "@mui/icons-material/Add";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import { getVlogs, createVlog, updateVlog, deleteVlog, getSections, uploadVlogFile, uploadHlsFolder, uploadTimelineImage, moveGuestFileToMain, deleteGuestFile, supabase, getVlogCategories, createVlogCategory, updateVlogCategory, deleteVlogCategory } from "../../lib/supabaseClient";
+import { clearVlogCache } from "../../lib/phuTanApi";
+import { useVlogCache } from "../../contexts/VlogCacheContext";
 
 const formatDuration = (seconds) => {
   if (isNaN(seconds) || seconds <= 0) return "";
@@ -22,6 +24,7 @@ const formatDuration = (seconds) => {
 };
 
 export default function AdminVlogs() {
+  const { refreshVlogs } = useVlogCache();
   const [vlogs, setVlogs] = useState([]);
   const [posts, setPosts] = useState([]);
   const [open, setOpen] = useState(false);
@@ -379,6 +382,8 @@ export default function AdminVlogs() {
       } else {
         await createVlog(vlogPayload, sortedLocations);
       }
+      clearVlogCache();
+      refreshVlogs();
       resetForm();
       setOpen(false);
       fetchVlogs();
@@ -394,6 +399,8 @@ export default function AdminVlogs() {
     if (!window.confirm("Bạn có chắc chắn muốn xóa Vlog này cùng tất cả giai đoạn của nó?")) return;
     try {
       await deleteVlog(id);
+      clearVlogCache();
+      refreshVlogs();
       fetchVlogs();
     } catch (e) {
       console.error(e);

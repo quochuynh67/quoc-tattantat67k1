@@ -193,6 +193,9 @@ const normalizeVlog = (row: any) => ({
 
 let _vlogCache: { data: any[]; ts: number } | null = null;
 
+export function clearVlogCache() { _vlogCache = null; }
+export function isVlogCacheValid() { return _vlogCache !== null && Date.now() - _vlogCache.ts < CACHE_TTL; }
+
 export async function getVlogReviews() {
   if (!isSupabaseConfigured) return [];
 
