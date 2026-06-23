@@ -9,6 +9,7 @@ import BeautyHealthSection from "../components/sections/BeautyHealthSection";
 import AgricultureSection from "../components/sections/AgricultureSection";
 import HealthSection from "../components/sections/HealthSection";
 import VlogsMapSection from "../components/sections/VlogsMapSection";
+import ContributorsSection from "../components/sections/ContributorsSection";
 import NewsletterCTA from "../components/sections/NewsletterCTA";
 import AgentChatDashboard from "../components/AgentChatDashboard";
 import SEOIntroSection from "../components/sections/SEOIntroSection";
@@ -52,6 +53,7 @@ const Home = () => {
       })}
 
       <VlogsMapSection />
+      <ContributorsSection />
       <SEOIntroSection />
       <NewsletterCTA />
       {canChatWithAi && <AgentChatDashboard />}

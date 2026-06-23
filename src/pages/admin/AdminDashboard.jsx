@@ -11,12 +11,15 @@ import {
   ToggleButtonGroup,
   Divider,
   LinearProgress,
+  Tooltip as MuiTooltip,
 } from "@mui/material";
 import ArticleIcon from "@mui/icons-material/Article";
 import OndemandVideoIcon from "@mui/icons-material/OndemandVideo";
 import GridViewIcon from "@mui/icons-material/GridView";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutlined";
 import EditNoteIcon from "@mui/icons-material/EditNote";
+import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
+import PhoneIcon from "@mui/icons-material/Phone";
 import {
   BarChart,
   Bar,
@@ -29,7 +32,7 @@ import {
   Pie,
   Cell,
 } from "recharts";
-import { getSections, getPostsBySection, getVlogs } from "../../lib/supabaseClient";
+import { getSections, getPostsBySection, getVlogs, supabase } from "../../lib/supabaseClient";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -212,19 +215,63 @@ function ChartTooltip({ active, payload, label }) {
 
 // ─── main ─────────────────────────────────────────────────────────────────────
 
+async function fetchContributors() {
+  const [
+    { data: posts },
+    { data: postsGuest },
+    { data: vlogs },
+    { data: vlogsGuest },
+  ] = await Promise.all([
+    supabase.from("content_items").select("uploader_phone, created_at").not("uploader_phone", "is", null),
+    supabase.from("content_items_guest").select("uploader_phone, submitted_at").not("uploader_phone", "is", null),
+    supabase.from("vlog_reviews").select("uploader_phone, created_at").not("uploader_phone", "is", null),
+    supabase.from("vlog_reviews_guest").select("uploader_phone, submitted_at").not("uploader_phone", "is", null),
+  ]);
+
+  const map = {};
+  const ensure = (phone) => {
+    if (!map[phone]) map[phone] = { phone, posts: 0, postsGuest: 0, vlogs: 0, vlogsGuest: 0, lastDate: null };
+  };
+  const touch = (phone, dateStr) => {
+    const d = new Date(dateStr);
+    if (!map[phone].lastDate || d > map[phone].lastDate) map[phone].lastDate = d;
+  };
+
+  (posts || []).forEach(({ uploader_phone, created_at }) => {
+    ensure(uploader_phone); map[uploader_phone].posts++; touch(uploader_phone, created_at);
+  });
+  (postsGuest || []).forEach(({ uploader_phone, submitted_at }) => {
+    ensure(uploader_phone); map[uploader_phone].postsGuest++; touch(uploader_phone, submitted_at);
+  });
+  (vlogs || []).forEach(({ uploader_phone, created_at }) => {
+    ensure(uploader_phone); map[uploader_phone].vlogs++; touch(uploader_phone, created_at);
+  });
+  (vlogsGuest || []).forEach(({ uploader_phone, submitted_at }) => {
+    ensure(uploader_phone); map[uploader_phone].vlogsGuest++; touch(uploader_phone, submitted_at);
+  });
+
+  return Object.values(map).sort((a, b) => {
+    const totalA = a.posts + a.vlogs + a.postsGuest + a.vlogsGuest;
+    const totalB = b.posts + b.vlogs + b.postsGuest + b.vlogsGuest;
+    return totalB - totalA || (b.lastDate - a.lastDate);
+  });
+}
+
 export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [sections, setSections] = useState([]);
   const [allPosts, setAllPosts] = useState([]);
   const [allVlogs, setAllVlogs] = useState([]);
   const [period, setPeriod] = useState(null);
+  const [contributors, setContributors] = useState([]);
 
   useEffect(() => {
-    Promise.all([getSections(), getPostsBySection(""), getVlogs()])
-      .then(([sec, pst, vlg]) => {
+    Promise.all([getSections(), getPostsBySection(""), getVlogs(), fetchContributors()])
+      .then(([sec, pst, vlg, contrib]) => {
         setSections(sec || []);
         setAllPosts(pst || []);
         setAllVlogs(vlg || []);
+        setContributors(contrib);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -547,6 +594,130 @@ export default function AdminDashboard() {
           </Card>
         </Grid>
       </Grid>
+
+      {/* ── Contributors ────────────────────────────────────── */}
+      <Card
+        elevation={0}
+        sx={{ borderRadius: 3, border: "1px solid", borderColor: "divider", overflow: "hidden", mb: 3 }}
+      >
+        <CardContent sx={{ p: 3 }}>
+          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 2.5 }}>
+            <Box>
+              <Typography variant="subtitle1" fontWeight={700}>Người cống hiến</Typography>
+              <Typography variant="caption" color="text.secondary">
+                Số điện thoại đã gửi bài viết hoặc vlog
+              </Typography>
+            </Box>
+            <Box sx={{ width: 36, height: 36, borderRadius: 2, bgcolor: "#fef3c7", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <EmojiEventsIcon fontSize="small" sx={{ color: "#d97706" }} />
+            </Box>
+          </Box>
+
+          {contributors.length === 0 ? (
+            <Box sx={{ py: 5, display: "flex", alignItems: "center", justifyContent: "center", bgcolor: "action.hover", borderRadius: 2 }}>
+              <Typography variant="body2" color="text.disabled">Chưa có ai cống hiến</Typography>
+            </Box>
+          ) : (
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 0 }}>
+              {/* Header row */}
+              <Box sx={{ display: "grid", gridTemplateColumns: "32px 1fr 72px 72px 90px 80px", gap: 1, px: 1, pb: 1, alignItems: "center" }}>
+                {["#", "Số điện thoại", "Bài viết", "Vlog", "Chờ duyệt", "Lần cuối"].map((h) => (
+                  <Typography key={h} variant="caption" color="text.disabled" fontWeight={700} sx={{ fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: 0.5 }}>
+                    {h}
+                  </Typography>
+                ))}
+              </Box>
+              <Divider />
+
+              {contributors.map((c, idx) => {
+                const total = c.posts + c.vlogs + c.postsGuest + c.vlogsGuest;
+                const pending = c.postsGuest + c.vlogsGuest;
+                const rankColor = idx === 0 ? "#f59e0b" : idx === 1 ? "#94a3b8" : idx === 2 ? "#b45309" : null;
+
+                return (
+                  <React.Fragment key={c.phone}>
+                    <Box
+                      sx={{
+                        display: "grid",
+                        gridTemplateColumns: "32px 1fr 72px 72px 90px 80px",
+                        gap: 1,
+                        px: 1,
+                        py: 1.25,
+                        alignItems: "center",
+                        borderRadius: 2,
+                        mx: -1,
+                        transition: "background 0.12s",
+                        "&:hover": { bgcolor: "#f8fafc" },
+                      }}
+                    >
+                      {/* Rank */}
+                      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        {rankColor ? (
+                          <EmojiEventsIcon sx={{ fontSize: 18, color: rankColor }} />
+                        ) : (
+                          <Typography variant="caption" color="text.disabled" fontWeight={700}>{idx + 1}</Typography>
+                        )}
+                      </Box>
+
+                      {/* Phone */}
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 1, minWidth: 0 }}>
+                        <PhoneIcon sx={{ fontSize: 14, color: "#94a3b8", flexShrink: 0 }} />
+                        <Box sx={{ minWidth: 0 }}>
+                          <Typography variant="body2" fontWeight={700} noWrap sx={{ fontFamily: "monospace", fontSize: "0.82rem" }}>
+                            {c.phone}
+                          </Typography>
+                          <Typography variant="caption" color="text.disabled">
+                            {total} đóng góp
+                          </Typography>
+                        </Box>
+                      </Box>
+
+                      {/* Posts approved */}
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                        {c.posts > 0 ? (
+                          <Chip label={c.posts} size="small" sx={{ bgcolor: "#dbeafe", color: "#1d4ed8", fontWeight: 800, fontSize: "0.72rem", height: 22 }} />
+                        ) : (
+                          <Typography variant="caption" color="text.disabled">—</Typography>
+                        )}
+                      </Box>
+
+                      {/* Vlogs approved */}
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                        {c.vlogs > 0 ? (
+                          <Chip label={c.vlogs} size="small" sx={{ bgcolor: "#ede9fe", color: "#7c3aed", fontWeight: 800, fontSize: "0.72rem", height: 22 }} />
+                        ) : (
+                          <Typography variant="caption" color="text.disabled">—</Typography>
+                        )}
+                      </Box>
+
+                      {/* Pending (guest) */}
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, flexWrap: "wrap" }}>
+                        {pending > 0 ? (
+                          <MuiTooltip title={`${c.postsGuest} bài · ${c.vlogsGuest} vlog chờ duyệt`} arrow>
+                            <Chip
+                              label={`${pending} chờ duyệt`}
+                              size="small"
+                              sx={{ bgcolor: "#fef3c7", color: "#92400e", fontWeight: 700, fontSize: "0.68rem", height: 22, cursor: "default" }}
+                            />
+                          </MuiTooltip>
+                        ) : (
+                          <Typography variant="caption" color="text.disabled">—</Typography>
+                        )}
+                      </Box>
+
+                      {/* Last date */}
+                      <Typography variant="caption" color="text.secondary" noWrap>
+                        {c.lastDate ? formatDate(c.lastDate) : "—"}
+                      </Typography>
+                    </Box>
+                    {idx < contributors.length - 1 && <Divider />}
+                  </React.Fragment>
+                );
+              })}
+            </Box>
+          )}
+        </CardContent>
+      </Card>
 
       {/* ── Recent vlogs ────────────────────────────────────── */}
       <Card

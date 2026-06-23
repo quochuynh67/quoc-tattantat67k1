@@ -1,8 +1,8 @@
 // src/pages/admin/Posts.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
-import { Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Grid, FormControl, InputLabel, Select, MenuItem, FormControlLabel, Switch, List, ListItem, ListItemText, Tooltip, Chip, Alert, Tabs, Tab } from "@mui/material";
+import { Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Grid, FormControl, InputLabel, Select, MenuItem, FormControlLabel, Switch, List, ListItem, ListItemText, Tooltip, Chip, Alert, Tabs, Tab, Autocomplete } from "@mui/material";
 import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -121,6 +121,7 @@ export default function AdminPosts() {
   // Filtering states
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSection, setSelectedSection] = useState("all");
+  const [filterPhone, setFilterPhone] = useState(null);
 
   const fetchPosts = async () => {
     try {
@@ -278,16 +279,19 @@ export default function AdminPosts() {
     }
   };
 
-  // Client-side search and category filtering
+  const phoneOptions = useMemo(
+    () => [...new Set(posts.map((p) => p.uploader_phone).filter(Boolean))].sort(),
+    [posts]
+  );
+
   const filteredPosts = posts.filter((post) => {
-    const matchesSearch = 
-      (post.title || "").toLowerCase().includes(searchTerm.toLowerCase()) || 
+    const matchesSearch =
+      (post.title || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
       (post.content || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
       (post.excerpt || "").toLowerCase().includes(searchTerm.toLowerCase());
-    
     const matchesSection = selectedSection === "all" || post.section_slug === selectedSection;
-    
-    return matchesSearch && matchesSection;
+    const matchesPhone = filterPhone ? post.uploader_phone === filterPhone : true;
+    return matchesSearch && matchesSection && matchesPhone;
   });
 
   return (
@@ -329,21 +333,26 @@ export default function AdminPosts() {
               onChange={(e) => setSearchTerm(e.target.value)}
               sx={{ flexGrow: 1, minWidth: "220px" }}
             />
-            <FormControl fullWidth size="small" variant="outlined" sx={{ minWidth: "200px" }}>
-              <InputLabel id="filter-section-label">Lọc theo Chuyên mục</InputLabel>
-              <Select
-                labelId="filter-section-label"
-                label="Lọc theo Chuyên mục"
-                value={selectedSection}
-                onChange={(e) => setSelectedSection(e.target.value)}
-                displayEmpty
-              >
-                <MenuItem value="all"><em>Tất cả Chuyên mục</em></MenuItem>
-                {sections.map((sec) => (
-                  <MenuItem key={sec.id} value={sec.slug}>{sec.title}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            <Autocomplete
+              options={sections}
+              getOptionLabel={(sec) => sec.title || ""}
+              isOptionEqualToValue={(opt, val) => opt.slug === val.slug}
+              value={sections.find((s) => s.slug === selectedSection) || null}
+              onChange={(_, newVal) => setSelectedSection(newVal ? newVal.slug : "all")}
+              renderInput={(params) => (
+                <TextField {...params} label="Lọc theo Chuyên mục" size="small" variant="outlined" placeholder="Tìm chuyên mục..." />
+              )}
+              sx={{ minWidth: "200px" }}
+            />
+            <Autocomplete
+              options={phoneOptions}
+              value={filterPhone}
+              onChange={(_, newVal) => setFilterPhone(newVal)}
+              renderInput={(params) => (
+                <TextField {...params} label="Lọc theo SĐT" size="small" variant="outlined" placeholder="Nhập số điện thoại..." />
+              )}
+              sx={{ minWidth: "180px" }}
+            />
             <Button
               variant="contained"
               onClick={() => { setEditing(null); resetForm(); setOpen(true); }}

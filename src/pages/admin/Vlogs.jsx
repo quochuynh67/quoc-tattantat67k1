@@ -1,5 +1,5 @@
 // src/pages/admin/Vlogs.jsx
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useMemo } from "react";
 import { Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Grid, FormControlLabel, Switch, Divider, Card, CardContent, FormControl, InputLabel, Select, MenuItem, Chip, Alert, Tabs, Tab, Autocomplete, Tooltip } from "@mui/material";
 import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
@@ -172,6 +172,7 @@ export default function AdminVlogs() {
   // Filtering states
   const [searchTerm, setSearchTerm] = useState("");
   const [filterPostId, setFilterPostId] = useState("");
+  const [filterPhone, setFilterPhone] = useState(null);
 
   const fetchVlogs = async () => {
     try {
@@ -407,13 +408,18 @@ export default function AdminVlogs() {
     }
   };
 
-  // Filtered Vlogs List
+  const phoneOptions = useMemo(
+    () => [...new Set(vlogs.map((v) => v.uploader_phone).filter(Boolean))].sort(),
+    [vlogs]
+  );
+
   const filteredVlogs = vlogs.filter((vlog) => {
     const matchesSearch = (vlog.title || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
                           (vlog.subtitle || "").toLowerCase().includes(searchTerm.toLowerCase());
     const matchesPost = filterPostId ? vlog.content_item_id === filterPostId : true;
     const matchesCategory = filterCategorySlug ? vlog.category_slug === filterCategorySlug : true;
-    return matchesSearch && matchesPost && matchesCategory;
+    const matchesPhone = filterPhone ? vlog.uploader_phone === filterPhone : true;
+    return matchesSearch && matchesPost && matchesCategory && matchesPhone;
   });
 
   // Category dialog helpers
@@ -845,43 +851,48 @@ export default function AdminVlogs() {
           onChange={(e) => setSearchTerm(e.target.value)}
           sx={{ flexGrow: 1, minWidth: "220px" }}
         />
-        
-        <FormControl size="small" sx={{ minWidth: "180px" }}>
-          <InputLabel id="filter-post-label">Lọc theo bài viết</InputLabel>
-          <Select
-            labelId="filter-post-label"
-            label="Lọc theo bài viết"
-            value={filterPostId}
-            onChange={(e) => setFilterPostId(e.target.value)}
-          >
-            <MenuItem value=""><em>Tất cả</em></MenuItem>
-            {posts.map((p) => (
-              <MenuItem key={p.id} value={p.id}>
-                {p.title}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
 
-        <FormControl size="small" sx={{ minWidth: "160px" }}>
-          <InputLabel id="filter-cat-label">Lọc theo danh mục</InputLabel>
-          <Select
-            labelId="filter-cat-label"
-            label="Lọc theo danh mục"
-            value={filterCategorySlug}
-            onChange={(e) => setFilterCategorySlug(e.target.value)}
-          >
-            <MenuItem value=""><em>Tất cả</em></MenuItem>
-            {categories.map((cat) => (
-              <MenuItem key={cat.slug} value={cat.slug}>
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  <Box sx={{ width: 12, height: 12, borderRadius: "50%", bgcolor: cat.color, flexShrink: 0 }} />
-                  {cat.name}
-                </Box>
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+        <Autocomplete
+          options={posts}
+          getOptionLabel={(p) => p.title || ""}
+          isOptionEqualToValue={(opt, val) => opt.id === val.id}
+          value={posts.find((p) => p.id === filterPostId) || null}
+          onChange={(_, newVal) => setFilterPostId(newVal ? newVal.id : "")}
+          renderInput={(params) => (
+            <TextField {...params} label="Lọc theo bài viết" size="small" variant="outlined" placeholder="Tìm bài viết..." />
+          )}
+          sx={{ minWidth: "200px" }}
+        />
+
+        <Autocomplete
+          options={categories}
+          getOptionLabel={(cat) => cat.name || ""}
+          isOptionEqualToValue={(opt, val) => opt.slug === val.slug}
+          value={categories.find((c) => c.slug === filterCategorySlug) || null}
+          onChange={(_, newVal) => setFilterCategorySlug(newVal ? newVal.slug : "")}
+          renderOption={(props, cat) => (
+            <li {...props} key={cat.slug}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <Box sx={{ width: 12, height: 12, borderRadius: "50%", bgcolor: cat.color, flexShrink: 0 }} />
+                {cat.name}
+              </Box>
+            </li>
+          )}
+          renderInput={(params) => (
+            <TextField {...params} label="Lọc theo danh mục" size="small" variant="outlined" placeholder="Tìm danh mục..." />
+          )}
+          sx={{ minWidth: "180px" }}
+        />
+
+        <Autocomplete
+          options={phoneOptions}
+          value={filterPhone}
+          onChange={(_, newVal) => setFilterPhone(newVal)}
+          renderInput={(params) => (
+            <TextField {...params} label="Lọc theo SĐT" size="small" variant="outlined" placeholder="Nhập số điện thoại..." />
+          )}
+          sx={{ minWidth: "180px" }}
+        />
 
         <Button
           variant="contained"
