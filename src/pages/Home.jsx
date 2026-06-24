@@ -2,6 +2,7 @@
 import React from "react";
 import { Helmet } from "react-helmet-async";
 import HeroSection from "../components/sections/HeroSection";
+import HeroAskSection from "../components/sections/HeroAskSection";
 import NewsSection from "../components/sections/NewsSection";
 import PlacesSection from "../components/sections/PlacesSection";
 import FoodSection from "../components/sections/FoodSection";
@@ -44,6 +45,7 @@ const Home = () => {
       </Helmet>
 
       <HeroSection />
+      <HeroAskSection />
 
       {sectionsToRender.map(({ slug, title }) => {
         const Specific = SPECIFIC_COMPONENTS[slug];

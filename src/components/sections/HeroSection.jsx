@@ -25,7 +25,7 @@ const HeroSection = () => {
         position: 'relative',
         bgcolor: 'primary.dark',
         color: '#fff',
-        mb: 4,
+        mb: 0,
         minHeight: '40vh',
         display: 'flex',
         alignItems: 'center',
@@ -54,7 +54,7 @@ const HeroSection = () => {
       sx={{
         position: 'relative',
         color: '#fff',
-        mb: 4,
+        mb: 0,
         minHeight: '60vh',
         display: 'flex',
         alignItems: 'center',

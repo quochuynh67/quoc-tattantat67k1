@@ -21,6 +21,7 @@ const SECTION_TOPICS: Record<string, string> = {
   beautyHealth: "dịch vụ làm đẹp, spa, chăm sóc sức khỏe tại Phú Tân",
   agriculture: "nông nghiệp, canh tác, mùa vụ, phát triển nông thôn tại Phú Tân",
   health: "y tế cộng đồng, cảnh báo dịch bệnh, biện pháp phòng ngừa tại Phú Tân",
+  general: "mọi thông tin về huyện Phú Tân, tỉnh An Giang bao gồm địa lý, lịch sử, văn hóa, ẩm thực, dịch vụ vận chuyển (chành xe), địa điểm, sự kiện, đời sống và con người địa phương",
 };
 
 const GEMINI_MODELS = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-pro"];
