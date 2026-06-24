@@ -32,7 +32,7 @@ const BeautyHealthSection = () => {
   return (
     <section className="content-section">
       <Container maxWidth={false} className="section-container">
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+        <Box display="flex" alignItems="center" flexWrap="wrap" gap={2} mb={4}>
           <Typography
             variant="h4"
             component="h2"

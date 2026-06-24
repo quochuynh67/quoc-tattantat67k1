@@ -478,7 +478,7 @@ const VlogsMapSection = () => {
                         type="button"
                         className="vlog-map-popup-btn"
                         style={{ background: svStyle.bg }}
-                        onClick={(e) => { e.stopPropagation(); navigate(`/detail/${post.id}`); }}
+                        onClick={(e) => { e.stopPropagation(); navigate(`/post-detail/${post.id}`); }}
                       >
                         ▶ Xem bài viết
                       </button>

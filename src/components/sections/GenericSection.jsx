@@ -25,7 +25,7 @@ export default function GenericSection({ slug, title }) {
   return (
     <section className="content-section">
       <Container maxWidth={false} className="section-container">
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+        <Box display="flex" alignItems="center" flexWrap="wrap" gap={2} mb={5}>
           <Typography
             variant="h4"
             component="h2"

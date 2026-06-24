@@ -32,16 +32,18 @@ const HealthSection = () => {
   return (
     <section className="content-section">
       <Container maxWidth={false} className="section-container">
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
-          <Typography
-            variant="h4"
-            component="h2"
-            sx={{ fontFamily: "var(--font-display)", color: "primary.main" }}
-          >
-            Sức khỏe & Y tế
-          </Typography>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
+          <Box display="flex" alignItems="center" flexWrap="wrap" gap={2}>
+            <Typography
+              variant="h4"
+              component="h2"
+              sx={{ fontFamily: "var(--font-display)", color: "primary.main" }}
+            >
+              Cảnh báo dịch bệnh
+            </Typography>
             {canChatWithAi && <AgentChat section="health" variant="inline" />}
+          </Box>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
             {totalItems > 4 && (
               <Button component={RouterLink} to="/health" className="section-more-button">
                 Xem thêm

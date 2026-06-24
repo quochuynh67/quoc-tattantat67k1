@@ -14,6 +14,10 @@ import {
   Snackbar,
   Alert as MuiAlert,
   Typography,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { getSectionItems, getSectionItemsSync } from "../lib/phuTanApi";
@@ -76,6 +80,7 @@ const SectionList = ({ sectionKey }) => {
   const [loading, setLoading] = useState(() => getSectionItemsSync(key) === null);
   const [toastOpen, setToastOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  const [sortBy, setSortBy] = useState("newest");
 
   useEffect(() => {
     if (!section) return;
@@ -90,7 +95,31 @@ const SectionList = ({ sectionKey }) => {
     };
   }, [key, section]);
 
-  const pageSection = useMemo(() => (section ? { ...section, items } : section), [section, items]);
+  const pageSection = useMemo(() => {
+    if (!section) return section;
+    const sortedItems = [...items].sort((a, b) => {
+      if (sortBy === "newest") {
+        return new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime();
+      }
+      if (sortBy === "oldest") {
+        return new Date(a.date || 0).getTime() - new Date(b.date || 0).getTime();
+      }
+      if (sortBy === "views_desc") {
+        return (b.views || 0) - (a.views || 0);
+      }
+      if (sortBy === "rating_desc") {
+        return (b.rating || 0) - (a.rating || 0);
+      }
+      if (sortBy === "severity_desc") {
+        const sevOrder = { urgent: 3, warning: 2, normal: 1 };
+        const sevA = sevOrder[a.severity] || 0;
+        const sevB = sevOrder[b.severity] || 0;
+        return sevB - sevA;
+      }
+      return 0;
+    });
+    return { ...section, items: sortedItems };
+  }, [section, items, sortBy]);
 
   if (!pageSection) {
     return (
@@ -111,12 +140,27 @@ const SectionList = ({ sectionKey }) => {
         <Button onClick={() => navigate(-1)} startIcon={<ArrowBackIcon />} className="list-back-link">
           Trang chủ
         </Button>
-        <Typography variant="h3" component="h1" className="list-page-title">
+        <Typography variant="h3" component="h1" className="list-page-title" sx={{ mb: pageSection.description ? undefined : 4 }}>
           {pageSection.title}
         </Typography>
         <Typography className="list-page-description">
           {pageSection.description}
         </Typography>
+
+        {!loading && items.length > 0 && (
+          <Box sx={{ mb: 3, display: "flex", justifyContent: "flex-end" }}>
+            <FormControl size="small" variant="outlined" sx={{ minWidth: 200, bgcolor: "background.paper", borderRadius: 1 }}>
+              <InputLabel>Sắp xếp theo</InputLabel>
+              <Select value={sortBy} onChange={(e) => setSortBy(e.target.value)} label="Sắp xếp theo">
+                <MenuItem value="newest">Mới nhất</MenuItem>
+                <MenuItem value="oldest">Cũ nhất</MenuItem>
+                <MenuItem value="views_desc">Lượt xem cao</MenuItem>
+                <MenuItem value="rating_desc">Đánh giá cao</MenuItem>
+                <MenuItem value="severity_desc">Mức độ khẩn cấp</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
+        )}
 
         {loading ? (
           pageSection.kind === "health"

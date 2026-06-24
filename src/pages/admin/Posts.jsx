@@ -154,6 +154,7 @@ export default function AdminPosts() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSection, setSelectedSection] = useState("all");
   const [filterPhone, setFilterPhone] = useState(null);
+  const [sortBy, setSortBy] = useState("newest");
 
   const fetchPosts = async () => {
     try {
@@ -240,6 +241,16 @@ export default function AdminPosts() {
     if (!form.title || !form.section_slug) {
       alert("Vui lòng điền tiêu đề và chọn chuyên mục!");
       return;
+    }
+
+    if (form.is_featured) {
+      const featuredCount = posts.filter(
+        (p) => p.section_slug === form.section_slug && p.is_featured && p.id !== editing
+      ).length;
+      if (featuredCount >= 4) {
+        alert("Chuyên mục này đã có đủ 4 bài viết đại diện (featured). Vui lòng bỏ chọn bài viết khác trong chuyên mục này trước khi đặt bài này làm đại diện.");
+        return;
+      }
     }
 
     let finalImageUrl = form.image_url;
@@ -332,6 +343,32 @@ export default function AdminPosts() {
     return matchesSearch && matchesSection && matchesPhone;
   });
 
+  const sortedPosts = useMemo(() => {
+    const arr = [...filteredPosts];
+    arr.sort((a, b) => {
+      if (sortBy === "newest") {
+        return new Date(b.published_date || b.created_at || 0).getTime() - new Date(a.published_date || a.created_at || 0).getTime();
+      }
+      if (sortBy === "oldest") {
+        return new Date(a.published_date || a.created_at || 0).getTime() - new Date(b.published_date || b.created_at || 0).getTime();
+      }
+      if (sortBy === "views_desc") {
+        return (b.views || b.view_count || 0) - (a.views || a.view_count || 0);
+      }
+      if (sortBy === "rating_desc") {
+        return (b.rating || 0) - (a.rating || 0);
+      }
+      if (sortBy === "severity_desc") {
+        const sevOrder = { urgent: 3, warning: 2, normal: 1 };
+        const sevA = sevOrder[a.severity] || 0;
+        const sevB = sevOrder[b.severity] || 0;
+        return sevB - sevA;
+      }
+      return 0;
+    });
+    return arr;
+  }, [filteredPosts, sortBy]);
+
   // ── Bài tinh-thuong-men-thuong quá 7 ngày cần nhắc admin ────────────────
   const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
   const expiredTinhThuong = useMemo(() => {
@@ -417,6 +454,16 @@ export default function AdminPosts() {
               )}
               sx={{ minWidth: "180px" }}
             />
+            <FormControl size="small" variant="outlined" sx={{ minWidth: "180px" }}>
+              <InputLabel>Sắp xếp theo</InputLabel>
+              <Select value={sortBy} onChange={(e) => setSortBy(e.target.value)} label="Sắp xếp theo">
+                <MenuItem value="newest">Mới nhất</MenuItem>
+                <MenuItem value="oldest">Cũ nhất</MenuItem>
+                <MenuItem value="views_desc">Lượt view cao</MenuItem>
+                <MenuItem value="rating_desc">Đánh giá cao</MenuItem>
+                <MenuItem value="severity_desc">Mức độ khẩn cấp</MenuItem>
+              </Select>
+            </FormControl>
             <Button
               variant="contained"
               onClick={() => { setEditing(null); resetForm(); setOpen(true); }}
@@ -440,14 +487,14 @@ export default function AdminPosts() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {filteredPosts.length === 0 ? (
+                {sortedPosts.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} align="center" sx={{ py: 6, color: "text.secondary" }}>
                       Không tìm thấy bài viết nào phù hợp.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredPosts.map((post) => (
+                  sortedPosts.map((post) => (
                     <TableRow
                       key={post.id}
                       hover

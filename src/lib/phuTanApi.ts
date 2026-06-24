@@ -41,6 +41,7 @@ const fromContentItem = (row: any) => ({
   latitude: row.latitude != null ? Number(row.latitude) : null,
   longitude: row.longitude != null ? Number(row.longitude) : null,
   date: row.published_date,
+  views: row.views || row.view_count || 0,
   metadata: row.metadata || {},
 });
 
@@ -146,6 +147,7 @@ export async function getSectionItems(section: string, limit?: number) {
     .select("*")
     .eq("section_slug", section)
     .neq("hide", true)
+    .order("is_featured", { ascending: false })
     .order("display_order", { ascending: true })
     .order("published_date", { ascending: false });
 
