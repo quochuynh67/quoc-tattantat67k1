@@ -3,6 +3,7 @@ import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { Link as RouterLink, useNavigate, useLocation } from "react-router-dom";
 import { Container, Button, Card, CardActionArea, CardMedia, CardContent, Typography, Box, Snackbar, Alert } from "@mui/material";
 import MyLocationIcon from "@mui/icons-material/MyLocation";
+import ShareIcon from "@mui/icons-material/Share";
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -10,6 +11,7 @@ import { getVlogReviews, getSectionItems } from "../../lib/phuTanApi";
 import { getVlogCategories } from "../../lib/supabaseClient";
 import { getCurrentLocation, isInsideIframe, openCurrentPageInNewTab } from "../../utils/geolocation";
 import { getUrlParams } from "../../utils/urlParams";
+import { useGlobalToast } from "../../contexts/ToastContext";
 
 const getDistance = (lat1, lon1, lat2, lon2) => {
   const R = 6371;
@@ -168,6 +170,7 @@ const LocationButton = ({ userLocation, onRequestLocation, isLoading, onError })
 
 const VlogsMapSection = () => {
   const navigate = useNavigate();
+  const toast = useGlobalToast();
   const [vlogs, setVlogs] = useState([]);
   const [mapPosts, setMapPosts] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -231,6 +234,13 @@ const VlogsMapSection = () => {
   const handleBoundsChange = useCallback((center) => {
     setMapCenter(center);
   }, []);
+
+  const handleShareMarker = useCallback((vlogId, lat, long) => {
+    const shareUrl = `${window.location.origin}/vlogs?v=${vlogId}&map=1&lat=${lat}&long=${long}`;
+    navigator.clipboard.writeText(shareUrl)
+      .then(() => toast.show("Đã copy link vị trí Vlog", "success"))
+      .catch(() => toast.show("Không thể copy link", "error"));
+  }, [toast]);
 
   const sortedVlogs = useMemo(() => {
     if (!mapCenter) return vlogs;
@@ -397,7 +407,7 @@ const VlogsMapSection = () => {
               const catColor = vlog.category?.color || "#82f3cf";
               const catSlug = vlog.categorySlug || "";
 
-              const popupContent = (img, title, sub) => (
+              const popupContent = (img, title, sub, lat, long) => (
                 <div className="vlog-map-popup">
                   <img src={img} alt={title} className="vlog-map-popup-img" />
                   {vlog.category && (
@@ -412,13 +422,26 @@ const VlogsMapSection = () => {
                   )}
                   <strong className="vlog-map-popup-name">{title}</strong>
                   <span className="vlog-map-popup-sub">{sub}</span>
-                  <button
-                    type="button"
-                    className="vlog-map-popup-btn"
-                    onClick={(e) => { e.stopPropagation(); navigate(`/post-detail/${vlog.newsId}`); }}
-                  >
-                    ▶ Xem Vlog
-                  </button>
+                  <div style={{ display: "flex", gap: "4px", marginTop: "4px" }}>
+                    <button
+                      type="button"
+                      className="vlog-map-popup-btn"
+                      onClick={(e) => { e.stopPropagation(); navigate(`/post-detail/${vlog.newsId}`); }}
+                      style={{ flex: 1 }}
+                    >
+                      ▶ Xem Vlog
+                    </button>
+                    {lat && long && (
+                      <button
+                        type="button"
+                        className="vlog-map-popup-btn"
+                        onClick={(e) => { e.stopPropagation(); handleShareMarker(vlog.id, lat, long); }}
+                        style={{ background: "#2c2f3f", flex: 1, padding: "6px 4px" }}
+                      >
+                        <ShareIcon sx={{ fontSize: 14, mr: 0.5, verticalAlign: "middle" }} /> Chia sẻ
+                      </button>
+                    )}
+                  </div>
                 </div>
               );
 
@@ -440,7 +463,7 @@ const VlogsMapSection = () => {
                   position={[loc.latitude, loc.longitude]}
                   icon={createCategoryThumbIcon(loc.image || vlog.poster, loc.name || vlog.title, catColor, catSlug)}
                 >
-                  <Popup>{popupContent(loc.image || vlog.poster, loc.name || vlog.title, vlog.title)}</Popup>
+                  <Popup>{popupContent(loc.image || vlog.poster, loc.name || vlog.title, vlog.title, loc.latitude, loc.longitude)}</Popup>
                 </Marker>
               ));
             })}

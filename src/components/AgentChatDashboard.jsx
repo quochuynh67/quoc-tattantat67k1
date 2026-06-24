@@ -325,7 +325,7 @@ export default function AgentChatDashboard() {
             <Avatar name={agent.name} color="rgba(255,255,255,0.22)" size={30} />
             <Box>
               <Typography sx={{ fontWeight: 800, fontSize: "0.8rem", lineHeight: 1.1, color: "#fff !important" }}>
-                Chat với {agent.name}
+                Chat với AI: {agent.name}
               </Typography>
               <Typography sx={{ fontSize: "0.66rem", opacity: 0.88, color: "#fff !important" }}>
                 {chatOpen ? "Đang chat" : "Hỏi mình nha~"}
@@ -336,7 +336,7 @@ export default function AgentChatDashboard() {
           <>
             <SmartToyIcon sx={{ fontSize: 22, color: "#fff" }} />
             <Typography sx={{ fontWeight: 800, fontSize: "0.82rem", color: "#fff !important" }}>
-              Chat với nông dân địa phương
+              Chat với nông dân AI địa phương
             </Typography>
           </>
         )}

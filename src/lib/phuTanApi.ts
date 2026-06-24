@@ -227,6 +227,20 @@ export async function getVlogReview(contentItemUuid: string) {
   ) ?? null;
 }
 
+/** Fetch a single vlog directly by its legacy_id (UUID) without loading the full list. */
+export async function getVlogById(id: string) {
+  if (!isSupabaseConfigured) return null;
+  const { data, error } = await supabase
+    .from("vlog_reviews")
+    .select("*, vlog_locations(*), vlog_categories(slug, name, color)")
+    .eq("legacy_id", id)
+    .eq("is_published", true)
+    .order("time_seconds", { referencedTable: "vlog_locations", ascending: true })
+    .maybeSingle();
+  if (error || !data) return null;
+  return normalizeVlog(data);
+}
+
 export async function getVlogReviewForPost(contentItemId: string) {
   if (!isSupabaseConfigured) return [];
 

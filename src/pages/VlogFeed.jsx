@@ -6,6 +6,7 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import PauseIcon from "@mui/icons-material/Pause";
 import ArticleIcon from "@mui/icons-material/Article";
+import ShareIcon from "@mui/icons-material/Share";
 import MapIcon from "@mui/icons-material/Map";
 import MyLocationIcon from "@mui/icons-material/MyLocation";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
@@ -14,7 +15,9 @@ import { MapContainer, TileLayer, Polyline, CircleMarker, Marker, Popup, useMap 
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { useVlogCache } from "../contexts/VlogCacheContext";
+import { useGlobalToast } from "../contexts/ToastContext";
 import { getVlogCategories } from "../lib/supabaseClient";
+import { getVlogById } from "../lib/phuTanApi";
 import { getCurrentLocation, isInsideIframe, openCurrentPageInNewTab } from "../utils/geolocation";
 import { getUrlParams } from "../utils/urlParams";
 
@@ -214,11 +217,14 @@ const TapVideoOverlay = ({ vlogId, videoRefs, isPlaying, onToggle }) => {
 /* ─────────────────────────────────────────────────────────────────────── */
 
 const VlogFeed = () => {
+  const toast = useGlobalToast();
+  const hasInitializedFromUrl = useRef(false);
   const {
     vlogs,
     newsItems,
     loading,
     ensureLoaded,
+    prependVlog,
     activeSpotByVlog,
     setActiveSpotByVlog,
     visibleVlogIdx,
@@ -301,13 +307,36 @@ const VlogFeed = () => {
     getVlogCategories().then((data) => setCategories(data || [])).catch(() => {});
   }, []);
 
-  // Initialize user location from URL params
+  // Initialize URL params (location, map mode, shared vlog)
   useEffect(() => {
-    const { lat, long } = getUrlParams();
-    if (lat && long) {
-      setUserLocation([lat, long]);
+    const { lat, long, map, v } = getUrlParams();
+    if (lat && long) setUserLocation([lat, long]);
+    if (map) setMapView(true);
+
+    // If a specific vlog ID is in the URL:
+    // - ensureLoaded (in VlogCacheContext) already moves it to index 0 after the full list loads.
+    // - We just need to make sure visibleVlogIdx is reset to 0 and scrollTop is 0.
+    if (v) {
+      setVisibleVlogIdx(0);
+      scrollTopRef.current = 0;
+      if (feedRef.current) feedRef.current.scrollTop = 0;
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const handleShareVlog = useCallback((vlogId) => {
+    const shareUrl = `${window.location.origin}/vlogs?v=${vlogId}`;
+    navigator.clipboard.writeText(shareUrl)
+      .then(() => toast.show("Đã copy link Vlog", "success"))
+      .catch(() => toast.show("Không thể copy link", "error"));
+  }, [toast]);
+
+  const handleShareMarker = useCallback((vlogId, lat, long) => {
+    const shareUrl = `${window.location.origin}/vlogs?v=${vlogId}&map=1&lat=${lat}&long=${long}`;
+    navigator.clipboard.writeText(shareUrl)
+      .then(() => toast.show("Đã copy link vị trí Vlog", "success"))
+      .catch(() => toast.show("Không thể copy link", "error"));
+  }, [toast]);
 
   // Pause all videos when navigating away (scroll feed + map player overlay)
   useEffect(() => {
@@ -318,9 +347,10 @@ const VlogFeed = () => {
   }, [isActive]);
 
 
-  // Restore scroll position
+  // Restore scroll position (skip if opened via a shared ?v= URL — priority vlog is at index 0)
   useEffect(() => {
-    if (feedRef.current && scrollTopRef.current > 0) {
+    const { v } = getUrlParams();
+    if (!v && feedRef.current && scrollTopRef.current > 0) {
       feedRef.current.scrollTop = scrollTopRef.current;
     }
   }, [vlogs]);
@@ -640,7 +670,7 @@ const VlogFeed = () => {
                 const catSlug = vlog.categorySlug || "";
                 const geoLocs = (vlog.locations || []).filter((l) => l.latitude && l.longitude);
 
-                const popupContent = (img, title, sub) => (
+                const popupContent = (img, title, sub, lat, long) => (
                   <div className="vlog-map-popup">
                     <img src={img} alt={title} className="vlog-map-popup-img" />
                     {vlog.category && (
@@ -654,9 +684,16 @@ const VlogFeed = () => {
                     )}
                     <strong className="vlog-map-popup-name">{title}</strong>
                     <span className="vlog-map-popup-sub">{sub}</span>
-                    <button type="button" className="vlog-map-popup-btn" onClick={() => setMapPlayerVlog(vlog)}>
-                      ▶ Xem Vlog
-                    </button>
+                    <div style={{ display: "flex", gap: "4px", marginTop: "4px" }}>
+                      <button type="button" className="vlog-map-popup-btn" onClick={() => setMapPlayerVlog(vlog)} style={{ flex: 1 }}>
+                        ▶ Xem Vlog
+                      </button>
+                      {lat && long && (
+                        <button type="button" className="vlog-map-popup-btn" onClick={() => handleShareMarker(vlog.id, lat, long)} style={{ background: "#2c2f3f", flex: 1, padding: "6px 4px" }}>
+                          <ShareIcon sx={{ fontSize: 14, mr: 0.5, verticalAlign: "middle" }} /> Chia sẻ
+                        </button>
+                      )}
+                    </div>
                   </div>
                 );
 
@@ -678,7 +715,7 @@ const VlogFeed = () => {
                     position={[loc.latitude, loc.longitude]}
                     icon={createThumbIcon(loc.image || vlog.poster, loc.name || vlog.title, catColor, catSlug)}
                   >
-                    <Popup>{popupContent(loc.image || vlog.poster, loc.name || vlog.title, vlog.title)}</Popup>
+                    <Popup>{popupContent(loc.image || vlog.poster, loc.name || vlog.title, vlog.title, loc.latitude, loc.longitude)}</Popup>
                   </Marker>
                 ));
               })}
@@ -821,6 +858,14 @@ const VlogFeed = () => {
 
                 {/* Right side actions */}
                 <Box className="vlog-scroll-actions" aria-label="Vlog actions" sx={{ bottom: `${sheetHeight + 8}px` }}>
+                  <Button
+                    className="vlog-scroll-action"
+                    aria-label="Chia sẻ Vlog"
+                    onClick={() => handleShareVlog(vlog.id)}
+                  >
+                    <ShareIcon />
+                  </Button>
+                  <span className="vlog-scroll-action-label">Chia sẻ</span>
                   <Button
                     component={RouterLink}
                     to={`/post-detail/${vlog.newsId}`}

@@ -16,6 +16,18 @@ const shuffleArray = (arr) => {
   return a;
 };
 
+/**
+ * Read ?v= from the URL and return the priority vlog ID, or null.
+ * Reads window.location directly so it works outside React.
+ */
+const getPriorityVlogId = () => {
+  try {
+    return new URLSearchParams(window.location.search).get("v") || null;
+  } catch {
+    return null;
+  }
+};
+
 export const VlogCacheProvider = ({ children }) => {
   // Cached data — set once, never cleared
   const [vlogs, setVlogs] = useState(null);          // null = not yet loaded
@@ -41,7 +53,21 @@ export const VlogCacheProvider = ({ children }) => {
         getVlogReviews(),
         getSectionItems("news"),
       ]);
-      setVlogs(shuffleArray(vlogData));
+
+      let ordered = shuffleArray(vlogData);
+
+      // If the page was opened with ?v=ID, move that vlog to index 0
+      // so the user immediately sees the shared video at the top of the feed.
+      const priorityId = getPriorityVlogId();
+      if (priorityId) {
+        const idx = ordered.findIndex((v) => String(v.id) === String(priorityId));
+        if (idx > 0) {
+          const [priority] = ordered.splice(idx, 1);
+          ordered = [priority, ...ordered];
+        }
+      }
+
+      setVlogs(ordered);
       setNewsItems(newsData);
     } finally {
       setLoading(false);
@@ -63,6 +89,18 @@ export const VlogCacheProvider = ({ children }) => {
     }
   }, []);
 
+  /**
+   * Prepend a vlog to the top of the list (used when opening a shared URL).
+   * If the vlog is already in the list, it is moved to position 0.
+   */
+  const prependVlog = useCallback((vlog) => {
+    setVlogs((prev) => {
+      if (!prev) return [vlog];
+      const filtered = prev.filter((v) => String(v.id) !== String(vlog.id));
+      return [vlog, ...filtered];
+    });
+  }, []);
+
   return (
     <VlogCacheContext.Provider
       value={{
@@ -71,6 +109,7 @@ export const VlogCacheProvider = ({ children }) => {
         loading,
         ensureLoaded,
         refreshVlogs,
+        prependVlog,
         activeSpotByVlog,
         setActiveSpotByVlog,
         visibleVlogIdx,

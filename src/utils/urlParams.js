@@ -5,6 +5,8 @@ export function getUrlParams() {
     locationToken: params.get('locationToken'),
     lat: params.get('lat') ? parseFloat(params.get('lat')) : null,
     long: params.get('long') ? parseFloat(params.get('long')) : null,
+    v: params.get('v'),
+    map: params.get('map') === '1',
     allParams: Object.fromEntries(params),
   };
 }
