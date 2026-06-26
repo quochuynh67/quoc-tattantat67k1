@@ -170,13 +170,49 @@ const ConversationDisplay = ({ messages, loading }) => {
   );
 };
 
-const COOLDOWN_SECS = 30;
+const COOLDOWN_SECS = 45;
+const DAILY_LIMIT = 10;
+const SESSION_LIMIT = 10;
+const LS_COOLDOWN = "phutan_hero_cooldown_until";
+const LS_DAILY = "phutan_hero_daily";
+
+function getInitialCooldown() {
+  try {
+    const until = parseInt(localStorage.getItem(LS_COOLDOWN) ?? "0", 10);
+    return Math.max(0, Math.ceil((until - Date.now()) / 1000));
+  } catch { return 0; }
+}
+
+function getDailyCount() {
+  try {
+    const today = new Date().toDateString();
+    const raw = JSON.parse(localStorage.getItem(LS_DAILY) ?? "{}");
+    return raw.date === today ? (raw.count ?? 0) : 0;
+  } catch { return 0; }
+}
+
+function incrementDailyCount() {
+  try {
+    const today = new Date().toDateString();
+    const raw = JSON.parse(localStorage.getItem(LS_DAILY) ?? "{}");
+    const count = (raw.date === today ? raw.count : 0) + 1;
+    localStorage.setItem(LS_DAILY, JSON.stringify({ date: today, count }));
+    return count;
+  } catch { return 1; }
+}
+
+function saveCooldown() {
+  try {
+    localStorage.setItem(LS_COOLDOWN, String(Date.now() + COOLDOWN_SECS * 1000));
+  } catch { }
+}
 
 export default function HeroAskSection() {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [cooldownLeft, setCooldownLeft] = useState(0);
+  const [cooldownLeft, setCooldownLeft] = useState(getInitialCooldown);
+  const [dailyCount, setDailyCount] = useState(getDailyCount);
   const inputRef = useRef(null);
   const convRef = useRef(null);
   const pendingRef = useRef(false);
@@ -225,17 +261,24 @@ export default function HeroAskSection() {
   }, []);
 
   const isCooling = cooldownLeft > 0;
+  const isDailyMaxed = dailyCount >= DAILY_LIMIT;
+  const isSessionMaxed = messages.filter((m) => m.role === "user").length >= SESSION_LIMIT;
+  const isBlocked = isCooling || isDailyMaxed || isSessionMaxed;
 
   const send = (questionOverride) => {
     const question = (questionOverride ?? input).trim();
-    if (!question || loading || isCooling || !convRef.current) return;
+    if (!question || loading || isBlocked || !convRef.current) return;
 
     setMessages((m) => [...m, { role: "user", content: question }]);
     setInput("");
     setLoading(true);
     pendingRef.current = true;
     convRef.current.sendUserMessage(question);
+
+    saveCooldown();
     setCooldownLeft(COOLDOWN_SECS);
+    const newCount = incrementDailyCount();
+    setDailyCount(newCount);
     setTimeout(() => inputRef.current?.focus(), 50);
   };
 
@@ -247,6 +290,13 @@ export default function HeroAskSection() {
 
   const hasConversation = messages.length > 0;
   const notReady = !AGENT_ID || !convRef.current;
+
+  const placeholderText = () => {
+    if (isDailyMaxed) return `Hết ${DAILY_LIMIT} lượt hỏi hôm nay rồi nha, mai quay lại~`;
+    if (isSessionMaxed) return `Hết ${SESSION_LIMIT} lượt/phiên rồi, tải lại trang để hỏi tiếp~`;
+    if (isCooling) return `Đang chờ ${cooldownLeft}s…`;
+    return "Hỏi về Phú Tân… chành xe, đặc sản, địa điểm, sự kiện…";
+  };
 
   return (
     <Box sx={{
@@ -306,14 +356,14 @@ export default function HeroAskSection() {
           <InputBase
             inputRef={inputRef}
             fullWidth
-            disabled={isCooling}
-            placeholder={isCooling ? `Đang chờ ${cooldownLeft}s…` : "Hỏi về Phú Tân… chành xe, đặc sản, địa điểm, sự kiện…"}
+            disabled={isBlocked}
+            placeholder={placeholderText()}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
             sx={{
               fontSize: "0.95rem", color: "#1a1a1a",
-              "& input::placeholder": { color: isCooling ? "#e57373" : "#aaa", fontSize: "0.92rem" },
+              "& input::placeholder": { color: isBlocked ? "#e57373" : "#aaa", fontSize: "0.92rem" },
               "& input:disabled": { WebkitTextFillColor: "#9e9e9e" },
             }}
           />
@@ -324,7 +374,7 @@ export default function HeroAskSection() {
           )}
           <IconButton
             onClick={() => send()}
-            disabled={!input.trim() || loading || isCooling || notReady}
+            disabled={!input.trim() || loading || isBlocked || notReady}
             sx={{
               bgcolor: HERO_AGENT.color, color: "#fff", width: 44, height: 44,
               transition: "all 0.2s",
@@ -337,8 +387,26 @@ export default function HeroAskSection() {
           </IconButton>
         </Paper>
 
+        {/* Daily / session limit notice */}
+        {(isDailyMaxed || isSessionMaxed) && (
+          <Box sx={{ mt: 1.5, mx: "auto", maxWidth: 480 }}>
+            <Box sx={{
+              display: "flex", alignItems: "center", justifyContent: "center",
+              gap: 1, px: 2, py: 0.9, borderRadius: "999px",
+              bgcolor: "rgba(0,0,0,0.28)", backdropFilter: "blur(8px)",
+              border: "1px solid rgba(255,255,255,0.15)",
+            }}>
+              <Typography sx={{ color: "rgba(255,255,255,0.88)", fontSize: "0.82rem", fontFamily: "var(--font-body)", textAlign: "center" }}>
+                {isDailyMaxed
+                  ? `Hết ${DAILY_LIMIT} lượt hỏi hôm nay rồi nha cưng, quay lại vào ngày mai nhé~ 😄`
+                  : `Hết ${SESSION_LIMIT} lượt/phiên rồi, tải lại trang để tiếp tục hỏi nha~ 🔄`}
+              </Typography>
+            </Box>
+          </Box>
+        )}
+
         {/* Cooldown notice */}
-        {isCooling && (
+        {!isDailyMaxed && !isSessionMaxed && isCooling && (
           <Box sx={{
             mt: 1.5, mx: "auto", maxWidth: 480,
             animation: "cd-in 0.35s ease",
@@ -376,7 +444,7 @@ export default function HeroAskSection() {
         )}
 
         {!hasConversation
-          ? <SampleQADisplay onClickQuestion={(q) => { setInput(q); setTimeout(() => inputRef.current?.focus(), 50); }} />
+          ? <SampleQADisplay onClickQuestion={(q) => { if (!isBlocked) { setInput(q); setTimeout(() => inputRef.current?.focus(), 50); } }} />
           : <ConversationDisplay messages={messages} loading={loading} />
         }
       </Container>
