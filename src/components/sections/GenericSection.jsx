@@ -6,6 +6,7 @@ import { getSectionCount, getSectionItems } from "../../lib/phuTanApi";
 import { CardSkeletonGrid } from "../CardSkeleton";
 import AgentChat from "../AgentChat";
 import { useSiteSettings } from "../../contexts/SiteSettingsContext";
+import { stripHtml } from "../../utils/stripHtml";
 
 export default function GenericSection({ slug, title, subtitle }) {
   const { canChatWithAi } = useSiteSettings();
@@ -121,7 +122,7 @@ export default function GenericSection({ slug, title, subtitle }) {
                             WebkitBoxOrient: "vertical",
                           }}
                         >
-                          {item.excerpt}
+                          {stripHtml(item.excerpt)}
                         </Typography>
                       )}
                     </CardContent>

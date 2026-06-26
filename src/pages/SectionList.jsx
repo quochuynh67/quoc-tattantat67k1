@@ -21,6 +21,7 @@ import {
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { getSectionItems, getSectionItemsSync } from "../lib/phuTanApi";
+import { stripHtml } from "../utils/stripHtml";
 import { CardSkeletonGrid, AlertSkeleton } from "../components/CardSkeleton";
 import { HealthCard } from "../components/HealthCard";
 import AgentChat from "../components/AgentChat";
@@ -65,9 +66,9 @@ const getTitle = (item, kind) => {
 };
 
 const getDescription = (item, kind) => {
-  if (kind === "news") return item.excerpt;
-  if (kind === "health") return item.content;
-  return item.description;
+  if (kind === "news") return stripHtml(item.excerpt);
+  if (kind === "health") return stripHtml(item.content);
+  return stripHtml(item.description);
 };
 
 const SectionList = ({ sectionKey }) => {

@@ -7,6 +7,7 @@ import { getSectionCount, getSectionItems, getSectionItemsSync } from "../../lib
 import { CardSkeletonGrid } from "../CardSkeleton";
 import AgentChat from "../AgentChat";
 import { useSiteSettings } from "../../contexts/SiteSettingsContext";
+import { stripHtml } from "../../utils/stripHtml";
 
 const FoodSection = ({ subtitle }) => {
   const { canChatWithAi } = useSiteSettings();
@@ -119,7 +120,7 @@ const FoodSection = ({ subtitle }) => {
                       WebkitBoxOrient: "vertical"
                     }}
                   >
-                    {item.description}
+                    {stripHtml(item.description)}
                   </Typography>
                   <Box sx={{ display: 'flex', alignItems: 'center', mt: 'auto' }}>
                     <Rating value={item.rating || 0} precision={0.5} readOnly size="small" />

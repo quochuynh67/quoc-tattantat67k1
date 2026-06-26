@@ -7,6 +7,7 @@ import { getSectionCount, getSectionItems, getSectionItemsSync } from "../../lib
 import { CardSkeletonGrid } from "../CardSkeleton";
 import AgentChat from "../AgentChat";
 import { useSiteSettings } from "../../contexts/SiteSettingsContext";
+import { stripHtml } from "../../utils/stripHtml";
 
 const NewsSection = ({ subtitle }) => {
   const { canChatWithAi } = useSiteSettings();
@@ -120,7 +121,7 @@ const NewsSection = ({ subtitle }) => {
                         WebkitBoxOrient: "vertical"
                       }}
                     >
-                      {item.excerpt}
+                      {stripHtml(item.excerpt)}
                     </Typography>
                     <Typography
                       variant="caption"

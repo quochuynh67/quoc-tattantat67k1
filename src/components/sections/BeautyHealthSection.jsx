@@ -7,6 +7,7 @@ import { getSectionCount, getSectionItems, getSectionItemsSync } from "../../lib
 import { CardSkeletonGrid } from "../CardSkeleton";
 import AgentChat from "../AgentChat";
 import { useSiteSettings } from "../../contexts/SiteSettingsContext";
+import { stripHtml } from "../../utils/stripHtml";
 
 const BeautyHealthSection = ({ subtitle }) => {
   const { canChatWithAi } = useSiteSettings();
@@ -122,7 +123,7 @@ const BeautyHealthSection = ({ subtitle }) => {
                       WebkitBoxOrient: "vertical",
                     }}
                   >
-                    {item.description}
+                    {stripHtml(item.description)}
                   </Typography>
                   <Typography variant="caption" sx={{ color: "var(--color-text-subtle)" }}>
                     {item.address}
