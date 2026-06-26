@@ -15,6 +15,7 @@ import NewsletterCTA from "../components/sections/NewsletterCTA";
 import AgentChatDashboard from "../components/AgentChatDashboard";
 import SEOIntroSection from "../components/sections/SEOIntroSection";
 import GenericSection from "../components/sections/GenericSection";
+import VoiceChat from "../components/VoiceChat";
 import { useSiteSettings } from "../contexts/SiteSettingsContext";
 
 // Slug → specific component mapping for built-in sections
@@ -59,6 +60,7 @@ const Home = () => {
       <SEOIntroSection />
       <NewsletterCTA />
       {canChatWithAi && <AgentChatDashboard />}
+      <VoiceChat />
     </div>
   );
 };
