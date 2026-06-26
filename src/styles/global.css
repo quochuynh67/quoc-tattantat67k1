@@ -195,7 +195,7 @@ html.dark {
 .content-section {
   box-sizing: border-box;
   width: 100%;
-  padding: var(--spacing-lg) 0;
+  padding: 12px 0;
   background: var(--color-background);
 }
 

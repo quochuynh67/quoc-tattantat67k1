@@ -8,7 +8,7 @@ import { CardSkeletonGrid } from "../CardSkeleton";
 import AgentChat from "../AgentChat";
 import { useSiteSettings } from "../../contexts/SiteSettingsContext";
 
-const BeautyHealthSection = () => {
+const BeautyHealthSection = ({ subtitle }) => {
   const { canChatWithAi } = useSiteSettings();
   const [displayedServices, setDisplayedServices] = useState(() => getSectionItemsSync("beautyHealth", 4) ?? []);
   const [totalItems, setTotalItems] = useState(0);
@@ -32,7 +32,7 @@ const BeautyHealthSection = () => {
   return (
     <section className="content-section">
       <Container maxWidth={false} className="section-container">
-        <Box display="flex" alignItems="center" flexWrap="wrap" gap={2} mb={4}>
+        <Box display="flex" alignItems="center" flexWrap="wrap" gap={2} mb={subtitle ? 1 : 4}>
           <Typography
             variant="h4"
             component="h2"
@@ -42,13 +42,14 @@ const BeautyHealthSection = () => {
           </Typography>
           {canChatWithAi && <AgentChat section="beautyHealth" variant="inline" />}
         </Box>
-        <Typography
-          variant="body1"
-          gutterBottom
-          sx={{ fontFamily: "var(--font-body)", color: "var(--color-text-subtle)", mb: 4 }}
-        >
-          Gợi ý spa, hair salon và trị liệu thư giãn để chăm sóc vẻ ngoài lẫn sức khỏe tinh thần.
-        </Typography>
+        {subtitle && (
+          <Typography
+            variant="body1"
+            sx={{ fontFamily: "var(--font-body)", color: "var(--color-text-subtle)", mb: 2 }}
+          >
+            {subtitle}
+          </Typography>
+        )}
         {loading ? <CardSkeletonGrid count={4} hasRating hasChip /> : <Box
           className="card-scroll-row"
           sx={{

@@ -7,7 +7,7 @@ import { CardSkeletonGrid } from "../CardSkeleton";
 import AgentChat from "../AgentChat";
 import { useSiteSettings } from "../../contexts/SiteSettingsContext";
 
-export default function GenericSection({ slug, title }) {
+export default function GenericSection({ slug, title, subtitle }) {
   const { canChatWithAi } = useSiteSettings();
   const [items, setItems] = useState([]);
   const [totalItems, setTotalItems] = useState(0);
@@ -25,7 +25,7 @@ export default function GenericSection({ slug, title }) {
   return (
     <section className="content-section">
       <Container maxWidth={false} className="section-container">
-        <Box display="flex" alignItems="center" flexWrap="wrap" gap={2} mb={5}>
+        <Box display="flex" alignItems="center" flexWrap="wrap" gap={2} mb={subtitle ? 1 : 4}>
           <Typography
             variant="h4"
             component="h2"
@@ -35,6 +35,14 @@ export default function GenericSection({ slug, title }) {
           </Typography>
           {canChatWithAi && <AgentChat section={slug} variant="inline" />}
         </Box>
+        {subtitle && (
+          <Typography
+            variant="body1"
+            sx={{ fontFamily: "var(--font-body)", color: "var(--color-text-subtle)", mb: 2 }}
+          >
+            {subtitle}
+          </Typography>
+        )}
 
         {loading ? (
           <CardSkeletonGrid count={4} />

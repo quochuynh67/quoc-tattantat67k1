@@ -8,7 +8,7 @@ import { CardSkeletonGrid } from "../CardSkeleton";
 import AgentChat from "../AgentChat";
 import { useSiteSettings } from "../../contexts/SiteSettingsContext";
 
-const NewsSection = () => {
+const NewsSection = ({ subtitle }) => {
   const { canChatWithAi } = useSiteSettings();
   const [displayedNews, setDisplayedNews] = useState(() => getSectionItemsSync("news", 4) ?? []);
   const [totalItems, setTotalItems] = useState(0);
@@ -32,7 +32,7 @@ const NewsSection = () => {
   return (
     <section className="content-section">
       <Container maxWidth={false} className="section-container">
-        <Box display="flex" alignItems="center" flexWrap="wrap" gap={2} mb={4}>
+        <Box display="flex" alignItems="center" flexWrap="wrap" gap={2} mb={subtitle ? 1 : 4}>
           <Typography
             variant="h4"
             component="h2"
@@ -42,13 +42,14 @@ const NewsSection = () => {
           </Typography>
           {canChatWithAi && <AgentChat section="news" variant="inline" />}
         </Box>
-        <Typography
-          variant="body1"
-          gutterBottom
-          sx={{ fontFamily: "var(--font-body)", color: "var(--color-text-subtle)", mb: 4 }}
-        >
-          Cập nhật những sự kiện, hoạt động cộng đồng và thông tin mới nhất tại Phú Tân 67K1 AG.
-        </Typography>
+        {subtitle && (
+          <Typography
+            variant="body1"
+            sx={{ fontFamily: "var(--font-body)", color: "var(--color-text-subtle)", mb: 2 }}
+          >
+            {subtitle}
+          </Typography>
+        )}
         {loading ? <CardSkeletonGrid count={4} /> : <Box
           className="card-scroll-row"
           sx={{

@@ -47,11 +47,11 @@ const Home = () => {
       <HeroSection />
       <HeroAskSection />
 
-      {sectionsToRender.map(({ slug, title }) => {
+      {sectionsToRender.map(({ slug, title, description }) => {
         const Specific = SPECIFIC_COMPONENTS[slug];
         return Specific
-          ? <Specific key={slug} />
-          : <GenericSection key={slug} slug={slug} title={title} />;
+          ? <Specific key={slug} subtitle={description} />
+          : <GenericSection key={slug} slug={slug} title={title} subtitle={description} />;
       })}
 
       <VlogsMapSection />

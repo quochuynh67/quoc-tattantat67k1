@@ -42,8 +42,8 @@ const SAMPLE_QA = [
 // ─────────────────────────────────────────────────────────────────────────────
 
 const HERO_AGENT = {
-  name: "Cô Tân Anh Phú (Thổ địa Phú Tân)",
-  greeting: "Xin chào cưng! Cô Tân Anh Phú sẵn sàng giải đáp mọi thắc mắc về Phú Tân nha~",
+  name: "Anh Phú & Chị Tân (Thổ địa Phú Tân)",
+  greeting: "Xin chào cưng! Anh Phú & Chị Tân sẵn sàng giải đáp mọi thắc mắc về Phú Tân nha~",
   color: "#2d6a4f",
   emoji: "🌾",
 };
@@ -371,7 +371,7 @@ export default function HeroAskSection() {
                 sx={{ fontSize: "0.85rem !important", color: "#ffd700 !important" }}
               />
             }
-            label="Trợ lý AI Phú Tân: Cô Tân Anh Phú (Thổ địa Phú Tân)"
+            label="Trợ lý AI Phú Tân: Anh Phú & Chị Tân (Thổ địa Phú Tân)"
             size="small"
             sx={{
               mb: 2,
