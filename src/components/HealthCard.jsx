@@ -32,6 +32,9 @@ export function HealthCard({ item, showDesc = false }) {
     >
       <Box sx={{ width: 10, height: 10, borderRadius: "50%", background: s.dot, flexShrink: 0 }} />
       <Box sx={{ minWidth: 0 }}>
+        {item.isFeatured && (
+          <span className="featured-badge" style={{ marginBottom: 3 }}>★ Nổi bật</span>
+        )}
         <Typography sx={{
           fontWeight: 700, fontSize: "0.9rem", color: "text.primary",
           overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",

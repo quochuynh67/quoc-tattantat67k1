@@ -99,6 +99,11 @@ const SectionList = ({ sectionKey }) => {
   const pageSection = useMemo(() => {
     if (!section) return section;
     const sortedItems = [...items].sort((a, b) => {
+      // Featured items always float to the top (same as Supabase order)
+      if (sortBy !== "featured_first") {
+        const featuredDiff = (b.isFeatured ? 1 : 0) - (a.isFeatured ? 1 : 0);
+        if (featuredDiff !== 0) return featuredDiff;
+      }
       if (sortBy === "newest") {
         return new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime();
       }
@@ -116,6 +121,11 @@ const SectionList = ({ sectionKey }) => {
         const sevA = sevOrder[a.severity] || 0;
         const sevB = sevOrder[b.severity] || 0;
         return sevB - sevA;
+      }
+      if (sortBy === "featured_first") {
+        const featuredDiff = (b.isFeatured ? 1 : 0) - (a.isFeatured ? 1 : 0);
+        if (featuredDiff !== 0) return featuredDiff;
+        return new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime();
       }
       return 0;
     });
@@ -155,6 +165,7 @@ const SectionList = ({ sectionKey }) => {
               <Select value={sortBy} onChange={(e) => setSortBy(e.target.value)} label="Sắp xếp theo">
                 <MenuItem value="newest">Mới nhất</MenuItem>
                 <MenuItem value="oldest">Cũ nhất</MenuItem>
+                <MenuItem value="featured_first">★ Nổi bật trước</MenuItem>
                 <MenuItem value="views_desc">Lượt xem cao</MenuItem>
                 <MenuItem value="rating_desc">Đánh giá cao</MenuItem>
                 <MenuItem value="severity_desc">Mức độ khẩn cấp</MenuItem>
@@ -184,8 +195,9 @@ const SectionList = ({ sectionKey }) => {
                   className="list-card-media"
                 />
                 <CardContent className="list-card-content">
-                  {item.severity && (
-                    <Box sx={{ mb: 1 }}>
+                  {(item.isFeatured || item.severity) && (
+                    <Box sx={{ mb: 1, display: "flex", gap: 0.5, flexWrap: "wrap" }}>
+                      {item.isFeatured && <span className="featured-badge">★ Nổi bật</span>}
                       {item.severity === "urgent" && <span className="severity-badge urgent">Khẩn cấp</span>}
                       {item.severity === "warning" && <span className="severity-badge warning">Quan trọng</span>}
                       {item.severity === "normal" && <span className="severity-badge normal">Bình thường</span>}

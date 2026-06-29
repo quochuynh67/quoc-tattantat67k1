@@ -388,6 +388,20 @@ const VlogReview = () => {
     if (active) setActiveSpotByVlog((s) => ({ ...s, [vlog.id]: active.time }));
   };
 
+  // Release video decode buffers to prevent main-thread freeze on unmount/mode switch
+  useEffect(() => {
+    return () => {
+      const tab = tabVideoRef.current;
+      if (tab) { tab.pause(); tab.removeAttribute("src"); tab.load(); }
+      Object.values(scrollVideoRefs.current).forEach((v) => {
+        if (!v) return;
+        v.pause();
+        v.removeAttribute("src");
+        v.load();
+      });
+    };
+  }, []);
+
   if (loading) return <DetailSkeleton />;
 
   if (!post && vlogs.length === 0) {

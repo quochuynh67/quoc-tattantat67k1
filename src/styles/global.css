@@ -1480,15 +1480,14 @@ html.dark .vlog-info-panel {
 .severity-badge {
   display: inline-flex;
   align-items: center;
-  padding: 4px 10px;
-  border-radius: 16px;
-  font-size: 0.75rem;
-  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.68rem;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  box-shadow: var(--shadow-subtle);
-  margin-bottom: var(--spacing-xs);
+  letter-spacing: 0.4px;
   width: fit-content;
+  line-height: 1.6;
 }
 
 .severity-badge.normal {
@@ -1527,6 +1526,54 @@ html.dark .vlog-info-panel {
 @keyframes severity-flash {
   0%, 100% { opacity: 1; transform: scale(1); background-color: #FFEBEE; color: #C62828; }
   50% { opacity: 0.9; transform: scale(1.05); background-color: #C62828; color: #FFFFFF; }
+}
+
+/* Featured badge */
+.featured-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  line-height: 1.6;
+  width: fit-content;
+  position: relative;
+  overflow: hidden;
+  color: #7B3F00;
+  border: 1px solid #F9A825;
+  background: linear-gradient(90deg, #FFF8E1 0%, #FFE082 40%, #FFF8E1 80%);
+  background-size: 200% 100%;
+  animation: featured-shimmer 2.4s ease-in-out infinite, featured-glow 2.4s ease-in-out infinite;
+}
+
+.featured-badge::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -60%;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(120deg, transparent, rgba(255,255,255,0.7), transparent);
+  animation: featured-light 2.4s ease-in-out infinite;
+}
+
+@keyframes featured-shimmer {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+@keyframes featured-glow {
+  0%, 100% { box-shadow: 0 0 4px 0 rgba(249,168,37,0.4); }
+  50% { box-shadow: 0 0 10px 2px rgba(249,168,37,0.7), 0 0 20px 4px rgba(249,168,37,0.25); }
+}
+
+@keyframes featured-light {
+  0% { left: -60%; }
+  60%, 100% { left: 130%; }
 }
 
 /* Post map marker animations */

@@ -24,7 +24,7 @@ import { getUrlParams } from "../utils/urlParams";
 const SHEET_COLLAPSED = 120;
 const SHEET_EXPANDED = 380;
 const VIDEO_PRELOAD_BEHIND = 1;
-const VIDEO_PRELOAD_AHEAD = 3;
+const VIDEO_PRELOAD_AHEAD = 2;
 
 const formatTime = (seconds) => {
   const minutes = Math.floor(seconds / 60).toString().padStart(2, "0");
@@ -301,6 +301,7 @@ const VlogFeed = () => {
   const hydratedVideoStart = Math.max(0, visibleVlogIdx - VIDEO_PRELOAD_BEHIND);
   const hydratedVideoEnd = Math.min((displayedVlogs?.length ?? 0) - 1, visibleVlogIdx + VIDEO_PRELOAD_AHEAD);
 
+
   useEffect(() => { ensureLoaded(); }, []);
 
   useEffect(() => {
@@ -338,7 +339,7 @@ const VlogFeed = () => {
       .catch(() => toast.show("Không thể copy link", "error"));
   }, [toast]);
 
-  // Pause all videos when navigating away (scroll feed + map player overlay)
+  // Pause all videos when navigating away
   useEffect(() => {
     if (!isActive) {
       Object.values(videoRefs.current).forEach((v) => { if (v && !v.paused) v.pause(); });
@@ -821,7 +822,7 @@ const VlogFeed = () => {
                       <video
                         ref={(node) => { if (node) videoRefs.current[vlog.id] = node; }}
                         className="vlog-scroll-video"
-                        src={vlog.videoUrl}
+                        src={isActive ? vlog.videoUrl : undefined}
                         poster={vlog.poster}
                         playsInline
                         preload={preloadMode}
