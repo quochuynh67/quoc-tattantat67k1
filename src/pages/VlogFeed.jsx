@@ -543,9 +543,11 @@ const VlogFeed = () => {
     <main className="vlog-scroll-root">
       <Box className="vlog-scroll-shell">
         <Box className="vlog-scroll-header">
-          <Button component={RouterLink} to="/" startIcon={<ArrowBackIcon />} className="vlog-scroll-back">
-            Trang chủ
-          </Button>
+          {!mapView && (
+            <Button component={RouterLink} to="/" startIcon={<ArrowBackIcon />} className="vlog-scroll-back">
+              Trang chủ
+            </Button>
+          )}
           <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
             <Button
               className="vlog-scroll-back"
