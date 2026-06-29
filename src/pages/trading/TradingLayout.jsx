@@ -150,6 +150,27 @@ const TradingLayout = () => {
 
         {/* Mobile user info bar (shown on mobile only) */}
         <div className="flex md:hidden items-center gap-3 px-4 py-2 bg-white border-b border-gray-100 sticky top-0 z-10">
+          <button
+            onClick={() => navigate('/')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              background: '#f1f5f9',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '6px 10px',
+              cursor: 'pointer',
+              fontSize: '13px',
+              fontWeight: 600,
+              color: '#374151',
+              flexShrink: 0,
+            }}
+            title="Về trang chủ"
+          >
+            <span style={{ fontSize: '15px' }}>✕</span>
+            <span>Đóng</span>
+          </button>
           <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
             <span className="text-white font-bold text-sm">{getUserInitials()}</span>
           </div>

@@ -1,6 +1,6 @@
 // src/components/layout/Header.jsx
 import React, { useState, useRef, useEffect } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import ThemeToggle from "../ui/ThemeToggle";
 import { useSiteSettings } from "../../contexts/SiteSettingsContext";
 
@@ -26,6 +26,21 @@ const Header = () => {
   const [toolsOpen, setToolsOpen] = useState(false);
   const toolsRef = useRef(null);
   const { showOtherTab, visibleSectionSlugs } = useSiteSettings();
+  const navigate = useNavigate();
+
+  const handleToolClick = (url) => {
+    setToolsOpen(false);
+    if (!url || url === "#") return;
+    if (url.startsWith("/")) {
+      navigate(url);
+    } else {
+      // window.open bị block trong webview/iframe → fallback về location.href
+      const popup = window.open(url, "_blank");
+      if (!popup || popup.closed || typeof popup.closed === "undefined") {
+        window.location.href = url;
+      }
+    }
+  };
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -93,10 +108,7 @@ const Header = () => {
                 {TOOLS.map((tool) => (
                   <button
                     key={tool.id}
-                    onClick={() => {
-                      window.open(tool.url, "_blank");
-                      setToolsOpen(false);
-                    }}
+                    onClick={() => handleToolClick(tool.url)}
                     style={{
                       display: "flex",
                       alignItems: "center",
