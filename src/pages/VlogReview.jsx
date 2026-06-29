@@ -2,7 +2,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { Link as RouterLink, useParams, useNavigate } from "react-router-dom";
-import { Alert, Box, Button, Container, Rating, Tab, Tabs, Tooltip, Typography } from "@mui/material";
+import { Alert, Box, Button, Container, Rating, Tooltip, Typography } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import GridViewIcon from "@mui/icons-material/GridView";
 import ViewDayIcon from "@mui/icons-material/ViewDay";
@@ -817,7 +817,23 @@ const VlogReview = () => {
         {/* VLOG SECTION */}
         {vlogs.length > 0 && (
           <>
-            <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 1 }}>
+            {/* Section header row: label + count badge + toggle */}
+            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: vlogs.length > 1 ? 1.5 : 2 }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <Typography variant="overline" sx={{ color: "var(--color-primary)", fontWeight: 700, lineHeight: 1 }}>
+                  Review Vlog
+                </Typography>
+                {vlogs.length > 1 && (
+                  <Box sx={{
+                    bgcolor: "primary.main", color: "#fff",
+                    fontSize: "0.6rem", fontWeight: 900,
+                    px: 0.8, py: 0.25, borderRadius: 0.75,
+                    lineHeight: 1.4, letterSpacing: "0.04em",
+                  }}>
+                    {vlogs.length} video
+                  </Box>
+                )}
+              </Box>
               <Tooltip title="Chuyển sang dạng cuộn">
                 <Button
                   variant="outlined"
@@ -840,21 +856,98 @@ const VlogReview = () => {
                 </Button>
               </Tooltip>
             </Box>
+
+            {/* Thumbnail strip — only shown when there are multiple vlogs */}
             {vlogs.length > 1 && (
-              <Tabs
-                value={activeVlogIdx}
-                onChange={handleSelectTab}
-                variant="scrollable"
-                scrollButtons="auto"
-                sx={{
-                  mb: 3, borderBottom: 1, borderColor: "divider",
-                  "& .MuiTab-root": { whiteSpace: "nowrap" },
-                }}
-              >
-                {vlogs.map((v, idx) => (
-                  <Tab key={v.id} label={v.title || `Vlog ${idx + 1}`} />
-                ))}
-              </Tabs>
+              <Box sx={{
+                display: "flex",
+                gap: 1.5,
+                overflowX: "auto",
+                pb: 1.5,
+                mb: 2.5,
+                scrollSnapType: "x mandatory",
+                borderBottom: "1px solid var(--color-border)",
+                "&::-webkit-scrollbar": { height: 3 },
+                "&::-webkit-scrollbar-track": { background: "transparent" },
+                "&::-webkit-scrollbar-thumb": { background: "rgba(130,243,207,0.25)", borderRadius: 2 },
+              }}>
+                {vlogs.map((v, idx) => {
+                  const isActive = activeVlogIdx === idx;
+                  return (
+                    <Box
+                      key={v.id}
+                      onClick={() => handleSelectTab(null, idx)}
+                      sx={{
+                        flexShrink: 0,
+                        scrollSnapAlign: "start",
+                        width: 130,
+                        cursor: "pointer",
+                        borderRadius: 1.5,
+                        overflow: "hidden",
+                        border: isActive ? "2px solid" : "2px solid transparent",
+                        borderColor: isActive ? "primary.main" : "transparent",
+                        outline: isActive ? "none" : "1px solid var(--color-border)",
+                        outlineOffset: "-1px",
+                        transition: "all 0.18s ease",
+                        transform: isActive ? "scale(1.03)" : "scale(1)",
+                        boxShadow: isActive ? "0 4px 16px rgba(25,118,210,0.3)" : "none",
+                      }}
+                    >
+                      {/* Poster */}
+                      <Box sx={{ position: "relative", aspectRatio: "16/9", overflow: "hidden", bgcolor: "#1a1c24" }}>
+                        {v.poster
+                          ? <img src={v.poster} alt={v.title || `Vlog ${idx + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                          : <Box sx={{ width: "100%", height: "100%", bgcolor: "rgba(130,243,207,0.06)" }} />
+                        }
+                        {/* Active tint + play icon */}
+                        {isActive && (
+                          <Box sx={{ position: "absolute", inset: 0, bgcolor: "rgba(25,118,210,0.22)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            <PlayCircleIcon sx={{ color: "#fff", fontSize: 28, filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.6))" }} />
+                          </Box>
+                        )}
+                        {/* Number badge */}
+                        <Box sx={{
+                          position: "absolute", top: 5, left: 5,
+                          bgcolor: isActive ? "primary.main" : "rgba(0,0,0,0.62)",
+                          color: "#fff", fontSize: "0.6rem", fontWeight: 900,
+                          width: 18, height: 18, borderRadius: "50%",
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          lineHeight: 1,
+                        }}>
+                          {idx + 1}
+                        </Box>
+                        {/* Duration badge */}
+                        {v.durationLabel && (
+                          <Box sx={{
+                            position: "absolute", bottom: 4, right: 4,
+                            bgcolor: "rgba(0,0,0,0.7)", color: "#fff",
+                            fontSize: "0.6rem", fontWeight: 700,
+                            px: 0.6, py: 0.15, borderRadius: 0.5,
+                            fontFamily: "monospace", lineHeight: 1.5,
+                          }}>
+                            {v.durationLabel}
+                          </Box>
+                        )}
+                      </Box>
+                      {/* Title */}
+                      <Box sx={{ px: 1, py: 0.75, bgcolor: isActive ? "rgba(25,118,210,0.07)" : "transparent" }}>
+                        <Typography sx={{
+                          fontSize: "0.7rem",
+                          fontWeight: isActive ? 700 : 400,
+                          color: isActive ? "primary.main" : "text.secondary",
+                          display: "-webkit-box",
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: "vertical",
+                          overflow: "hidden",
+                          lineHeight: 1.35,
+                        }}>
+                          {v.title || `Vlog ${idx + 1}`}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  );
+                })}
+              </Box>
             )}
 
             <Box className="vlog-review-layout">
@@ -895,7 +988,6 @@ const VlogReview = () => {
           </Box>
 
           <Box className="vlog-info-panel">
-            <Typography variant="overline" className="vlog-kicker">Review vlog</Typography>
             <Typography variant="h3" component="h1" className="vlog-title">{activeVlog.title}</Typography>
             <Typography className="vlog-subtitle">{activeVlog.subtitle}</Typography>
 
