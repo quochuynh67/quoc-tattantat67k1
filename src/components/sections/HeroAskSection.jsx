@@ -171,8 +171,8 @@ const ConversationDisplay = ({ messages, loading }) => {
 };
 
 const COOLDOWN_SECS = 45;
-const DAILY_LIMIT = 10;
-const SESSION_LIMIT = 10;
+const DAILY_LIMIT = 5;
+const SESSION_LIMIT = 5;
 const LS_COOLDOWN = "phutan_hero_cooldown_until";
 const LS_DAILY = "phutan_hero_daily";
 
