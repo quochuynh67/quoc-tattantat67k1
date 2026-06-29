@@ -617,6 +617,74 @@ export const incrementVisitorCount = async (): Promise<number> => {
   return Number(data) || 0;
 };
 
+type ExtractedFile = { name: string; data: Uint8Array };
+
+const mimeForHls = (filename: string): string => {
+  if (filename.endsWith(".m3u8")) return "application/vnd.apple.mpegurl";
+  if (filename.endsWith(".ts")) return "video/MP2T";
+  return "application/octet-stream";
+};
+
+export const uploadHlsFromExtracted = async (
+  files: ExtractedFile[],
+  folderName: string,
+  onProgress?: (uploaded: number, total: number) => void
+): Promise<string> => {
+  try { await supabase.storage.createBucket(MAIN_BUCKET, { public: true }); } catch (_) {}
+  let m3u8Url = "";
+  let uploaded = 0;
+  const total = files.length;
+  const chunkSize = 5;
+  for (let i = 0; i < files.length; i += chunkSize) {
+    const chunk = files.slice(i, i + chunkSize);
+    await Promise.all(chunk.map(async ({ name, data }) => {
+      const fileName = name.split("/").pop() || name;
+      const filePath = `videos/${folderName}/${fileName}`;
+      const blob = new Blob([data], { type: mimeForHls(fileName) });
+      const { error } = await supabase.storage.from(MAIN_BUCKET).upload(filePath, blob, { upsert: true });
+      if (error) throw error;
+      uploaded++;
+      onProgress?.(uploaded, total);
+      if (fileName.endsWith(".m3u8")) {
+        const { data: urlData } = supabase.storage.from(MAIN_BUCKET).getPublicUrl(filePath);
+        m3u8Url = urlData.publicUrl;
+      }
+    }));
+  }
+  if (!m3u8Url) throw new Error("Không tìm thấy file .m3u8 sau khi giải nén!");
+  return m3u8Url;
+};
+
+export const uploadGuestHlsFromExtracted = async (
+  files: ExtractedFile[],
+  folderName: string,
+  onProgress?: (uploaded: number, total: number) => void
+): Promise<string> => {
+  try { await supabase.storage.createBucket(GUEST_BUCKET, { public: true }); } catch (_) {}
+  let m3u8Url = "";
+  let uploaded = 0;
+  const total = files.length;
+  const chunkSize = 5;
+  for (let i = 0; i < files.length; i += chunkSize) {
+    const chunk = files.slice(i, i + chunkSize);
+    await Promise.all(chunk.map(async ({ name, data }) => {
+      const fileName = name.split("/").pop() || name;
+      const filePath = `videos/${folderName}/${fileName}`;
+      const blob = new Blob([data], { type: mimeForHls(fileName) });
+      const { error } = await supabase.storage.from(GUEST_BUCKET).upload(filePath, blob, { upsert: true });
+      if (error) throw error;
+      uploaded++;
+      onProgress?.(uploaded, total);
+      if (fileName.endsWith(".m3u8")) {
+        const { data: urlData } = supabase.storage.from(GUEST_BUCKET).getPublicUrl(filePath);
+        m3u8Url = urlData.publicUrl;
+      }
+    }));
+  }
+  if (!m3u8Url) throw new Error("Không tìm thấy file .m3u8 sau khi giải nén!");
+  return m3u8Url;
+};
+
 export const uploadHlsFolder = async (files, onProgress) => {
   try {
     await supabase.storage.createBucket('vlogs-posts', { public: true });

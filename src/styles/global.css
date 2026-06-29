@@ -1,6 +1,10 @@
 /* src/styles/global.css – CSS reset and design‑system custom properties */
 
 /* Reset */
+html {
+  overscroll-behavior: none;
+}
+
 html,
 body,
 div,
@@ -90,6 +94,10 @@ video {
   vertical-align: baseline;
 }
 
+#root {
+  isolation: isolate;
+}
+
 /* HTML5 display‑role reset for older browsers */
 article,
 aside,
@@ -113,6 +121,9 @@ body {
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overscroll-behavior: none;
+  /* Tắt bounce scroll trên iOS WebView/iframe */
+  -webkit-overflow-scrolling: auto;
 }
 
 ol,

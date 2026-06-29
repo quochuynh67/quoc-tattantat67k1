@@ -128,6 +128,10 @@ const TradingLayout = () => {
           <i className="fas fa-user-tag"></i>
           <span style={{ fontSize: '10px' }}>Khách</span>
         </NavLink>
+        <NavLink to="/trading/products" className={({ isActive }) => `bottom-nav-item flex-1 ${isActive ? 'active' : ''}`}>
+          <i className="fas fa-seedling"></i>
+          <span style={{ fontSize: '10px' }}>Danh mục</span>
+        </NavLink>
       </div>
 
       {/* Main content */}

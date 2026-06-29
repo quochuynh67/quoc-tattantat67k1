@@ -8,7 +8,8 @@ import EditIcon from "@mui/icons-material/Edit";
 import AddIcon from "@mui/icons-material/Add";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import VisibilityIcon from "@mui/icons-material/Visibility";
-import { getVlogs, createVlog, updateVlog, deleteVlog, getSections, uploadVlogFile, uploadHlsFolder, uploadTimelineImage, moveGuestFileToMain, deleteGuestFile, supabase, getVlogCategories, createVlogCategory, updateVlogCategory, deleteVlogCategory } from "../../lib/supabaseClient";
+import { getVlogs, createVlog, updateVlog, deleteVlog, getSections, uploadVlogFile, uploadHlsFolder, uploadHlsFromExtracted, uploadTimelineImage, moveGuestFileToMain, deleteGuestFile, supabase, getVlogCategories, createVlogCategory, updateVlogCategory, deleteVlogCategory } from "../../lib/supabaseClient";
+import { convertVideoToHls, extractTarGz } from "../../lib/hlsApi";
 import { clearVlogCache } from "../../lib/phuTanApi";
 import { useVlogCache } from "../../contexts/VlogCacheContext";
 
@@ -38,6 +39,8 @@ export default function AdminVlogs() {
   const [uploadingPoster, setUploadingPoster] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pendingFolderFiles, setPendingFolderFiles] = useState(null);
+  const [pendingMp4File, setPendingMp4File] = useState(null);
+  const [convertStatus, setConvertStatus] = useState("");
   const [originalDuration, setOriginalDuration] = useState("");
 
   const videoRef = useRef(null);
@@ -250,6 +253,8 @@ export default function AdminVlogs() {
     });
     setLocations([]);
     setPendingFolderFiles(null);
+    setPendingMp4File(null);
+    setConvertStatus("");
     setVideoSourceMode("url");
     setPosterSourceMode("url");
   };
@@ -321,15 +326,39 @@ export default function AdminVlogs() {
   };
 
   const handleSubmit = async () => {
-    if (!form.title || (!form.video_url && !pendingFolderFiles)) {
-      alert("Vui lòng điền tiêu đề và đường dẫn/thư mục video!");
+    if (!form.title || (!form.video_url && !pendingFolderFiles && !pendingMp4File)) {
+      alert("Vui lòng điền tiêu đề và đường dẫn/thư mục/file video!");
       return;
     }
 
     setIsSubmitting(true);
     let finalVideoUrl = form.video_url;
 
-    if (pendingFolderFiles) {
+    if (pendingMp4File) {
+      setUploadProgress(0);
+      try {
+        setConvertStatus("Đang gửi video lên server convert...");
+        const { blob } = await convertVideoToHls(pendingMp4File, { maxSizeMb: 10, width: 1280 }, (phase) => {
+          if (phase === "converting") setConvertStatus("Đang convert sang HLS, vui lòng đợi...");
+        });
+        setConvertStatus("Đang giải nén file HLS...");
+        const extractedFiles = await extractTarGz(blob);
+        setConvertStatus(`Đang upload HLS (${extractedFiles.length} files)...`);
+        const folderName = `hls-${Date.now()}`;
+        finalVideoUrl = await uploadHlsFromExtracted(extractedFiles, folderName, (uploaded, total) => {
+          setUploadProgress(Math.round((uploaded / total) * 100));
+        });
+        setForm(prev => ({ ...prev, video_url: finalVideoUrl }));
+        setPendingMp4File(null);
+        setConvertStatus("");
+      } catch (e) {
+        console.error(e);
+        alert("Lỗi convert video: " + e.message);
+        setConvertStatus("");
+        setIsSubmitting(false);
+        return;
+      }
+    } else if (pendingFolderFiles) {
       setUploadProgress(0);
       try {
         finalVideoUrl = await uploadHlsFolder(pendingFolderFiles, (uploaded, total) => {
@@ -1072,9 +1101,9 @@ export default function AdminVlogs() {
                     <Button size="small" variant={videoSourceMode === "url" ? "contained" : "outlined"} onClick={() => setVideoSourceMode("url")} sx={{ textTransform: "none", borderRadius: 1.5 }}>
                       Dán Link URL
                     </Button>
-                    {/* <Button size="small" variant={videoSourceMode === "file" ? "contained" : "outlined"} onClick={() => setVideoSourceMode("file")} sx={{ textTransform: "none", borderRadius: 1.5 }}>
+                    <Button size="small" variant={videoSourceMode === "file" ? "contained" : "outlined"} onClick={() => setVideoSourceMode("file")} sx={{ textTransform: "none", borderRadius: 1.5 }}>
                       Tải File .mp4 Lên
-                    </Button> */}
+                    </Button>
                     <Button size="small" variant={videoSourceMode === "folder" ? "contained" : "outlined"} onClick={() => setVideoSourceMode("folder")} sx={{ textTransform: "none", borderRadius: 1.5 }}>
                       Tải Thư Mục HLS (.m3u8)
                     </Button>
@@ -1092,62 +1121,23 @@ export default function AdminVlogs() {
                   ) : videoSourceMode === "file" ? (
                     <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
                       <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                        <Button component="label" variant="contained" startIcon={<CloudUploadIcon />} size="small" disabled={uploadingVideo} sx={{ textTransform: "none", borderRadius: 1.5 }}>
-                          {uploadingVideo ? "Đang xử lý..." : "Chọn File Video"}
-                          <input type="file" accept="video/*" hidden onChange={async (e) => {
+                        <Button component="label" variant="contained" startIcon={<CloudUploadIcon />} size="small" disabled={isSubmitting} sx={{ textTransform: "none", borderRadius: 1.5 }}>
+                          Chọn File MP4
+                          <input type="file" accept="video/mp4,video/*" hidden onChange={(e) => {
                             const file = e.target.files?.[0];
                             if (!file) return;
-                            setUploadingVideo(true);
-                            try {
-                              const publicUrl = await uploadVlogFile(file, "videos");
-
-                              // Trigger local HLS conversion API
-                              const sourcePath = publicUrl.split('/public/vlogs-posts/')[1] || publicUrl;
-                              try {
-                                const res = await fetch('/api/convert-hls', {
-                                  method: 'POST',
-                                  body: JSON.stringify({ sourcePath })
-                                });
-                                if (res.ok) {
-                                  alert("Tự động convert HLS bằng local script thành công!");
-                                }
-                              } catch (apiErr) {
-                                console.log("Local conversion API unavailable (expected if deployed).");
-                              }
-
-                              // Auto-translate to target HLS path .m3u8 matching convert-videos-to-hls.mjs
-                              let hlsUrl = publicUrl;
-                              if (publicUrl.includes("/public/vlogs-posts/")) {
-                                hlsUrl = publicUrl
-                                  .replace("/public/vlogs-posts/", "/public/video-hls/")
-                                  .replace(/\.mp4$/i, "/index.m3u8");
-                              } else {
-                                hlsUrl = publicUrl.replace(/\.mp4$/i, "/index.m3u8");
-                              }
-                              setForm((prev) => ({ ...prev, video_url: hlsUrl }));
-                              alert("Đã upload MP4 gốc lên storage. Đường dẫn video tự động tối ưu hóa sang HLS (.m3u8) để tương thích thiết bị di động!");
-                            } catch (err) {
-                              console.error(err);
-                              alert("Lỗi tải video lên: " + err.message);
-                            } finally {
-                              setUploadingVideo(false);
-                            }
+                            setPendingMp4File(file);
+                            setForm((prev) => ({ ...prev, video_url: `[Sẽ convert: ${file.name}]` }));
                           }} />
                         </Button>
-                        <Typography variant="caption" sx={{ color: form.video_url ? "success.main" : "text.secondary", fontWeight: 600 }}>
-                          {form.video_url ? "Đã tối ưu sang HLS!" : "Chưa chọn file"}
+                        <Typography variant="caption" sx={{ color: pendingMp4File ? "warning.main" : "text.secondary", fontWeight: 600 }}>
+                          {pendingMp4File ? `${pendingMp4File.name} (sẽ convert khi Lưu)` : "Chưa chọn file"}
                         </Typography>
                       </Box>
-                      {form.video_url && (
-                        <TextField
-                          value={form.video_url}
-                          disabled
-                          size="small"
-                          variant="filled"
-                          fullWidth
-                          label="Target HLS Playback URL"
-                          inputProps={{ style: { fontSize: "0.75rem", fontFamily: "monospace" } }}
-                        />
+                      {pendingMp4File && (
+                        <Typography variant="caption" color="text.secondary" sx={{ pl: 0.5 }}>
+                          Video sẽ được tự động convert sang HLS (.m3u8) khi nhấn "Lưu Vlog".
+                        </Typography>
                       )}
                     </Box>
                   ) : (
@@ -1403,13 +1393,24 @@ export default function AdminVlogs() {
             </Grid>
           </Grid>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2, pt: 1 }}>
-          <Button onClick={() => setOpen(false)} disabled={isSubmitting} sx={{ textTransform: "none", fontWeight: 600 }}>Hủy bỏ</Button>
-          <Button onClick={handleSubmit} disabled={isSubmitting} variant="contained" sx={{ px: 3, borderRadius: 2, textTransform: "none", fontWeight: 600 }}>
-            {isSubmitting
-              ? (pendingFolderFiles ? `Đang upload thư mục HLS... ${uploadProgress}%` : "Đang lưu...")
-              : (editing ? "Cập nhật" : "Lưu Vlog")}
-          </Button>
+        <DialogActions sx={{ px: 3, pb: 2, pt: 1, flexDirection: "column", alignItems: "stretch", gap: 1 }}>
+          {isSubmitting && convertStatus && (
+            <Typography variant="caption" color="primary.main" sx={{ textAlign: "center" }}>
+              {convertStatus}{uploadProgress > 0 ? ` ${uploadProgress}%` : ""}
+            </Typography>
+          )}
+          <Box sx={{ display: "flex", gap: 1, justifyContent: "flex-end" }}>
+            <Button onClick={() => setOpen(false)} disabled={isSubmitting} sx={{ textTransform: "none", fontWeight: 600 }}>Hủy bỏ</Button>
+            <Button onClick={handleSubmit} disabled={isSubmitting} variant="contained" sx={{ px: 3, borderRadius: 2, textTransform: "none", fontWeight: 600 }}>
+              {isSubmitting
+                ? (convertStatus
+                    ? (uploadProgress > 0 ? `Upload HLS... ${uploadProgress}%` : "Đang xử lý video...")
+                    : pendingFolderFiles
+                      ? `Đang upload HLS... ${uploadProgress}%`
+                      : "Đang lưu...")
+                : (editing ? "Cập nhật" : "Lưu Vlog")}
+            </Button>
+          </Box>
         </DialogActions>
       </Dialog>
       </>}

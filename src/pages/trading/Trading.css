@@ -14,6 +14,7 @@
   width: 100%;
   max-width: 100vw;
   overflow-x: hidden;
+  overscroll-behavior: none;
 }
 .trading-app *, .trading-app *::before, .trading-app *::after {
   box-sizing: border-box;

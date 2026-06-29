@@ -17,8 +17,9 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import MyLocationIcon from "@mui/icons-material/MyLocation";
 import {
   getSections, uploadGuestPostImage, uploadGuestPosterImage,
-  uploadGuestHlsFolder, uploadGuestTimelineImage, supabase, getVlogCategories,
+  uploadGuestHlsFolder, uploadGuestHlsFromExtracted, uploadGuestTimelineImage, supabase, getVlogCategories,
 } from "../lib/supabaseClient";
+import { convertVideoToHls, extractTarGz } from "../lib/hlsApi";
 
 const VN_PHONE_RE = /^(0|\+84)(3[2-9]|5[6-9]|7[0-9]|8[0-9]|9[0-9])\d{7}$/;
 
@@ -79,6 +80,8 @@ export default function GuestSubmit() {
   const [uploadingPoster, setUploadingPoster] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [pendingFolderFiles, setPendingFolderFiles] = useState(null);
+  const [pendingMp4File, setPendingMp4File] = useState(null);
+  const [convertStatus, setConvertStatus] = useState("");
   const [pendingPosterFile, setPendingPosterFile] = useState(null);
   const [locations, setLocations] = useState([]);
   const videoRef = useRef(null);
@@ -141,14 +144,32 @@ export default function GuestSubmit() {
     const phoneErr = validatePhone(phone);
     if (phoneErr) { setPhoneError(phoneErr); return; }
     if (!vlogForm.title.trim()) { setError("Vui lòng nhập tiêu đề video."); return; }
-    if (!vlogForm.video_url.trim() && !pendingFolderFiles) { setError("Vui lòng nhập đường dẫn hoặc chọn thư mục video."); return; }
+    if (!vlogForm.video_url.trim() && !pendingFolderFiles && !pendingMp4File) {
+      setError("Vui lòng nhập đường dẫn hoặc chọn file video.");
+      return;
+    }
 
     setLoading(true);
     setError("");
     try {
       let finalVideoUrl = vlogForm.video_url.trim();
 
-      if (pendingFolderFiles) {
+      if (pendingMp4File) {
+        setUploadProgress(0);
+        setConvertStatus("Đang gửi video lên server convert...");
+        const { blob } = await convertVideoToHls(pendingMp4File, { maxSizeMb: 10, width: 1280 }, (phase) => {
+          if (phase === "converting") setConvertStatus("Đang convert sang HLS, vui lòng đợi...");
+        });
+        setConvertStatus("Đang giải nén file HLS...");
+        const extractedFiles = await extractTarGz(blob);
+        setConvertStatus(`Đang upload HLS (${extractedFiles.length} files)...`);
+        const folderName = `hls-${Date.now()}`;
+        finalVideoUrl = await uploadGuestHlsFromExtracted(extractedFiles, folderName, (uploaded, total) => {
+          setUploadProgress(Math.round((uploaded / total) * 100));
+        });
+        setPendingMp4File(null);
+        setConvertStatus("");
+      } else if (pendingFolderFiles) {
         setUploadProgress(0);
         finalVideoUrl = await uploadGuestHlsFolder(pendingFolderFiles, (uploaded, total) => {
           setUploadProgress(Math.round((uploaded / total) * 100));
@@ -188,10 +209,12 @@ export default function GuestSubmit() {
       setVlogForm(EMPTY_VLOG);
       setLocations([]);
       setPendingPosterFile(null);
+      setPendingMp4File(null);
       setPosterSourceMode("url");
       setVideoSourceMode("url");
     } catch (e) {
       setError("Đã xảy ra lỗi khi gửi video: " + e.message);
+      setConvertStatus("");
     } finally {
       setLoading(false);
       setUploadingPoster(false);
@@ -224,6 +247,8 @@ export default function GuestSubmit() {
     setPendingPosterFile(null);
     setVideoSourceMode("url");
     setPendingFolderFiles(null);
+    setPendingMp4File(null);
+    setConvertStatus("");
     setLocations([]);
   };
 
@@ -498,28 +523,23 @@ export default function GuestSubmit() {
                     {videoSourceMode === "file" && (
                       <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
                         <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                          <Button component="label" variant="contained" startIcon={<CloudUploadIcon />} size="small" disabled={uploadingVideo} sx={{ textTransform: "none", borderRadius: 1.5 }}>
-                            {uploadingVideo ? "Đang tải..." : "Chọn File Video"}
-                            <input type="file" accept="video/*" hidden onChange={async (e) => {
+                          <Button component="label" variant="contained" startIcon={<CloudUploadIcon />} size="small" disabled={loading} sx={{ textTransform: "none", borderRadius: 1.5 }}>
+                            Chọn File MP4
+                            <input type="file" accept="video/mp4,video/*" hidden onChange={(e) => {
                               const file = e.target.files?.[0];
                               if (!file) return;
-                              setUploadingVideo(true);
-                              try {
-                                const publicUrl = await uploadVlogFile(file);
-                                setVlogForm((prev) => ({ ...prev, video_url: publicUrl }));
-                              } catch (err) {
-                                setError("Lỗi tải video lên: " + err.message);
-                              } finally {
-                                setUploadingVideo(false);
-                              }
+                              setPendingMp4File(file);
+                              setVlogForm((prev) => ({ ...prev, video_url: `[Sẽ convert: ${file.name}]` }));
                             }} />
                           </Button>
-                          <Typography variant="caption" sx={{ color: vlogForm.video_url ? "success.main" : "text.secondary", fontWeight: 600 }}>
-                            {uploadingVideo ? "Đang upload..." : vlogForm.video_url ? "Đã tải lên!" : "Chưa chọn file"}
+                          <Typography variant="caption" sx={{ color: pendingMp4File ? "warning.main" : "text.secondary", fontWeight: 600 }}>
+                            {pendingMp4File ? `${pendingMp4File.name} (sẽ convert khi gửi)` : "Chưa chọn file"}
                           </Typography>
                         </Box>
-                        {vlogForm.video_url && (
-                          <TextField value={vlogForm.video_url} disabled size="small" variant="filled" fullWidth label="URL video" inputProps={{ style: { fontSize: "0.75rem", fontFamily: "monospace" } }} />
+                        {pendingMp4File && (
+                          <Typography variant="caption" color="text.secondary" sx={{ pl: 0.5 }}>
+                            Video sẽ được tự động convert sang HLS (.m3u8) khi bạn nhấn "Gửi video".
+                          </Typography>
                         )}
                       </Box>
                     )}
@@ -692,6 +712,11 @@ export default function GuestSubmit() {
                 </Box>
 
                 <Divider sx={{ mt: 3, mb: 2 }} />
+                {loading && convertStatus && (
+                  <Typography variant="caption" color="primary.main" sx={{ display: "block", mb: 1, textAlign: "center" }}>
+                    {convertStatus}{uploadProgress > 0 ? ` ${uploadProgress}%` : ""}
+                  </Typography>
+                )}
                 <Button
                   variant="contained" size="large" onClick={handleSubmitVlog}
                   disabled={loading}
@@ -700,7 +725,11 @@ export default function GuestSubmit() {
                   startIcon={loading ? <CircularProgress size={18} color="inherit" /> : <VideocamIcon />}
                 >
                   {loading
-                    ? (pendingFolderFiles ? `Đang upload HLS... ${uploadProgress}%` : "Đang gửi...")
+                    ? (convertStatus
+                        ? `${uploadProgress > 0 ? `Upload HLS... ${uploadProgress}%` : "Đang xử lý video..."}`
+                        : pendingFolderFiles
+                          ? `Đang upload HLS... ${uploadProgress}%`
+                          : "Đang gửi...")
                     : "Gửi video"}
                 </Button>
               </Grid>
