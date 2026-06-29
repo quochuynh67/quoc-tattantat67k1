@@ -441,13 +441,16 @@ html.dark .theme-toggle-button {
   align-items: stretch;
   display: grid;
   gap: var(--spacing-lg);
-  grid-template-columns: minmax(280px, 0.8fr) minmax(320px, 1.2fr);
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  min-width: 0;
+  width: 100%;
 }
 
 .vlog-video-panel {
   background: #070807;
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-medium);
+  min-width: 0;
   overflow: hidden;
   position: relative;
 }
@@ -490,6 +493,8 @@ html.dark .theme-toggle-button {
   border: 1px solid rgba(0, 0, 0, 0.06);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-subtle);
+  min-width: 0;
+  overflow: hidden;
   padding: var(--spacing-lg);
 }
 
@@ -1154,9 +1159,19 @@ html.dark .vlog-info-panel {
 
 /* Quill Content Styles */
 .quill-content {
-  line-height: 1.6;
+  font-family: var(--font-body), "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+  line-height: 1.7;
   max-width: 100%;
   overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.plain-content {
+  font-family: var(--font-body), "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+  line-height: 1.7;
+  max-width: 100%;
+  overflow-wrap: break-word;
+  white-space: pre-wrap;
   word-break: break-word;
 }
 
@@ -1220,7 +1235,9 @@ html.dark .vlog-info-panel {
 }
 
 .quill-content iframe {
+  display: block;
   max-width: 100%;
+  width: 100%;
 }
 
 /* ── Vlog Bottom Sheet ──────────────────────────────────────────────── */

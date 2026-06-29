@@ -24,6 +24,30 @@ import { useSiteSettings } from "../contexts/SiteSettingsContext";
 const SHEET_COLLAPSED = 120;
 const SHEET_EXPANDED = 380;
 
+const isHtmlContent = (str) => str && /<[a-zA-Z][^>]*>/.test(str);
+
+const RichContent = ({ html, className = "", sx = {} }) => {
+  if (!html) return null;
+  if (isHtmlContent(html)) {
+    return (
+      <Box
+        className={`quill-content${className ? ` ${className}` : ""}`}
+        sx={sx}
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
+    );
+  }
+  return (
+    <Box
+      component="p"
+      className={`plain-content${className ? ` ${className}` : ""}`}
+      sx={sx}
+    >
+      {html}
+    </Box>
+  );
+};
+
 const formatTime = (seconds) => {
   const m = Math.floor(seconds / 60).toString().padStart(2, "0");
   const s = Math.floor(seconds % 60).toString().padStart(2, "0");
@@ -409,30 +433,30 @@ const VlogReview = () => {
         <Helmet>
           <script type="application/ld+json">{JSON.stringify(contentSchema)}</script>
         </Helmet>
-        <Container maxWidth={false} className="section-container">
+        <Container maxWidth="md" className="section-container">
           <Button onClick={() => navigate(-1)} startIcon={<ArrowBackIcon />} className="vlog-back-link">
             Quay lại
           </Button>
-          <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, mt: 2 }}>
+          <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, mt: 2, width: "100%", overflowX: "hidden" }}>
             {isHealth ? (
-              <Box sx={{ width: { xs: "100%", md: "66.666%" } }}>
+              <Box sx={{ width: "100%" }}>
                 <Alert severity={post.severity || "info"} sx={{ fontSize: "1rem", borderRadius: 2 }}>{post.title}</Alert>
               </Box>
             ) : post.image ? (
-              <Box sx={{ width: { xs: "100%", md: "66.666%" } }}>
-                <img src={post.image} alt={post.title} style={{ width: "100%", height: "auto", objectFit: "contain", display: "block", borderRadius: 8 }} />
+              <Box sx={{ width: "100%" }}>
+                <img src={post.image} alt={post.title} style={{ width: "100%", maxWidth: "100%", height: "auto", objectFit: "contain", display: "block", borderRadius: 8 }} />
               </Box>
             ) : null}
-            <Box sx={{ width: "100%", maxWidth: "800px" }}>
+            <Box sx={{ width: "100%", maxWidth: "100%", overflowX: "hidden" }}>
               <Typography variant="overline" className="vlog-kicker">{post.category || "Chi tiết"}</Typography>
               <Typography variant="h3" component="h1" className="vlog-title">{post.title}</Typography>
               {post.description ? (
-                <Box className="vlog-subtitle quill-content" dangerouslySetInnerHTML={{ __html: post.description }} />
+                <RichContent html={post.description} className="vlog-subtitle" sx={{ maxWidth: "100%", overflowX: "hidden" }} />
               ) : post.excerpt ? (
                 <Typography className="vlog-subtitle">{post.excerpt}</Typography>
               ) : null}
               {post.content && post.content !== post.description && (
-                <Box className="vlog-subtitle quill-content" sx={{ mt: 2 }} dangerouslySetInnerHTML={{ __html: post.content }} />
+                <RichContent html={post.content} className="vlog-subtitle" sx={{ mt: 2, maxWidth: "100%", overflowX: "hidden" }} />
               )}
               {post.address && (
                 <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mt: 2, color: "var(--color-text-subtle)" }}>
@@ -760,12 +784,12 @@ const VlogReview = () => {
             <Typography variant="overline" sx={{ color: "var(--color-text-subtle)" }}>{post.category || "Chi tiết"}</Typography>
             <Typography variant="h4" sx={{ mt: 1, mb: 2, fontFamily: "var(--font-display)" }}>{post.title}</Typography>
             {post.description ? (
-              <Box sx={{ mb: 2, color: "var(--color-text)" }} className="quill-content" dangerouslySetInnerHTML={{ __html: post.description }} />
+              <RichContent html={post.description} sx={{ mb: 2, color: "var(--color-text)" }} />
             ) : post.excerpt ? (
               <Typography sx={{ mb: 2, color: "var(--color-text)" }}>{post.excerpt}</Typography>
             ) : null}
             {post.content && post.content !== post.description && (
-              <Box sx={{ mb: 2, color: "var(--color-text)" }} className="quill-content" dangerouslySetInnerHTML={{ __html: post.content }} />
+              <RichContent html={post.content} sx={{ mb: 2, color: "var(--color-text)" }} />
             )}
             <Box sx={{ display: "flex", gap: 3, flexWrap: "wrap" }}>
               {post.address && (
