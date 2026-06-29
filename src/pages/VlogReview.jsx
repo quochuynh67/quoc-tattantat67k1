@@ -502,20 +502,10 @@ const VlogReview = () => {
 
   // ── Shared header (back + toggle) ─────────────────────────────────────────
   const PageHeader = () => (
-    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+    <Box sx={{ mb: 2 }}>
       <Button onClick={() => navigate(-1)} startIcon={<ArrowBackIcon />} className="vlog-back-link" sx={{ mb: "0 !important" }}>
         Quay lại
       </Button>
-      <Tooltip title={viewMode === "tab" ? "Chuyển sang dạng cuộn" : "Chuyển sang dạng tab"}>
-        <Button
-          variant="outlined"
-          size="small"
-          startIcon={viewMode === "tab" ? <ViewDayIcon /> : <GridViewIcon />}
-          onClick={() => setViewMode((v) => (v === "tab" ? "scroll" : "tab"))}
-        >
-          {viewMode === "tab" ? "Dạng cuộn" : "Dạng tab"}
-        </Button>
-      </Tooltip>
     </Box>
   );
 
@@ -540,12 +530,21 @@ const VlogReview = () => {
       <main className="vlog-scroll-root" style={{ position: "fixed", inset: 0, zIndex: 1300 }}>
         <Box className="vlog-scroll-shell">
           <Box className="vlog-scroll-header" sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <Button onClick={() => navigate(-1)} startIcon={<ArrowBackIcon />} className="vlog-scroll-back">
+            <Button onClick={() => setViewMode("tab")} startIcon={<ArrowBackIcon />} className="vlog-scroll-back">
               Quay lại
             </Button>
             <Tooltip title="Chuyển sang dạng tab">
               <Button variant="outlined" size="small" startIcon={<GridViewIcon />} onClick={() => setViewMode("tab")}
-                sx={{ color: "#fff", borderColor: "rgba(255,255,255,0.5)", "&:hover": { borderColor: "#fff", background: "rgba(255,255,255,0.1)" } }}>
+                sx={{
+                  color: "#fff", borderColor: "rgba(255,255,255,0.5)",
+                  "&:hover": { borderColor: "#fff", background: "rgba(255,255,255,0.1)" },
+                  "@keyframes vlog-pulse-scroll": {
+                    "0%":   { boxShadow: "0 0 0 0 rgba(130,243,207,0.6)", transform: "scale(1)" },
+                    "55%":  { boxShadow: "0 0 0 8px rgba(130,243,207,0)", transform: "scale(1.05)" },
+                    "100%": { boxShadow: "0 0 0 0 rgba(130,243,207,0)",   transform: "scale(1)" },
+                  },
+                  animation: "vlog-pulse-scroll 2s ease-in-out infinite",
+                }}>
                 Dạng tab
               </Button>
             </Tooltip>
@@ -599,14 +598,14 @@ const VlogReview = () => {
                       }}
                       aria-label={isPlaying ? "Chạm để tạm dừng" : "Chạm để phát"}
                     />
-                    {!hasInteracted && (
-                      <div className={`vlog-play-hint${isPlaying ? " hidden" : ""}`} style={{ pointerEvents: "none" }}>
-                        <div className="vlog-play-hint-btn">
-                          <PlayCircleIcon sx={{ fontSize: 36 }} />
-                        </div>
-                        <span className="vlog-play-hint-label">Chạm để phát</span>
+                    <div className={`vlog-play-hint${isPlaying ? " hidden" : ""}`} style={{ pointerEvents: "none" }}>
+                      <div className="vlog-play-hint-btn">
+                        <PlayCircleIcon sx={{ fontSize: 36 }} />
                       </div>
-                    )}
+                      <span className="vlog-play-hint-label">
+                        {hasInteracted ? "Chạm để tiếp tục" : "Chạm để phát"}
+                      </span>
+                    </div>
                   </Box>
 
                   <Box className="vlog-scroll-bottom-panel" sx={{ bottom: `${scrollSheetHeight + 8}px` }}>
@@ -794,18 +793,44 @@ const VlogReview = () => {
         {/* VLOG SECTION */}
         {vlogs.length > 0 && (
           <>
+            <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 1 }}>
+              <Tooltip title="Chuyển sang dạng cuộn">
+                <Button
+                  variant="outlined"
+                  size="small"
+                  startIcon={<ViewDayIcon />}
+                  onClick={() => {
+                    hasInteractedRef.current = true;
+                    setHasInteracted(true);
+                    setViewMode("scroll");
+                  }}
+                  sx={{
+                    "@keyframes vlog-pulse-tab": {
+                      "0%, 100%": { boxShadow: "0 0 0 0 rgba(25,118,210,0)" },
+                      "50%": { boxShadow: "0 0 0 7px rgba(25,118,210,0.5), 0 0 14px rgba(25,118,210,0.25)" },
+                    },
+                    animation: "vlog-pulse-tab 2s ease-in-out infinite",
+                  }}
+                >
+                  Dạng cuộn
+                </Button>
+              </Tooltip>
+            </Box>
             {vlogs.length > 1 && (
-          <Tabs
-            value={activeVlogIdx}
-            onChange={handleSelectTab}
-            variant="scrollable"
-            scrollButtons="auto"
-            sx={{ mb: 3, borderBottom: 1, borderColor: "divider" }}
-          >
-            {vlogs.map((v, idx) => (
-              <Tab key={v.id} label={v.title || `Vlog ${idx + 1}`} />
-            ))}
-          </Tabs>
+              <Tabs
+                value={activeVlogIdx}
+                onChange={handleSelectTab}
+                variant="scrollable"
+                scrollButtons="auto"
+                sx={{
+                  mb: 3, borderBottom: 1, borderColor: "divider",
+                  "& .MuiTab-root": { whiteSpace: "nowrap" },
+                }}
+              >
+                {vlogs.map((v, idx) => (
+                  <Tab key={v.id} label={v.title || `Vlog ${idx + 1}`} />
+                ))}
+              </Tabs>
             )}
 
             <Box className="vlog-review-layout">
@@ -827,7 +852,9 @@ const VlogReview = () => {
               <div className="vlog-play-hint-btn">
                 <PlayCircleIcon sx={{ fontSize: 36 }} />
               </div>
-              <span className="vlog-play-hint-label">Chạm để phát</span>
+              <span className="vlog-play-hint-label">
+                {hasInteracted ? "Chạm để tiếp tục" : "Chạm để phát"}
+              </span>
             </div>
             <Box className="vlog-video-caption">
               <Typography className="vlog-host">{activeVlog.host}</Typography>

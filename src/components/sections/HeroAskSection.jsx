@@ -216,6 +216,7 @@ export default function HeroAskSection() {
   const inputRef = useRef(null);
   const convRef = useRef(null);
   const pendingRef = useRef(false);
+  const connectingRef = useRef(false);
 
   useEffect(() => {
     if (cooldownLeft <= 0) return;
@@ -223,38 +224,9 @@ export default function HeroAskSection() {
     return () => clearInterval(t);
   }, [cooldownLeft]);
 
-  // Start a persistent text-only ElevenLabs session
+  // Cleanup session on unmount only
   useEffect(() => {
-    if (!AGENT_ID) return;
-    let cancelled = false;
-
-    Conversation.startSession({
-      agentId: AGENT_ID,
-      textOnly: true,
-      onMessage: ({ role, message }) => {
-        if (cancelled) return;
-        if (role === "agent") {
-          setLoading(false);
-          pendingRef.current = false;
-          setMessages((m) => [...m, { role: "assistant", content: message }]);
-        }
-      },
-      onError: (msg) => {
-        if (cancelled) return;
-        setLoading(false);
-        pendingRef.current = false;
-        setMessages((m) => [...m, { role: "assistant", content: msg ?? "Hỏng kết nối được, thử lại sau nha~" }]);
-      },
-    }).then((conv) => {
-      if (cancelled) { conv.endSession(); return; }
-      convRef.current = conv;
-    }).catch((err) => {
-      if (cancelled) return;
-      console.error("[ElevenLabs] session error:", err);
-    });
-
     return () => {
-      cancelled = true;
       convRef.current?.endSession();
       convRef.current = null;
     };
@@ -265,20 +237,57 @@ export default function HeroAskSection() {
   const isSessionMaxed = messages.filter((m) => m.role === "user").length >= SESSION_LIMIT;
   const isBlocked = isCooling || isDailyMaxed || isSessionMaxed;
 
-  const send = (questionOverride) => {
+  const getOrCreateSession = async () => {
+    if (convRef.current) return convRef.current;
+    if (connectingRef.current) return null;
+    if (!AGENT_ID) return null;
+
+    connectingRef.current = true;
+    try {
+      const conv = await Conversation.startSession({
+        agentId: AGENT_ID,
+        textOnly: true,
+        onMessage: ({ role, message }) => {
+          if (role === "agent") {
+            setLoading(false);
+            pendingRef.current = false;
+            setMessages((m) => [...m, { role: "assistant", content: message }]);
+          }
+        },
+        onError: (msg) => {
+          setLoading(false);
+          pendingRef.current = false;
+          setMessages((m) => [...m, { role: "assistant", content: msg ?? "Hỏng kết nối được, thử lại sau nha~" }]);
+        },
+      });
+      convRef.current = conv;
+      return conv;
+    } catch (err) {
+      console.error("[ElevenLabs] session error:", err);
+      setMessages((m) => [...m, { role: "assistant", content: "Hỏng kết nối được, thử lại sau nha~" }]);
+      return null;
+    } finally {
+      connectingRef.current = false;
+    }
+  };
+
+  const send = async (questionOverride) => {
     const question = (questionOverride ?? input).trim();
-    if (!question || loading || isBlocked || !convRef.current) return;
+    if (!question || loading || isBlocked) return;
 
     setMessages((m) => [...m, { role: "user", content: question }]);
     setInput("");
     setLoading(true);
     pendingRef.current = true;
-    convRef.current.sendUserMessage(question);
-
     saveCooldown();
     setCooldownLeft(COOLDOWN_SECS);
     const newCount = incrementDailyCount();
     setDailyCount(newCount);
+
+    const conv = await getOrCreateSession();
+    if (conv) {
+      conv.sendUserMessage(question);
+    }
     setTimeout(() => inputRef.current?.focus(), 50);
   };
 
@@ -289,7 +298,7 @@ export default function HeroAskSection() {
   };
 
   const hasConversation = messages.length > 0;
-  const notReady = !AGENT_ID || !convRef.current;
+  const notReady = !AGENT_ID;
 
   const placeholderText = () => {
     if (isDailyMaxed) return `Hết ${DAILY_LIMIT} lượt hỏi hôm nay rồi nha, mai quay lại~`;
