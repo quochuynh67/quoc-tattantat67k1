@@ -1,9 +1,7 @@
-export interface AgentConfig {
-  name: string;
-  greeting: string;
-  color: string;
-  emoji: string;
-}
+export type { AgentConfig } from "./promptBuilder";
+import { buildChatAgentPrompt, buildWishPrompt } from "./promptBuilder";
+import type { AgentConfig } from "./promptBuilder";
+// Re-exported for any existing consumers: import { AgentConfig } from "./agentApi"
 
 export const DEFAULT_AGENTS: Record<string, AgentConfig> = {
   news: { name: "Cậu Út Tin Tức", greeting: "Ê cưng! Có gì muốn biết về tin tức Phú Tân thì hỏi Cậu Út nha~", color: "#1565c0", emoji: "📰" },
@@ -12,16 +10,6 @@ export const DEFAULT_AGENTS: Record<string, AgentConfig> = {
   beautyHealth: { name: "Chị Út Spa", greeting: "Hi cưng! Cần tư vấn làm đẹp hay sức khỏe thì cứ hỏi Chị Út nha~", color: "#c2185b", emoji: "💆" },
   agriculture: { name: "Chú Út Nông Dân", greeting: "Chào bà con! Có gì về nông nghiệp, mùa vụ Phú Tân thì hỏi Chú Út nha~", color: "#5d4037", emoji: "🌾" },
   health: { name: "Bác Út Y Tế", greeting: "Xin chào cưng! Có gì liên quan sức khỏe, dịch bệnh thì hỏi Bác Út nha~", color: "#b71c1c", emoji: "🏥" },
-};
-
-const SECTION_TOPICS: Record<string, string> = {
-  news: "tin tức địa phương, sự kiện, hoạt động cộng đồng tại huyện Phú Tân",
-  places: "địa điểm tham quan, du lịch, di tích lịch sử tại Phú Tân",
-  food: "ẩm thực, món ăn đặc sản, quán ăn ngon tại Phú Tân",
-  beautyHealth: "dịch vụ làm đẹp, spa, chăm sóc sức khỏe tại Phú Tân",
-  agriculture: "nông nghiệp, canh tác, mùa vụ, phát triển nông thôn tại Phú Tân",
-  health: "y tế cộng đồng, cảnh báo dịch bệnh, biện pháp phòng ngừa tại Phú Tân",
-  general: "mọi thông tin về huyện Phú Tân, tỉnh An Giang bao gồm địa lý, lịch sử, văn hóa, ẩm thực, dịch vụ vận chuyển (chành xe), địa điểm, sự kiện, đời sống và con người địa phương",
 };
 
 const GEMINI_MODELS = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-pro"];
@@ -37,16 +25,9 @@ export interface Message {
 const RATE_LIMIT_MS = 60_000;
 let _blockedUntil = 0;
 
-function buildSystemPrompt(section: string, agent: AgentConfig): string {
-  return `Bạn là ${agent.name}, trợ lý AI thân thiện của trang thông tin huyện Phú Tân, tỉnh An Giang.
-Bạn chuyên về ${SECTION_TOPICS[section] || "thông tin huyện Phú Tân"}.
-Luôn trả lời bằng tiếng Việt, giọng thân thiện, gần gũi theo phong cách miền Tây Nam Bộ (dùng từ "cưng", "nha", "á", "nè"...).
-Câu trả lời ngắn gọn, dưới 150 từ, không dùng markdown.`;
-}
-
 function buildGeminiContents(messages: Message[], section: string, agent: AgentConfig) {
   return [
-    { role: "user", parts: [{ text: buildSystemPrompt(section, agent) }] },
+    { role: "user", parts: [{ text: buildChatAgentPrompt(section, agent) }] },
     ...messages.map((m) => ({
       role: m.role === "user" ? "user" : "model",
       parts: [{ text: m.content }],
@@ -200,23 +181,7 @@ export async function generateWishes(
   if (!apiKey) throw new Error("Gemini API key chưa được cấu hình");
 
   const model = GEMINI_MODELS[_currentGeminiModelIdx] ?? GEMINI_MODELS[0];
-  const prompt = `Bạn là chuyên gia viết lời chúc tiếng Việt. Hãy tạo ${count} lời chúc ${occasion} khác nhau theo yêu cầu sau:
-
-Yêu cầu: ${description}
-
-Quy tắc:
-- Mỗi lời chúc chân thành, ý nghĩa, đúng văn hóa Việt Nam
-- Độ dài 60–130 từ
-- Không dùng markdown, không gạch đầu dòng, viết thành đoạn văn tự nhiên
-- Mỗi lời chúc bắt đầu bằng "---WISH---" trên một dòng riêng
-- Không thêm số thứ tự hay tiêu đề, chỉ viết thẳng nội dung sau "---WISH---"
-
-Ví dụ format:
----WISH---
-Nội dung lời chúc 1 ở đây...
-
----WISH---
-Nội dung lời chúc 2 ở đây...`;
+  const prompt = buildWishPrompt(occasion, description, count);
 
   const res = await fetch(
     `https://generativelanguage.googleapis.com/v1/models/${model}:streamGenerateContent?alt=sse&key=${apiKey}`,
@@ -291,7 +256,7 @@ export async function callClaudeAgent(messages: Message[], section: string, agen
       body: JSON.stringify({
         model: "claude-haiku-4-5-20251001",
         max_tokens: 400,
-        system: buildSystemPrompt(section, agent),
+        system: buildChatAgentPrompt(section, agent),
         messages: messages.map((m) => ({ role: m.role, content: m.content })),
       }),
     });

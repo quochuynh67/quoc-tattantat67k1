@@ -1,92 +1,93 @@
 // src/pages/MenuCreator.jsx – Responsive drag-drop menu board editor
 import React, { useState, useRef, useEffect, useCallback } from "react";
+import { buildMenuAiPrompt } from "../lib/promptBuilder";
 import { Helmet } from "react-helmet-async";
 import {
   Box, Typography, Paper, TextField, Button, IconButton,
   Tooltip, Tabs, Tab, Select, MenuItem as MuiMenuItem,
   FormControl, InputLabel, Slider, Switch, FormControlLabel,
-  Dialog, DialogTitle, DialogContent, DialogActions, Chip,
+  Dialog, DialogTitle, DialogContent, DialogActions, Chip, Alert,
   CircularProgress, Divider, Drawer, useMediaQuery, useTheme,
 } from "@mui/material";
-import DownloadIcon          from "@mui/icons-material/Download";
-import AutoAwesomeIcon       from "@mui/icons-material/AutoAwesome";
-import DeleteIcon            from "@mui/icons-material/Delete";
-import AddIcon               from "@mui/icons-material/Add";
-import UndoIcon              from "@mui/icons-material/Undo";
-import RedoIcon              from "@mui/icons-material/Redo";
-import EditIcon              from "@mui/icons-material/Edit";
-import CloseIcon             from "@mui/icons-material/Close";
-import FormatBoldIcon        from "@mui/icons-material/FormatBold";
-import FormatItalicIcon      from "@mui/icons-material/FormatItalic";
-import FormatAlignLeftIcon   from "@mui/icons-material/FormatAlignLeft";
+import DownloadIcon from "@mui/icons-material/Download";
+import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
+import DeleteIcon from "@mui/icons-material/Delete";
+import AddIcon from "@mui/icons-material/Add";
+import UndoIcon from "@mui/icons-material/Undo";
+import RedoIcon from "@mui/icons-material/Redo";
+import EditIcon from "@mui/icons-material/Edit";
+import CloseIcon from "@mui/icons-material/Close";
+import FormatBoldIcon from "@mui/icons-material/FormatBold";
+import FormatItalicIcon from "@mui/icons-material/FormatItalic";
+import FormatAlignLeftIcon from "@mui/icons-material/FormatAlignLeft";
 import FormatAlignCenterIcon from "@mui/icons-material/FormatAlignCenter";
-import FormatAlignRightIcon  from "@mui/icons-material/FormatAlignRight";
-import ArrowUpwardIcon       from "@mui/icons-material/ArrowUpward";
-import ArrowDownwardIcon     from "@mui/icons-material/ArrowDownward";
-import RestaurantMenuIcon    from "@mui/icons-material/RestaurantMenu";
-import RemoveIcon            from "@mui/icons-material/Remove";
-import ZoomOutMapIcon        from "@mui/icons-material/ZoomOutMap";
+import FormatAlignRightIcon from "@mui/icons-material/FormatAlignRight";
+import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
+import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
+import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
+import RemoveIcon from "@mui/icons-material/Remove";
+import ZoomOutMapIcon from "@mui/icons-material/ZoomOutMap";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const BOARD_SIZES = [
-  { label: "Ngang A5",  w: 794,  h: 559  },
-  { label: "Vuông",     w: 680,  h: 680  },
-  { label: "Dọc A5",   w: 559,  h: 794  },
-  { label: "Ngang A4", w: 1122, h: 794  },
+  { label: "Ngang A5", w: 794, h: 559 },
+  { label: "Vuông", w: 680, h: 680 },
+  { label: "Dọc A5", w: 559, h: 794 },
+  { label: "Ngang A4", w: 1122, h: 794 },
 ];
 
 const BG_PRESETS = [
-  { label: "Trắng",          v: "#ffffff" },
-  { label: "Kem ấm",         v: "#fff8f0" },
-  { label: "Vàng nhẹ",       v: "#fffde7" },
-  { label: "Xanh lá nhẹ",    v: "#f1f8e9" },
-  { label: "Hồng phấn",      v: "#fce4ec" },
+  { label: "Trắng", v: "#ffffff" },
+  { label: "Kem ấm", v: "#fff8f0" },
+  { label: "Vàng nhẹ", v: "#fffde7" },
+  { label: "Xanh lá nhẹ", v: "#f1f8e9" },
+  { label: "Hồng phấn", v: "#fce4ec" },
   { label: "Xanh dương nhẹ", v: "#e3f2fd" },
-  { label: "Tím lavender",   v: "#ede7f6" },
-  { label: "Nâu latte",      v: "#efebe9" },
-  { label: "Gradient vàng",  v: "linear-gradient(135deg,#fff9e6 0%,#ffe082 100%)" },
-  { label: "Gradient xanh",  v: "linear-gradient(135deg,#e8f5e9 0%,#a5d6a7 100%)" },
-  { label: "Gradient hồng",  v: "linear-gradient(135deg,#fce4ec 0%,#f48fb1 100%)" },
-  { label: "Gradient cam",   v: "linear-gradient(135deg,#fff3e0 0%,#ffcc80 100%)" },
-  { label: "Gradient tím",   v: "linear-gradient(135deg,#ede7f6 0%,#ce93d8 100%)" },
-  { label: "Đêm tối",        v: "linear-gradient(135deg,#1a1a2e 0%,#16213e 100%)" },
-  { label: "Gỗ tối",         v: "#3e2723" },
-  { label: "Đen sang",       v: "#212121" },
+  { label: "Tím lavender", v: "#ede7f6" },
+  { label: "Nâu latte", v: "#efebe9" },
+  { label: "Gradient vàng", v: "linear-gradient(135deg,#fff9e6 0%,#ffe082 100%)" },
+  { label: "Gradient xanh", v: "linear-gradient(135deg,#e8f5e9 0%,#a5d6a7 100%)" },
+  { label: "Gradient hồng", v: "linear-gradient(135deg,#fce4ec 0%,#f48fb1 100%)" },
+  { label: "Gradient cam", v: "linear-gradient(135deg,#fff3e0 0%,#ffcc80 100%)" },
+  { label: "Gradient tím", v: "linear-gradient(135deg,#ede7f6 0%,#ce93d8 100%)" },
+  { label: "Đêm tối", v: "linear-gradient(135deg,#1a1a2e 0%,#16213e 100%)" },
+  { label: "Gỗ tối", v: "#3e2723" },
+  { label: "Đen sang", v: "#212121" },
 ];
 
 const FONT_OPTIONS = [
-  { label: "Inter – Hiện đại",         v: "Inter, sans-serif" },
-  { label: "Merriweather – Cổ điển",   v: "'Merriweather', serif" },
+  { label: "Inter – Hiện đại", v: "Inter, sans-serif" },
+  { label: "Merriweather – Cổ điển", v: "'Merriweather', serif" },
   { label: "Dancing Script – Chữ đẹp", v: "'Dancing Script', cursive" },
-  { label: "Great Vibes – Thư pháp",   v: "'Great Vibes', cursive" },
-  { label: "Satisfy – Lãng mạn",       v: "'Satisfy', cursive" },
-  { label: "Pacifico – Vui tươi",      v: "'Pacifico', cursive" },
-  { label: "Lora – Trang nhã",         v: "'Lora', serif" },
+  { label: "Great Vibes – Thư pháp", v: "'Great Vibes', cursive" },
+  { label: "Satisfy – Lãng mạn", v: "'Satisfy', cursive" },
+  { label: "Pacifico – Vui tươi", v: "'Pacifico', cursive" },
+  { label: "Lora – Trang nhã", v: "'Lora', serif" },
 ];
 
 const FOOD_EMOJIS = [
-  "🍜","🍲","🥘","🍛","🍱","🥗","🍚","🍖","🍗","🥩","🍤","🦐","🦑","🦀",
-  "🐟","🥚","🧆","🥙","🌮","🌯","🥪","🍔","🍕","🍣","🥡","🥟","🍢","🍡",
-  "🍧","🍨","🍦","🧁","🎂","🍰","🍮","☕","🍵","🧋","🥤","🍹","🧃","🍺",
-  "🎉","⭐","✨","🌟","💫","🔥","❤️","🌿","🌸","🍀","🌺","🌻","🏵️","🎊",
+  "🍜", "🍲", "🥘", "🍛", "🍱", "🥗", "🍚", "🍖", "🍗", "🥩", "🍤", "🦐", "🦑", "🦀",
+  "🐟", "🥚", "🧆", "🥙", "🌮", "🌯", "🥪", "🍔", "🍕", "🍣", "🥡", "🥟", "🍢", "🍡",
+  "🍧", "🍨", "🍦", "🧁", "🎂", "🍰", "🍮", "☕", "🍵", "🧋", "🥤", "🍹", "🧃", "🍺",
+  "🎉", "⭐", "✨", "🌟", "💫", "🔥", "❤️", "🌿", "🌸", "🍀", "🌺", "🌻", "🏵️", "🎊",
 ];
 
 const SHAPE_OPTIONS = [
-  { label: "Hộp chữ nhật", type: "rect",   color: "#ffd700", w: 200, h: 80  },
-  { label: "Hình tròn",    type: "circle", color: "#ff6b6b", w: 100, h: 100 },
-  { label: "Kẻ ngang",     type: "hline",  color: "#555555", w: 300, h: 3   },
-  { label: "Kẻ dọc",       type: "vline",  color: "#555555", w: 3,   h: 120 },
+  { label: "Hộp chữ nhật", type: "rect", color: "#ffd700", w: 200, h: 80 },
+  { label: "Hình tròn", type: "circle", color: "#ff6b6b", w: 100, h: 100 },
+  { label: "Kẻ ngang", type: "hline", color: "#555555", w: 300, h: 3 },
+  { label: "Kẻ dọc", type: "vline", color: "#555555", w: 3, h: 120 },
 ];
 
 const TEXT_PRESETS = [
-  { label: "Tiêu đề lớn",   content: "THỰC ĐƠN",                  fontSize: 52, fontFamily: "'Dancing Script', cursive", bold: true,  italic: false, color: "#2d1b00", align: "center" },
-  { label: "Tên mục",       content: "Món Chính",                  fontSize: 28, fontFamily: "'Merriweather', serif",     bold: true,  italic: false, color: "#c62828", align: "left"   },
-  { label: "Phụ đề",        content: "Phong cách miền Tây Nam Bộ", fontSize: 18, fontFamily: "'Satisfy', cursive",        bold: false, italic: true,  color: "#6d4c41", align: "center" },
-  { label: "Giá tiền",      content: "35,000đ",                    fontSize: 22, fontFamily: "'Dancing Script', cursive", bold: true,  italic: false, color: "#c62828", align: "right"  },
-  { label: "Mô tả",         content: "Thêm mô tả món ăn tại đây", fontSize: 13, fontFamily: "Inter, sans-serif",          bold: false, italic: false, color: "#777",    align: "left"   },
-  { label: "Chú thích nhỏ", content: "* Giá đã bao gồm VAT",      fontSize: 12, fontFamily: "Inter, sans-serif",          bold: false, italic: true,  color: "#aaa",    align: "right"  },
-  { label: "Chữ tự do",     content: "Nhập văn bản",               fontSize: 20, fontFamily: "Inter, sans-serif",          bold: false, italic: false, color: "#333",    align: "left"   },
+  { label: "Tiêu đề lớn", content: "THỰC ĐƠN", fontSize: 52, fontFamily: "'Dancing Script', cursive", bold: true, italic: false, color: "#2d1b00", align: "center" },
+  { label: "Tên mục", content: "Món Chính", fontSize: 28, fontFamily: "'Merriweather', serif", bold: true, italic: false, color: "#c62828", align: "left" },
+  { label: "Phụ đề", content: "Phong cách miền Tây Nam Bộ", fontSize: 18, fontFamily: "'Satisfy', cursive", bold: false, italic: true, color: "#6d4c41", align: "center" },
+  { label: "Giá tiền", content: "35,000đ", fontSize: 22, fontFamily: "'Dancing Script', cursive", bold: true, italic: false, color: "#c62828", align: "right" },
+  { label: "Mô tả", content: "Thêm mô tả món ăn tại đây", fontSize: 13, fontFamily: "Inter, sans-serif", bold: false, italic: false, color: "#777", align: "left" },
+  { label: "Chú thích nhỏ", content: "* Giá đã bao gồm VAT", fontSize: 12, fontFamily: "Inter, sans-serif", bold: false, italic: true, color: "#aaa", align: "right" },
+  { label: "Chữ tự do", content: "Nhập văn bản", fontSize: 20, fontFamily: "Inter, sans-serif", bold: false, italic: false, color: "#333", align: "left" },
 ];
 
 const AI_QUICK_PROMPTS = [
@@ -100,6 +101,184 @@ const AI_QUICK_PROMPTS = [
 
 const DEFAULT_AI_PROMPT = `Bạn là chuyên gia thiết kế menu nhà hàng Việt Nam. Hãy tạo danh sách món ăn đặc sắc cho menu, phong cách miền Tây Nam Bộ, dân dã và ấm cúng. Tên món ngắn gọn, hấp dẫn. Giá từ 20,000đ đến 80,000đ. Mỗi món kèm emoji phù hợp và mô tả ngắn 5-8 từ.`;
 
+// ── Local menu templates ──────────────────────────────────────────────────────
+
+const mkItems = (items, W, H, opts = {}) => {
+  const {
+    nameColor = "#2d1b00", priceColor = "#c62828", descColor = "#888",
+    nameFont = "'Merriweather', serif", accentColor = "#c62828",
+    bgColor = "rgba(255,255,255,0.5)",
+  } = opts;
+  const startY = Math.floor(H * 0.22);
+  const gap = Math.floor((H - startY - 20) / items.length);
+  const x = Math.floor(W * 0.045);
+  const w = Math.floor(W * 0.91);
+  return items.map((item, i) => ({
+    type: "menuItem", x, y: startY + i * gap, width: w,
+    emoji: item[0], name: item[1], price: item[2], desc: item[3],
+    nameColor, priceColor, descColor,
+    nameFont, nameSize: 14, priceSize: 17, emojiSize: 20,
+    accent: true, accentColor, bgColor,
+    radius: 6, padX: 12, padY: 8,
+  }));
+};
+
+const mkTitle = (content, W, H, color, family = "'Dancing Script', cursive") => ({
+  type: "text", x: 0, y: Math.floor(H * 0.03), width: W,
+  content, fontSize: 46, fontFamily: family,
+  bold: true, italic: false, color, align: "center",
+  lineHeight: 1.15, tracking: 1, shadow: false,
+});
+
+const mkSub = (content, W, H, color) => ({
+  type: "text", x: 0, y: Math.floor(H * 0.14), width: W,
+  content, fontSize: 13, fontFamily: "'Satisfy', cursive",
+  bold: false, italic: true, color, align: "center",
+  lineHeight: 1.4, tracking: 0, shadow: false,
+});
+
+const mkLine = (W, H, color) => ({
+  type: "shape", shape: "hline",
+  x: Math.floor(W * 0.05), y: Math.floor(H * 0.20),
+  width: Math.floor(W * 0.90), height: 2,
+  color, radius: 2, opacity: 0.5, bordered: false,
+});
+
+export const MENU_TEMPLATES = [
+  {
+    id: "com-binh-dan",
+    label: "Cơm bình dân",
+    emoji: "🍚",
+    desc: "Miền Tây ấm cúng",
+    boardBg: "#fff8f0",
+    isGrad: false,
+    accent: "#c62828",
+    make: (W, H) => [
+      mkTitle("THỰC ĐƠN", W, H, "#2d1b00"),
+      mkSub("Cơm bình dân · Phục vụ từ 6:00 đến 21:00", W, H, "#a0785a"),
+      mkLine(W, H, "#e8c4a0"),
+      ...mkItems([
+        ["🍚", "Cơm sườn bì chả", "35,000đ", "Sườn non, bì giòn, chả trứng"],
+        ["🍗", "Cơm gà xối mỡ", "40,000đ", "Gà vàng giòn, cơm trắng thơm"],
+        ["🐟", "Canh chua cá lóc", "35,000đ", "Chua ngọt đậm đà kiểu miền Tây"],
+        ["🥩", "Bò kho khoai tây", "45,000đ", "Thịt mềm, sốt đậm, khoai bùi"],
+        ["🥘", "Khổ qua nhồi thịt", "30,000đ", "Nhân thịt xay, nước dùng trong"],
+        ["🧃", "Nước ngọt các loại", "15,000đ", "Pepsi, 7Up, nước suối, trà đá"],
+      ], W, H, { nameColor: "#2d1b00", priceColor: "#c62828", descColor: "#a0785a", accentColor: "#c62828", bgColor: "rgba(255,248,240,0.85)" }),
+    ],
+  },
+  {
+    id: "bun-pho",
+    label: "Bún & Phở",
+    emoji: "🍜",
+    desc: "Hương vị truyền thống",
+    boardBg: "#fff3e0",
+    isGrad: false,
+    accent: "#bf360c",
+    make: (W, H) => [
+      mkTitle("PHỞ & BÚN", W, H, "#3e2723"),
+      mkSub("Nước dùng hầm xương · Phục vụ từ 5:30 đến 14:00", W, H, "#8d5524"),
+      mkLine(W, H, "#ffcc80"),
+      ...mkItems([
+        ["🐮", "Phở bò tái chín", "50,000đ", "Nước dùng trong, thịt mềm"],
+        ["🐔", "Phở gà ta", "45,000đ", "Gà ta thả vườn, béo ngậy"],
+        ["🌶️", "Bún bò Huế", "45,000đ", "Cay nồng đặc trưng miền Trung"],
+        ["🦀", "Bún riêu cua đồng", "40,000đ", "Riêu cua đồng, cà chua tươi"],
+        ["🍖", "Hủ tiếu Nam Vang", "45,000đ", "Nước lèo ngọt, thịt heo bằm"],
+        ["🦪", "Bánh canh cua", "50,000đ", "Sợi bánh canh, cua chắc thịt"],
+      ], W, H, { nameColor: "#3e2723", priceColor: "#bf360c", descColor: "#8d5524", accentColor: "#bf360c", bgColor: "rgba(255,243,224,0.85)" }),
+    ],
+  },
+  {
+    id: "quan-nhau",
+    label: "Quán Nhậu",
+    emoji: "🍺",
+    desc: "Đặc sản nhậu vui vẻ",
+    boardBg: "linear-gradient(135deg,#1a1a2e 0%,#16213e 100%)",
+    isGrad: true,
+    accent: "#ffd700",
+    make: (W, H) => [
+      mkTitle("ĐẶC SẢN NHẬU", W, H, "#ffd700"),
+      mkSub("Bia lạnh · Đồ nhậu · Phục vụ từ 15:00 đến 23:00", W, H, "#bdbdbd"),
+      mkLine(W, H, "#ffd700"),
+      ...mkItems([
+        ["🦑", "Mực chiên giòn", "65,000đ", "Mực tươi, giòn tan, chấm tương"],
+        ["🍗", "Gà nướng muối ớt", "70,000đ", "Gà ta, ướp muối ớt thơm phức"],
+        ["🥩", "Bò nướng lá lốt", "60,000đ", "Thịt bò cuộn lá lốt, thơm nồng"],
+        ["🦐", "Tôm nướng muối ớt", "80,000đ", "Tôm sú tươi, cay ngọt hấp dẫn"],
+        ["🌮", "Gỏi cuốn tôm thịt", "40,000đ", "Cuốn sống, tươi mát, đi kèm chấm"],
+        ["🍺", "Bia lon các loại", "20,000đ", "Heineken, Tiger, Saigon Special"],
+      ], W, H, { nameColor: "#f5f5f5", priceColor: "#ffd700", descColor: "#bdbdbd", accentColor: "#ffd700", bgColor: "rgba(255,255,255,0.05)" }),
+    ],
+  },
+  {
+    id: "ca-phe-banh",
+    label: "Cà Phê & Bánh",
+    emoji: "☕",
+    desc: "Cà phê, bánh ngọt, thư giãn",
+    boardBg: "#efebe9",
+    isGrad: false,
+    accent: "#4e342e",
+    make: (W, H) => [
+      mkTitle("CÀ PHÊ & BÁNH NGỌT", W, H, "#3e2723", "'Dancing Script', cursive"),
+      mkSub("Phục vụ từ 6:30 · Wifi miễn phí · Không gian yên tĩnh", W, H, "#795548"),
+      mkLine(W, H, "#bcaaa4"),
+      ...mkItems([
+        ["☕", "Cà phê đen đá", "25,000đ", "Robusta đậm đà, đá bào mịn"],
+        ["🥛", "Bạc xỉu đá", "30,000đ", "Cà phê sữa, ngọt nhẹ, thơm"],
+        ["🧉", "Cà phê sữa dừa", "35,000đ", "Nước cốt dừa tươi, béo mịn"],
+        ["🍵", "Matcha latte đá", "40,000đ", "Matcha Nhật, sữa tươi, mát lạnh"],
+        ["🍰", "Bánh tiramisu", "45,000đ", "Lớp kem mascarpone, cacao đắng"],
+        ["🥐", "Croissant bơ Pháp", "35,000đ", "Vỏ giòn xốp, bơ Pháp thơm ngon"],
+      ], W, H, { nameColor: "#3e2723", priceColor: "#4e342e", descColor: "#795548", accentColor: "#795548", bgColor: "rgba(239,235,233,0.9)" }),
+    ],
+  },
+  {
+    id: "hai-san",
+    label: "Hải Sản",
+    emoji: "🦞",
+    desc: "Hải sản tươi sống cao cấp",
+    boardBg: "#e3f2fd",
+    isGrad: false,
+    accent: "#01579b",
+    make: (W, H) => [
+      mkTitle("HẢI SẢN TƯƠI SỐNG", W, H, "#01579b"),
+      mkSub("Đặt trước 30 phút · Giao hàng tận nơi · Tươi 100%", W, H, "#1565c0"),
+      mkLine(W, H, "#90caf9"),
+      ...mkItems([
+        ["🦞", "Tôm hùm nướng phô mai", "350,000đ", "Tôm tươi, phô mai tan chảy"],
+        ["🦀", "Cua rang muối tiêu", "180,000đ", "Cua biển, muối tiêu cay thơm"],
+        ["🦑", "Mực nướng sa tế", "90,000đ", "Mực ống, sa tế đậm vị"],
+        ["🐚", "Ốc hương xào bơ tỏi", "75,000đ", "Ốc tươi, bơ thơm, tỏi phi vàng"],
+        ["🐟", "Cá mú hấp xì dầu", "220,000đ", "Cá mú tươi, gừng, hành, dầu hào"],
+        ["🦐", "Tôm sú nướng muối ớt", "130,000đ", "Tôm sú to, cay ngọt hấp dẫn"],
+      ], W, H, { nameColor: "#0d47a1", priceColor: "#01579b", descColor: "#1565c0", accentColor: "#0277bd", bgColor: "rgba(227,242,253,0.85)" }),
+    ],
+  },
+  {
+    id: "chay",
+    label: "Thực Đơn Chay",
+    emoji: "🌿",
+    desc: "Thanh đạm, tốt cho sức khỏe",
+    boardBg: "#f1f8e9",
+    isGrad: false,
+    accent: "#2e7d32",
+    make: (W, H) => [
+      mkTitle("THỰC ĐƠN CHAY", W, H, "#1b5e20"),
+      mkSub("Nguyên liệu tươi · Không MSG · Mỗi ngày đều có", W, H, "#388e3c"),
+      mkLine(W, H, "#a5d6a7"),
+      ...mkItems([
+        ["🌾", "Cơm chay thập cẩm", "35,000đ", "10 món phụ, đủ chất, thơm ngon"],
+        ["🍜", "Bún chay đặc biệt", "30,000đ", "Nước dùng rau củ ngọt tự nhiên"],
+        ["🥚", "Đậu phụ sốt cà chua", "25,000đ", "Đậu non, sốt cà tươi, ngọt nhẹ"],
+        ["🥬", "Rau muống xào tỏi", "20,000đ", "Rau tươi, tỏi vàng thơm giòn"],
+        ["🍲", "Canh chua chay", "25,000đ", "Chua ngọt dịu, rau củ tươi mát"],
+        ["🍵", "Chè đậu xanh nước cốt dừa", "20,000đ", "Đậu bở, nước cốt dừa béo ngậy"],
+      ], W, H, { nameColor: "#1b5e20", priceColor: "#2e7d32", descColor: "#388e3c", accentColor: "#43a047", bgColor: "rgba(241,248,233,0.9)" }),
+    ],
+  },
+];
+
 // ── ID generator ──────────────────────────────────────────────────────────────
 
 let _seq = 0;
@@ -109,16 +288,16 @@ const uid = () => `el-${Date.now()}-${++_seq}`;
 
 function ElementNode({ el, selected, onPointerDown }) {
   const base = {
-    position:     "absolute",
-    left:         el.x,
-    top:          el.y,
-    zIndex:       el.zIndex ?? 1,
-    cursor:       "move",
-    userSelect:   "none",
-    outline:      selected ? "2px dashed #1976d2" : "2px solid transparent",
+    position: "absolute",
+    left: el.x,
+    top: el.y,
+    zIndex: el.zIndex ?? 1,
+    cursor: "move",
+    userSelect: "none",
+    outline: selected ? "2px dashed #1976d2" : "2px solid transparent",
     outlineOffset: 3,
-    boxSizing:    "border-box",
-    touchAction:  "none",
+    boxSizing: "border-box",
+    touchAction: "none",
   };
 
   const pd = (e) => { e.preventDefault(); e.stopPropagation(); onPointerDown(e, el.id); };
@@ -126,19 +305,19 @@ function ElementNode({ el, selected, onPointerDown }) {
   if (el.type === "text") return (
     <div onPointerDown={pd} style={{
       ...base,
-      width:         el.width ?? "auto",
-      fontFamily:    el.fontFamily ?? "Inter, sans-serif",
-      fontSize:      el.fontSize ?? 24,
-      fontWeight:    el.bold ? 700 : 400,
-      fontStyle:     el.italic ? "italic" : "normal",
-      color:         el.color ?? "#333",
-      textAlign:     el.align ?? "left",
-      lineHeight:    el.lineHeight ?? 1.35,
+      width: el.width ?? "auto",
+      fontFamily: el.fontFamily ?? "Inter, sans-serif",
+      fontSize: el.fontSize ?? 24,
+      fontWeight: el.bold ? 700 : 400,
+      fontStyle: el.italic ? "italic" : "normal",
+      color: el.color ?? "#333",
+      textAlign: el.align ?? "left",
+      lineHeight: el.lineHeight ?? 1.35,
       letterSpacing: el.tracking ? `${el.tracking}px` : 0,
-      textShadow:    el.shadow ? "1px 1px 4px rgba(0,0,0,0.28)" : "none",
-      whiteSpace:    "pre-wrap",
-      wordBreak:     "break-word",
-      padding:       "2px 4px",
+      textShadow: el.shadow ? "1px 1px 4px rgba(0,0,0,0.28)" : "none",
+      whiteSpace: "pre-wrap",
+      wordBreak: "break-word",
+      padding: "2px 4px",
     }}>
       {el.content}
     </div>
@@ -153,11 +332,11 @@ function ElementNode({ el, selected, onPointerDown }) {
   if (el.type === "menuItem") return (
     <div onPointerDown={pd} style={{
       ...base,
-      width:        el.width ?? 320,
-      padding:      `${el.padY ?? 10}px ${el.padX ?? 14}px`,
-      background:   el.bgColor ?? "transparent",
+      width: el.width ?? 320,
+      padding: `${el.padY ?? 10}px ${el.padX ?? 14}px`,
+      background: el.bgColor ?? "transparent",
       borderRadius: el.radius ?? 8,
-      borderLeft:   el.accent ? `4px solid ${el.accentColor ?? "#c62828"}` : "none",
+      borderLeft: el.accent ? `4px solid ${el.accentColor ?? "#c62828"}` : "none",
     }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: 8, flex: 1, minWidth: 0 }}>
@@ -165,9 +344,9 @@ function ElementNode({ el, selected, onPointerDown }) {
           <div style={{ minWidth: 0 }}>
             <div style={{
               fontFamily: el.nameFont ?? "'Merriweather', serif",
-              fontSize:   el.nameSize ?? 15,
+              fontSize: el.nameSize ?? 15,
               fontWeight: 700,
-              color:      el.nameColor ?? "#2d1b00",
+              color: el.nameColor ?? "#2d1b00",
               lineHeight: 1.3,
             }}>
               {el.name}
@@ -175,10 +354,10 @@ function ElementNode({ el, selected, onPointerDown }) {
             {el.desc && (
               <div style={{
                 fontFamily: "Inter, sans-serif",
-                fontSize:   (el.nameSize ?? 15) - 3,
-                color:      el.descColor ?? "#888",
+                fontSize: (el.nameSize ?? 15) - 3,
+                color: el.descColor ?? "#888",
                 lineHeight: 1.3,
-                marginTop:  2,
+                marginTop: 2,
               }}>
                 {el.desc}
               </div>
@@ -187,9 +366,9 @@ function ElementNode({ el, selected, onPointerDown }) {
         </div>
         <div style={{
           fontFamily: el.priceFont ?? "'Dancing Script', cursive",
-          fontSize:   el.priceSize ?? 18,
+          fontSize: el.priceSize ?? 18,
           fontWeight: 700,
-          color:      el.priceColor ?? "#c62828",
+          color: el.priceColor ?? "#c62828",
           whiteSpace: "nowrap",
           flexShrink: 0,
           lineHeight: 1.3,
@@ -210,12 +389,12 @@ function ElementNode({ el, selected, onPointerDown }) {
     return (
       <div onPointerDown={pd} style={{
         ...base,
-        width:        el.width ?? 200,
-        height:       el.height ?? 80,
-        background:   el.color ?? "#ffd700",
+        width: el.width ?? 200,
+        height: el.height ?? 80,
+        background: el.color ?? "#ffd700",
         borderRadius: el.shape === "circle" ? "50%" : (el.radius ?? 8),
-        opacity:      el.opacity ?? 1,
-        border:       el.bordered ? `${el.borderW ?? 2}px solid ${el.borderColor ?? "#333"}` : "none",
+        opacity: el.opacity ?? 1,
+        border: el.bordered ? `${el.borderW ?? 2}px solid ${el.borderColor ?? "#333"}` : "none",
       }} />
     );
   }
@@ -261,8 +440,8 @@ function PropsPanel({ el, onUpdate, onDelete, onUp, onDown }) {
       <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1 }}>
         {numInput("X", "x", 0)}
         {numInput("Y", "y", 0)}
-        {el.width  != null && numInput("Rộng", "width",  el.width)}
-        {el.height != null && numInput("Cao",  "height", el.height)}
+        {el.width != null && numInput("Rộng", "width", el.width)}
+        {el.height != null && numInput("Cao", "height", el.height)}
       </Box>
 
       {/* ── TEXT ── */}
@@ -283,12 +462,12 @@ function PropsPanel({ el, onUpdate, onDelete, onUp, onDown }) {
         </FormControl>
         <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1 }}>
           {numInput("Cỡ chữ", "fontSize", 24)}
-          {numInput("Giãn",   "tracking", 0)}
+          {numInput("Giãn", "tracking", 0)}
         </Box>
         {colInput("Màu chữ", "color", "#333333")}
         <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap" }}>
           {[
-            [FormatBoldIcon,   () => set("bold",   !el.bold),   el.bold],
+            [FormatBoldIcon, () => set("bold", !el.bold), el.bold],
             [FormatItalicIcon, () => set("italic", !el.italic), el.italic],
           ].map(([Icon, fn, active], i) => (
             <IconButton key={i} size="small" onClick={fn}
@@ -329,7 +508,7 @@ function PropsPanel({ el, onUpdate, onDelete, onUp, onDown }) {
       {el.type === "menuItem" && <>
         <Divider />
         <Typography sx={{ fontSize: "0.68rem", fontWeight: 800, color: "var(--color-subtle)", textTransform: "uppercase", letterSpacing: "0.07em" }}>Món ăn</Typography>
-        {[["Tên món","name"],["Giá","price"],["Mô tả","desc"],["Emoji","emoji"]].map(([l, k]) => (
+        {[["Tên món", "name"], ["Giá", "price"], ["Mô tả", "desc"], ["Emoji", "emoji"]].map(([l, k]) => (
           <TextField key={k} label={l} size="small" value={el[k] ?? ""}
             onChange={(e) => set(k, e.target.value)}
             sx={{ "& .MuiOutlinedInput-root": { borderRadius: 1.5 } }}
@@ -339,10 +518,10 @@ function PropsPanel({ el, onUpdate, onDelete, onUp, onDown }) {
           {numInput("Cỡ tên", "nameSize", 15)}
           {numInput("Cỡ giá", "priceSize", 18)}
         </Box>
-        {colInput("Màu tên",   "nameColor",  "#2d1b00")}
-        {colInput("Màu giá",   "priceColor", "#c62828")}
-        {colInput("Màu mô tả", "descColor",  "#888888")}
-        {colInput("Màu nền",   "bgColor",    "#fff8f0")}
+        {colInput("Màu tên", "nameColor", "#2d1b00")}
+        {colInput("Màu giá", "priceColor", "#c62828")}
+        {colInput("Màu mô tả", "descColor", "#888888")}
+        {colInput("Màu nền", "bgColor", "#fff8f0")}
         <FormControlLabel sx={{ m: 0 }}
           control={<Switch size="small" checked={el.accent ?? true} onChange={(e) => set("accent", e.target.checked)} />}
           label={<Typography sx={{ fontSize: "0.82rem" }}>Viền màu trái</Typography>}
@@ -454,10 +633,12 @@ function AddPanel({ tab, setTab, boardBg, setBoardBg, addText, addEmoji, addMenu
           <Box sx={{ display: "flex", flexDirection: "column", gap: 0.8 }}>
             {TEXT_PRESETS.map((t) => (
               <Paper key={t.label} elevation={0} onClick={() => addText(t)}
-                sx={{ p: 1.2, cursor: "pointer", borderRadius: 2,
+                sx={{
+                  p: 1.2, cursor: "pointer", borderRadius: 2,
                   border: "1.5px solid rgba(0,0,0,0.08)",
                   "&:hover": { borderColor: "var(--color-primary)", bgcolor: "rgba(46,125,50,0.04)" },
-                  transition: "all 0.15s" }}>
+                  transition: "all 0.15s"
+                }}>
                 <Typography sx={{
                   fontFamily: t.fontFamily, fontWeight: t.bold ? 700 : 400,
                   fontStyle: t.italic ? "italic" : "normal",
@@ -511,16 +692,18 @@ function AddPanel({ tab, setTab, boardBg, setBoardBg, addText, addEmoji, addMenu
               Mẫu nhanh
             </Typography>
             {[
-              { emoji:"🍖", name:"Cơm tấm sườn",        price:"45,000đ", desc:"Sườn nướng, bì, chả" },
-              { emoji:"🍜", name:"Bún bò Huế",           price:"35,000đ", desc:"Bún bò đặc trưng" },
-              { emoji:"🥖", name:"Bánh mì thịt",         price:"20,000đ", desc:"Bánh giòn, thịt nguội" },
-              { emoji:"🍛", name:"Cơm chiên dương châu", price:"40,000đ", desc:"Cơm chiên đặc biệt" },
+              { emoji: "🍖", name: "Cơm tấm sườn", price: "45,000đ", desc: "Sườn nướng, bì, chả" },
+              { emoji: "🍜", name: "Bún bò Huế", price: "35,000đ", desc: "Bún bò đặc trưng" },
+              { emoji: "🥖", name: "Bánh mì thịt", price: "20,000đ", desc: "Bánh giòn, thịt nguội" },
+              { emoji: "🍛", name: "Cơm chiên dương châu", price: "40,000đ", desc: "Cơm chiên đặc biệt" },
             ].map((item) => (
               <Paper key={item.name} elevation={0} onClick={() => addMenuItem(item)}
-                sx={{ p: 1, cursor: "pointer", borderRadius: 2,
+                sx={{
+                  p: 1, cursor: "pointer", borderRadius: 2,
                   border: "1.5px solid rgba(0,0,0,0.08)",
                   "&:hover": { borderColor: "var(--color-primary)", bgcolor: "rgba(46,125,50,0.04)" },
-                  transition: "all 0.15s" }}>
+                  transition: "all 0.15s"
+                }}>
                 <Box sx={{ display: "flex", alignItems: "center", gap: 0.8 }}>
                   <span style={{ fontSize: "1rem" }}>{item.emoji}</span>
                   <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -540,14 +723,16 @@ function AddPanel({ tab, setTab, boardBg, setBoardBg, addText, addEmoji, addMenu
           <Box sx={{ display: "flex", flexDirection: "column", gap: 0.8 }}>
             {SHAPE_OPTIONS.map((s) => (
               <Paper key={s.type} elevation={0} onClick={() => addShape(s)}
-                sx={{ p: 1.3, cursor: "pointer", borderRadius: 2,
+                sx={{
+                  p: 1.3, cursor: "pointer", borderRadius: 2,
                   border: "1.5px solid rgba(0,0,0,0.08)",
                   "&:hover": { borderColor: "var(--color-primary)", bgcolor: "rgba(46,125,50,0.04)" },
                   transition: "all 0.15s",
-                  display: "flex", alignItems: "center", gap: 1.2 }}>
+                  display: "flex", alignItems: "center", gap: 1.2
+                }}>
                 <Box sx={{
-                  width:  s.type === "vline" ? 4  : s.type === "hline" ? 42 : s.type === "circle" ? 26 : 42,
-                  height: s.type === "hline" ? 4  : s.type === "vline" ? 26 : 26,
+                  width: s.type === "vline" ? 4 : s.type === "hline" ? 42 : s.type === "circle" ? 26 : 42,
+                  height: s.type === "hline" ? 4 : s.type === "vline" ? 26 : 26,
                   bgcolor: s.color,
                   borderRadius: s.type === "circle" ? "50%" : s.type.includes("line") ? 99 : 4,
                   flexShrink: 0,
@@ -565,37 +750,39 @@ function AddPanel({ tab, setTab, boardBg, setBoardBg, addText, addEmoji, addMenu
 // ── Main Component ────────────────────────────────────────────────────────────
 
 export default function MenuCreator() {
-  const theme   = useTheme();
+  const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
   const [boardSizeIdx, setBoardSizeIdx] = useState(0);
-  const [boardBg,      setBoardBg]      = useState("#fff8f0");
-  const [elements,     setElements]     = useState([]);
-  const [selectedId,   setSelectedId]   = useState(null);
-  const [tab,          setTab]          = useState(0);
-  const [aiOpen,       setAiOpen]       = useState(false);
-  const [aiPrompt,     setAiPrompt]     = useState(DEFAULT_AI_PROMPT);
-  const [aiLoading,    setAiLoading]    = useState(false);
-  const [exporting,    setExporting]    = useState(false);
+  const [boardBg, setBoardBg] = useState("#fff8f0");
+  const [elements, setElements] = useState([]);
+  const [selectedId, setSelectedId] = useState(null);
+  const [tab, setTab] = useState(0);
+  const [aiOpen, setAiOpen] = useState(false);
+  const [aiTab, setAiTab] = useState(0); // 0 = templates, 1 = AI
+  const [aiPrompt, setAiPrompt] = useState(DEFAULT_AI_PROMPT);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState(null); // { type: "quota"|"error", msg, retry? }
+  const [exporting, setExporting] = useState(false);
   const [exportPreview, setExportPreview] = useState(null); // data URL for WebView save dialog
-  const [history,      setHistory]      = useState([[]]);
-  const [hIdx,         setHIdx]         = useState(0);
-  const [propsOpen,    setPropsOpen]    = useState(false); // mobile props drawer
-  const [addOpen,      setAddOpen]      = useState(false); // mobile add drawer
-  const [boardScale,   setBoardScale]   = useState(1);
-  const [zoomLevel,    setZoomLevel]    = useState(1);    // user zoom multiplier
+  const [history, setHistory] = useState([[]]);
+  const [hIdx, setHIdx] = useState(0);
+  const [propsOpen, setPropsOpen] = useState(false); // mobile props drawer
+  const [addOpen, setAddOpen] = useState(false); // mobile add drawer
+  const [boardScale, setBoardScale] = useState(1);
+  const [zoomLevel, setZoomLevel] = useState(1);    // user zoom multiplier
 
-  const boardRef        = useRef(null);
-  const containerRef    = useRef(null);
-  const dragRef         = useRef({ active: false });
-  const pinchTouches    = useRef(new Map()); // pointerId → {x,y}
-  const pinchStartDist  = useRef(0);
-  const pinchStartZoom  = useRef(1);
-  const elemsRef     = useRef(elements);
+  const boardRef = useRef(null);
+  const containerRef = useRef(null);
+  const dragRef = useRef({ active: false });
+  const pinchTouches = useRef(new Map()); // pointerId → {x,y}
+  const pinchStartDist = useRef(0);
+  const pinchStartZoom = useRef(1);
+  const elemsRef = useRef(elements);
   useEffect(() => { elemsRef.current = elements; }, [elements]);
 
-  const boardSize     = BOARD_SIZES[boardSizeIdx];
-  const selected      = elements.find((e) => e.id === selectedId) ?? null;
+  const boardSize = BOARD_SIZES[boardSizeIdx];
+  const selected = elements.find((e) => e.id === selectedId) ?? null;
   const effectiveScale = boardScale * zoomLevel;
 
   // ── Auto-scale board to fit container ──
@@ -603,7 +790,7 @@ export default function MenuCreator() {
   useEffect(() => {
     const update = () => {
       if (!containerRef.current) return;
-      const pad   = isMobile ? 16 : 48;
+      const pad = isMobile ? 16 : 48;
       const avail = containerRef.current.clientWidth - pad;
       setBoardScale(Math.min(1, avail / boardSize.w));
     };
@@ -654,14 +841,14 @@ export default function MenuCreator() {
   const bringUp = (id) => setElements((p) => {
     const i = p.findIndex((e) => e.id === id);
     if (i >= p.length - 1) return p;
-    const n = [...p]; [n[i], n[i + 1]] = [n[i + 1], n[i]];
+    const n = [...p];[n[i], n[i + 1]] = [n[i + 1], n[i]];
     return n.map((e, j) => ({ ...e, zIndex: j }));
   });
 
   const sendDown = (id) => setElements((p) => {
     const i = p.findIndex((e) => e.id === id);
     if (i <= 0) return p;
-    const n = [...p]; [n[i], n[i - 1]] = [n[i - 1], n[i]];
+    const n = [...p];[n[i], n[i - 1]] = [n[i - 1], n[i]];
     return n.map((e, j) => ({ ...e, zIndex: j }));
   });
 
@@ -674,6 +861,13 @@ export default function MenuCreator() {
     document.addEventListener("touchmove", block, { passive: false });
     return () => document.removeEventListener("touchmove", block);
   }, [isMobile]);
+
+  // Auto-open / auto-close inline props panel when selection changes on mobile
+  useEffect(() => {
+    if (!isMobile) return;
+    if (selectedId) setPropsOpen(true);
+    else setPropsOpen(false);
+  }, [selectedId, isMobile]);
 
   // ── Drag & Drop (pointer events — works on both touch & mouse) ──
 
@@ -699,10 +893,10 @@ export default function MenuCreator() {
       }
     };
     window.addEventListener("pointermove", onMove, { passive: false });
-    window.addEventListener("pointerup",   onUp);
+    window.addEventListener("pointerup", onUp);
     return () => {
       window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup",   onUp);
+      window.removeEventListener("pointerup", onUp);
     };
   }, [boardSize.w, snapshot]);
 
@@ -731,7 +925,7 @@ export default function MenuCreator() {
     pinchTouches.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (pinchTouches.current.size !== 2 || pinchStartDist.current === 0) return;
     const [p1, p2] = [...pinchTouches.current.values()];
-    const dist  = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+    const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
     const ratio = dist / pinchStartDist.current;
     setZoomLevel(Math.min(4, Math.max(0.35, pinchStartZoom.current * ratio)));
   }, []);
@@ -787,16 +981,29 @@ export default function MenuCreator() {
     zIndex: elements.length,
   });
 
+  // ── Apply local template ──
+
+  const applyTemplate = (tpl) => {
+    const base = tpl.make(boardSize.w, boardSize.h);
+    const items = base.map((el, i) => ({ ...el, id: uid(), zIndex: i + 1 }));
+    setBoardBg(tpl.boardBg);
+    setElements(items);
+    snapshot(items);
+    setAiOpen(false);
+    setAiTab(0);
+  };
+
   // ── AI generate ──
 
   const handleAI = async () => {
     setAiLoading(true);
+    setAiError(null);
     try {
       const key = (import.meta).env?.VITE_GEMINI_API_KEY;
       if (!key) throw new Error("Chưa cấu hình VITE_GEMINI_API_KEY");
-      const prompt = `${aiPrompt}\n\nTạo 6 món ăn cho menu. CHỈ trả về một JSON array thuần túy, không giải thích, không markdown:\n[{"name":"Tên món","price":"XX,000đ","emoji":"🍜","desc":"Mô tả ngắn"}]`;
-      const res  = await fetch(
-        `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${key}`,
+      const prompt = buildMenuAiPrompt(aiPrompt);
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,
         {
           method: "POST",
           headers: { "content-type": "application/json" },
@@ -806,8 +1013,21 @@ export default function MenuCreator() {
           }),
         }
       );
-      const data  = await res.json();
-      const raw   = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+      const data = await res.json();
+
+      if (!res.ok) {
+        if (res.status === 429) {
+          const retryInfo = data?.error?.details?.find(
+            (d) => d["@type"]?.includes("RetryInfo")
+          );
+          const secs = retryInfo?.retryDelay ? parseInt(retryInfo.retryDelay) : 60;
+          setAiError({ type: "quota", retry: secs });
+          return;
+        }
+        throw new Error(data?.error?.message ?? `HTTP ${res.status}`);
+      }
+
+      const raw = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
       // Strip markdown fences (```json ... ```) if present
       const stripped = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
       // Greedy match – find the outermost [ ... ] array
@@ -822,7 +1042,7 @@ export default function MenuCreator() {
       }
       if (!Array.isArray(items) || items.length === 0) throw new Error("AI trả về danh sách rỗng");
       items = items.slice(0, 8);
-      const colW   = Math.floor(boardSize.w * 0.62);
+      const colW = Math.floor(boardSize.w * 0.62);
       const newEls = items.map((item, i) => ({
         id: uid(), type: "menuItem",
         x: Math.floor(boardSize.w * 0.04), y: 50 + i * 70,
@@ -840,7 +1060,7 @@ export default function MenuCreator() {
       const merged = [...elements, ...newEls];
       setElements(merged); snapshot(merged); setAiOpen(false);
     } catch (err) {
-      alert("Lỗi: " + (err.message ?? "Không tạo được menu"));
+      setAiError({ type: "error", msg: err.message ?? "Không tạo được menu" });
     } finally {
       setAiLoading(false);
     }
@@ -860,7 +1080,7 @@ export default function MenuCreator() {
       // the captured canvas contains the scaled-down content surrounded by empty space.
       const node = boardRef.current;
       const savedTransform = node.style.transform;
-      const savedShadow    = node.style.boxShadow;
+      const savedShadow = node.style.boxShadow;
       node.style.transform = "none";
       node.style.boxShadow = "none";
       await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
@@ -878,8 +1098,8 @@ export default function MenuCreator() {
       // 1️⃣ Web Share API — iOS 15+ / Android Chrome / nhiều WebView hỗ trợ
       if (isMobile && navigator.share) {
         try {
-          const blob  = await (await fetch(dataUrl)).blob();
-          const file  = new File([blob], filename, { type: "image/png" });
+          const blob = await (await fetch(dataUrl)).blob();
+          const file = new File([blob], filename, { type: "image/png" });
           if (navigator.canShare?.({ files: [file] })) {
             await navigator.share({ files: [file], title: "Menu thực đơn" });
             return;
@@ -933,8 +1153,8 @@ export default function MenuCreator() {
 
   // Wrapper takes the visual (scaled) dimensions so parent scroll works correctly
   const boardWrapperStyle = {
-    width:    boardSize.w * effectiveScale,
-    height:   boardSize.h * effectiveScale,
+    width: boardSize.w * effectiveScale,
+    height: boardSize.h * effectiveScale,
     flexShrink: 0,
     overflow: "visible",
   };
@@ -999,7 +1219,7 @@ export default function MenuCreator() {
           startIcon={<AutoAwesomeIcon sx={{ fontSize: 14 }} />}
           onClick={() => setAiOpen(true)}
           sx={{ borderRadius: 2, textTransform: "none", fontWeight: 700, fontSize: "0.8rem", flexShrink: 0, whiteSpace: "nowrap" }}>
-          {isMobile ? "AI" : "✨ AI Tạo Menu"}
+          {isMobile ? "Mẫu" : "🍽️ Mẫu & AI"}
         </Button>
 
         <Button size="small" variant="contained"
@@ -1064,22 +1284,25 @@ export default function MenuCreator() {
 
       {/* ══════════════════ MOBILE LAYOUT (<md) ══════════════════ */}
       {isMobile && (
-        <Box sx={{ display: "flex", flexDirection: "column", minHeight: "calc(100vh - 100px)", bgcolor: "#d8d8d8", touchAction: "pan-x pan-y" }}>
+        <Box sx={{ display: "flex", flexDirection: "column", bgcolor: "#d8d8d8", touchAction: "pan-x pan-y" }}>
 
-          {/* Board area – pinch-to-zoom + scroll when zoomed in */}
+          {/* Board area — shrinks when props panel is open so board stays visible */}
           <Box ref={containerRef}
             onPointerDown={handleContainerPD}
             onPointerMove={handleContainerPM}
             onPointerUp={handleContainerPU}
             onPointerCancel={handleContainerPU}
             sx={{
-              flex: "0 0 auto", p: 1, position: "relative",
+              flexShrink: 0, p: 1, position: "relative",
               overflow: "auto",
               touchAction: "none",
               background: "repeating-linear-gradient(45deg,transparent,transparent 10px,rgba(0,0,0,0.025) 10px,rgba(0,0,0,0.025) 20px), #d0d0d0",
-              height: Math.min(boardSize.h * boardScale + 16, 440),
+              height: propsOpen && selectedId
+                ? Math.min(boardSize.h * boardScale + 16, 210)
+                : Math.min(boardSize.h * boardScale + 16, 440),
+              transition: "height 0.22s ease",
             }}
-            onClick={() => setSelectedId(null)}
+            onClick={() => { setSelectedId(null); }}
           >
             <div style={{ display: "flex", justifyContent: "center", alignItems: "flex-start", minWidth: boardSize.w * effectiveScale + 8 }}>
               <div style={boardWrapperStyle} onClick={(e) => e.stopPropagation()}>
@@ -1123,41 +1346,65 @@ export default function MenuCreator() {
 
           {/* Mobile action bar */}
           <Box sx={{
-            display: "flex", gap: 1, px: 1.5, py: 1,
+            display: "flex", gap: 1, px: 1.5, py: 0.8,
             bgcolor: "var(--color-surface)",
             borderTop: "1px solid rgba(0,0,0,0.08)",
-            borderBottom: "1px solid rgba(0,0,0,0.06)",
-            alignItems: "center",
+            alignItems: "center", flexShrink: 0,
           }}>
             <Button fullWidth variant="contained" size="small"
               startIcon={<AddIcon sx={{ fontSize: 15 }} />}
-              onClick={() => setAddOpen(true)}
+              onClick={() => { setAddOpen(true); setSelectedId(null); }}
               sx={{ borderRadius: 2, textTransform: "none", fontWeight: 700, bgcolor: "var(--color-primary)", fontSize: "0.82rem" }}>
               Thêm
             </Button>
             {selectedId && (
-              <Button fullWidth variant="outlined" size="small"
+              <Button fullWidth variant={propsOpen ? "contained" : "outlined"} size="small"
                 startIcon={<EditIcon sx={{ fontSize: 15 }} />}
-                onClick={() => setPropsOpen(true)}
+                onClick={() => setPropsOpen((v) => !v)}
+                color={propsOpen ? "primary" : "inherit"}
                 sx={{ borderRadius: 2, textTransform: "none", fontWeight: 700, fontSize: "0.82rem" }}>
-                Chỉnh sửa
+                {propsOpen ? "Ẩn panel" : "Chỉnh sửa"}
               </Button>
             )}
           </Box>
 
-          {/* Selected element label */}
-          {selectedId && selected && (
-            <Box sx={{ px: 1.5, py: 0.6, bgcolor: "rgba(25,118,210,0.06)", display: "flex", alignItems: "center", gap: 0.8 }}>
-              <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "#1976d2", flexShrink: 0 }} />
-              <Typography sx={{ fontSize: "0.78rem", color: "#1976d2", fontWeight: 600 }}>
-                Đang chọn: {selected.type === "text" ? "Chữ" : selected.type === "emoji" ? "Sticker" : selected.type === "menuItem" ? `Món – ${selected.name}` : "Hình"}
+          {/* Inline Props Panel — no overlay, board stays visible above */}
+          <Box sx={{
+            flexShrink: 0,
+            maxHeight: propsOpen && selected ? "48vh" : 0,
+            overflow: "hidden",
+            transition: "max-height 0.25s cubic-bezier(0.4,0,0.2,1)",
+            bgcolor: "var(--color-surface)",
+            borderTop: propsOpen && selected ? "2px solid #1976d2" : "none",
+            display: "flex", flexDirection: "column",
+          }}>
+            {/* Panel header — sticky within the panel */}
+            <Box sx={{
+              display: "flex", alignItems: "center",
+              px: 2, py: 0.7, flexShrink: 0,
+              borderBottom: "1px solid rgba(0,0,0,0.08)",
+              bgcolor: "var(--color-surface)",
+            }}>
+              <Box sx={{ width: 7, height: 7, borderRadius: "50%", bgcolor: "#1976d2", mr: 1, flexShrink: 0 }} />
+              <Typography sx={{ fontWeight: 800, fontSize: "0.85rem", flex: 1, color: "var(--color-text)" }}>
+                {selected?.type === "text"     ? "Chữ văn bản"
+                  : selected?.type === "emoji"    ? "Sticker / Emoji"
+                  : selected?.type === "menuItem" ? `Món: ${selected.name ?? ""}`
+                  : selected?.type === "shape"    ? "Hình dạng"
+                  : "Thuộc tính"}
               </Typography>
-              <Box sx={{ flex: 1 }} />
-              <IconButton size="small" onClick={() => setSelectedId(null)} sx={{ p: 0.3 }}>
-                <CloseIcon sx={{ fontSize: 15 }} />
+              <IconButton size="small" onClick={() => { setSelectedId(null); }}
+                sx={{ ml: 0.5, p: 0.4 }}>
+                <CloseIcon sx={{ fontSize: 17 }} />
               </IconButton>
             </Box>
-          )}
+            {/* Scrollable props content */}
+            <Box sx={{ overflowY: "auto", flex: 1 }}>
+              {selected && (
+                <PropsPanel el={selected} onUpdate={updateEl} onDelete={deleteEl} onUp={bringUp} onDown={sendDown} />
+              )}
+            </Box>
+          </Box>
         </Box>
       )}
 
@@ -1175,18 +1422,6 @@ export default function MenuCreator() {
         </Box>
       </Drawer>
 
-      {/* ── Mobile: Properties Drawer (bottom) ── */}
-      <Drawer anchor="bottom" open={isMobile && propsOpen} onClose={() => setPropsOpen(false)}
-        PaperProps={{ sx: { borderRadius: "16px 16px 0 0", maxHeight: "80vh", display: "flex", flexDirection: "column" } }}>
-        <Box sx={{ display: "flex", alignItems: "center", px: 2, pt: 1.5, pb: 0.5, flexShrink: 0 }}>
-          <Typography sx={{ fontWeight: 800, fontSize: "0.9rem", flex: 1, color: "var(--color-text)" }}>Thuộc tính phần tử</Typography>
-          <IconButton size="small" onClick={() => setPropsOpen(false)}><CloseIcon sx={{ fontSize: 18 }} /></IconButton>
-        </Box>
-        <Divider />
-        <Box sx={{ flex: 1, overflowY: "auto" }}>
-          <PropsPanel el={selected} onUpdate={updateEl} onDelete={deleteEl} onUp={bringUp} onDown={sendDown} />
-        </Box>
-      </Drawer>
 
       {/* ── Export Preview Dialog (WebView fallback) ── */}
       <Dialog
@@ -1241,50 +1476,163 @@ export default function MenuCreator() {
         </DialogActions>
       </Dialog>
 
-      {/* ── AI Dialog ── */}
-      <Dialog open={aiOpen} onClose={() => setAiOpen(false)} maxWidth="sm" fullWidth
+      {/* ── Menu Templates + AI Dialog ── */}
+      <Dialog open={aiOpen} onClose={() => { setAiOpen(false); setAiError(null); }} maxWidth="sm" fullWidth
         fullScreen={isMobile}
         PaperProps={{ sx: { borderRadius: isMobile ? 0 : 4 } }}>
-        <DialogTitle sx={{ fontFamily: "'Dancing Script', cursive", fontSize: "1.55rem", fontWeight: 700, pb: 0.5, display: "flex", alignItems: "center", gap: 1 }}>
-          ✨ AI Tạo Menu
-          {isMobile && <IconButton sx={{ ml: "auto" }} onClick={() => setAiOpen(false)}><CloseIcon /></IconButton>}
+
+        {/* Header */}
+        <DialogTitle sx={{ pb: 0, display: "flex", alignItems: "center", gap: 1 }}>
+          <Typography sx={{ fontFamily: "'Dancing Script', cursive", fontSize: "1.4rem", fontWeight: 700, flex: 1 }}>
+            🍽️ Chọn mẫu thực đơn
+          </Typography>
+          {isMobile && (
+            <IconButton onClick={() => { setAiOpen(false); setAiError(null); }}>
+              <CloseIcon />
+            </IconButton>
+          )}
         </DialogTitle>
-        <DialogContent sx={{ pt: 1 }}>
-          <Typography sx={{ fontSize: "0.87rem", color: "var(--color-subtle)", mb: 2, lineHeight: 1.55 }}>
-            Mô tả phong cách quán, AI sẽ gợi ý 6 món và thêm thẳng vào board.
-          </Typography>
-          <TextField fullWidth multiline minRows={isMobile ? 4 : 5} maxRows={9}
-            label="Prompt hệ thống (có thể chỉnh sửa)"
-            value={aiPrompt} onChange={(e) => setAiPrompt(e.target.value)}
-            sx={{ mb: 1.5, "& .MuiOutlinedInput-root": { borderRadius: 2.5, fontSize: "0.88rem" } }}
-          />
-          <Typography sx={{ fontSize: "0.72rem", fontWeight: 800, color: "var(--color-subtle)", mb: 1, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-            Gợi ý nhanh
-          </Typography>
-          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.8 }}>
-            {AI_QUICK_PROMPTS.map((p) => (
-              <Chip key={p} label={p} size="small"
-                onClick={() => setAiPrompt(`Bạn là chuyên gia thiết kế menu nhà hàng. Tạo menu cho: ${p}. Tên món ngắn gọn, hấp dẫn, giá hợp lý (VNĐ), emoji phù hợp, mô tả ngắn 5-8 từ.`)}
-                sx={{ cursor: "pointer", fontSize: "0.78rem",
-                  "&:hover": { bgcolor: "rgba(46,125,50,0.1)", borderColor: "var(--color-primary)" },
-                  border: "1px solid rgba(0,0,0,0.12)" }}
-              />
-            ))}
-          </Box>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
-          {!isMobile && <Button onClick={() => setAiOpen(false)} sx={{ borderRadius: 2, textTransform: "none" }}>Hủy</Button>}
-          <Button fullWidth={isMobile} variant="contained" onClick={handleAI} disabled={aiLoading}
-            startIcon={aiLoading ? <CircularProgress size={16} color="inherit" /> : <AutoAwesomeIcon />}
-            sx={{
-              borderRadius: 2, textTransform: "none", fontWeight: 800,
-              background: "linear-gradient(135deg,#43e97b 0%,#38f9d7 100%)",
-              color: "#1b3a1b", boxShadow: "none",
-              "&:hover": { boxShadow: "0 4px 16px rgba(67,233,123,0.4)" },
+
+        {/* Tabs */}
+        <Tabs value={aiTab} onChange={(_, v) => setAiTab(v)}
+          sx={{ px: 2, borderBottom: "1px solid", borderColor: "divider", minHeight: 40 }}
+          TabIndicatorProps={{ style: { height: 3, borderRadius: 2 } }}>
+          <Tab label="Mẫu có sẵn" sx={{ textTransform: "none", fontWeight: 700, minHeight: 40, fontSize: "0.88rem" }} />
+          <Tab label="✨ AI tạo" sx={{ textTransform: "none", fontWeight: 700, minHeight: 40, fontSize: "0.88rem" }} />
+        </Tabs>
+
+        {/* ── Tab 0: Local templates ── */}
+        {aiTab === 0 && (
+          <DialogContent sx={{ pt: 2 }}>
+            <Typography sx={{ fontSize: "0.82rem", color: "text.secondary", mb: 2 }}>
+              Chọn mẫu để áp dụng ngay — board hiện tại sẽ được thay thế (có thể Undo).
+            </Typography>
+            <Box sx={{
+              display: "grid",
+              gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr",
+              gap: 1.5,
             }}>
-            {aiLoading ? "Đang tạo…" : "Tạo Menu"}
-          </Button>
-        </DialogActions>
+              {MENU_TEMPLATES.map((tpl) => (
+                <Paper key={tpl.id} elevation={0} onClick={() => applyTemplate(tpl)}
+                  sx={{
+                    cursor: "pointer", borderRadius: 2.5, overflow: "hidden",
+                    border: "1.5px solid", borderColor: "divider",
+                    transition: "box-shadow 0.18s, border-color 0.18s, transform 0.12s",
+                    "&:hover": {
+                      boxShadow: "0 4px 20px rgba(0,0,0,0.14)",
+                      borderColor: tpl.accent,
+                      transform: "translateY(-2px)",
+                    },
+                    "&:active": { transform: "scale(0.97)" },
+                  }}>
+                  {/* Mini preview */}
+                  <Box sx={{
+                    height: 72,
+                    ...(tpl.isGrad
+                      ? { backgroundImage: tpl.boardBg }
+                      : { backgroundColor: tpl.boardBg }),
+                    display: "flex", flexDirection: "column",
+                    alignItems: "center", justifyContent: "center",
+                    gap: 0.6, px: 1.5, py: 1,
+                    position: "relative", overflow: "hidden",
+                  }}>
+                    {/* Title bar */}
+                    <Box sx={{ height: 7, borderRadius: 3, bgcolor: tpl.accent, width: "55%", opacity: 0.9 }} />
+                    {/* Item lines */}
+                    {[0.85, 0.7, 0.78, 0.65].map((w, i) => (
+                      <Box key={i} sx={{ height: 3.5, borderRadius: 2, bgcolor: tpl.accent, width: `${w * 100}%`, opacity: 0.28 }} />
+                    ))}
+                  </Box>
+                  {/* Label */}
+                  <Box sx={{ p: 1, textAlign: "center", bgcolor: "background.paper" }}>
+                    <Typography sx={{ fontSize: "1.15rem", lineHeight: 1 }}>{tpl.emoji}</Typography>
+                    <Typography sx={{ fontSize: "0.78rem", fontWeight: 700, mt: 0.3, lineHeight: 1.2 }}>
+                      {tpl.label}
+                    </Typography>
+                    <Typography sx={{ fontSize: "0.66rem", color: "text.secondary", mt: 0.2 }}>
+                      {tpl.desc}
+                    </Typography>
+                  </Box>
+                </Paper>
+              ))}
+            </Box>
+          </DialogContent>
+        )}
+
+        {/* ── Tab 1: AI generate ── */}
+        {aiTab === 1 && (
+          <>
+            <DialogContent sx={{ pt: 1.5 }}>
+              <Typography sx={{ fontSize: "0.87rem", color: "text.secondary", mb: 2, lineHeight: 1.55 }}>
+                Mô tả phong cách quán, AI sẽ gợi ý 6 món và thêm thẳng vào board.
+              </Typography>
+              <TextField fullWidth multiline minRows={isMobile ? 4 : 5} maxRows={9}
+                label="Mô tả phong cách quán"
+                value={aiPrompt} onChange={(e) => setAiPrompt(e.target.value)}
+                sx={{ mb: 1.5, "& .MuiOutlinedInput-root": { borderRadius: 2.5, fontSize: "0.88rem" } }}
+              />
+              <Typography sx={{ fontSize: "0.72rem", fontWeight: 800, color: "text.secondary", mb: 1, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                Gợi ý nhanh
+              </Typography>
+              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.8 }}>
+                {AI_QUICK_PROMPTS.map((p) => (
+                  <Chip key={p} label={p} size="small"
+                    onClick={() => { setAiPrompt(`Tạo menu cho: ${p}. Tên món ngắn, hấp dẫn, giá hợp lý (VNĐ), emoji phù hợp, mô tả ngắn 5-8 từ.`); setAiError(null); }}
+                    sx={{
+                      cursor: "pointer", fontSize: "0.78rem",
+                      "&:hover": { bgcolor: "rgba(46,125,50,0.1)", borderColor: "var(--color-primary)" },
+                      border: "1px solid rgba(0,0,0,0.12)"
+                    }}
+                  />
+                ))}
+              </Box>
+              {aiError?.type === "quota" && (
+                <Alert severity="warning" sx={{ mt: 2, borderRadius: 2, fontSize: "0.85rem" }}>
+                  AI đang quá tải vì nhiều người xài. Vui lòng thử lại sau{" "}
+                  <strong>{aiError.retry} giây</strong>.
+                </Alert>
+              )}
+              {aiError?.type === "error" && (
+                <Alert severity="error" sx={{ mt: 2, borderRadius: 2, fontSize: "0.85rem" }}>
+                  {aiError.msg}
+                </Alert>
+              )}
+            </DialogContent>
+            <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
+              {!isMobile && (
+                <Button onClick={() => { setAiOpen(false); setAiError(null); }}
+                  sx={{ borderRadius: 2, textTransform: "none" }}>Hủy</Button>
+              )}
+              <Button fullWidth={isMobile} variant="contained" onClick={handleAI} disabled={aiLoading}
+                startIcon={aiLoading ? <CircularProgress size={16} color="inherit" /> : <AutoAwesomeIcon />}
+                sx={{
+                  borderRadius: 2, textTransform: "none", fontWeight: 800,
+                  background: "linear-gradient(135deg,#43e97b 0%,#38f9d7 100%)",
+                  color: "#1b3a1b", boxShadow: "none",
+                  "&:hover": { boxShadow: "0 4px 16px rgba(67,233,123,0.4)" },
+                }}>
+                {aiLoading ? "Đang tạo…" : "Tạo Menu bằng AI"}
+              </Button>
+            </DialogActions>
+          </>
+        )}
+
+        {/* Close button for template tab on desktop */}
+        {aiTab === 0 && !isMobile && (
+          <DialogActions sx={{ px: 3, pb: 2 }}>
+            <Button onClick={() => setAiOpen(false)} sx={{ borderRadius: 2, textTransform: "none" }}>
+              Đóng
+            </Button>
+          </DialogActions>
+        )}
+        {aiTab === 0 && isMobile && (
+          <DialogActions sx={{ px: 2, pb: 2 }}>
+            <Button fullWidth onClick={() => setAiOpen(false)} variant="outlined"
+              sx={{ borderRadius: 2, textTransform: "none" }}>
+              Đóng
+            </Button>
+          </DialogActions>
+        )}
       </Dialog>
     </>
   );

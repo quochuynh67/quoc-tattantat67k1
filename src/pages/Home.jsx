@@ -60,7 +60,7 @@ const Home = () => {
       <VlogsMapSection />
       <ContributorsSection />
       <SEOIntroSection />
-      <NewsletterCTA />
+      {/* <NewsletterCTA /> */}
       {canChatWithAi && <AgentChatDashboard />}
       <VoiceChat />
     </div>
