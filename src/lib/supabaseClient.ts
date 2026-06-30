@@ -723,3 +723,36 @@ export const uploadHlsFolder = async (files, onProgress) => {
 
   return m3u8Url;
 };
+
+// ── Wish Usage (server-side, per phone) ──────────────────────────────────────
+// Requires table + RPC in Supabase — see SQL in CLAUDE.md or docs.
+
+export const WISH_DAILY_LIMIT = 2;
+
+export function normalizePhone(phone: string): string {
+  const d = phone.replace(/[\s\-\.\(\)]/g, "");
+  if (d.startsWith("+84")) return "0" + d.slice(3);
+  if (/^84\d{9}$/.test(d)) return "0" + d.slice(2);
+  return d;
+}
+
+export async function getWishPhoneCount(phone: string): Promise<number> {
+  const norm = normalizePhone(phone);
+  const today = new Date().toISOString().slice(0, 10);
+  const { data, error } = await supabase
+    .from("wish_usage")
+    .select("count")
+    .eq("phone", norm)
+    .eq("usage_date", today)
+    .maybeSingle();
+  if (error) throw error;
+  return data?.count ?? 0;
+}
+
+// Atomically increments via RPC and returns the new count.
+export async function incrementWishPhoneCount(phone: string): Promise<number> {
+  const norm = normalizePhone(phone);
+  const { data, error } = await supabase.rpc("increment_wish_usage", { p_phone: norm });
+  if (error) throw new Error(error.message);
+  return Number(data) ?? 1;
+}

@@ -1,4 +1,5 @@
-// src/pages/WishGenerator.jsx – AI wish generator, phone-gated, 2/day per phone via localStorage
+// src/pages/WishGenerator.jsx
+// Rate-limit: 2/day per phone (Supabase) AND 2/day per device (localStorage)
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { Helmet } from "react-helmet-async";
 import {
@@ -12,46 +13,37 @@ import RefreshIcon from "@mui/icons-material/Refresh";
 import CheckIcon from "@mui/icons-material/Check";
 import PhoneIcon from "@mui/icons-material/Phone";
 import EditIcon from "@mui/icons-material/Edit";
+import SmartphoneIcon from "@mui/icons-material/Smartphone";
 import { generateWishes } from "../lib/agentApi";
+import {
+  WISH_DAILY_LIMIT,
+  normalizePhone,
+  getWishPhoneCount,
+  incrementWishPhoneCount,
+} from "../lib/supabaseClient";
 
-// ── Constants ─────────────────────────────────────────────────────────────────
+// ── Device-limit helpers (localStorage) ──────────────────────────────────────
 
-const DAILY_LIMIT = 2;
-const LS_PHONE_KEY = "wish_phone";
-const LS_USAGE_KEY = "wish_usage";
-
-// ── localStorage helpers ──────────────────────────────────────────────────────
-
-function normalizePhone(raw) {
-  return raw.replace(/[\s\-\.\(\)]/g, "").replace(/^(\+84)/, "0").replace(/^(84)(\d{9})$/, "0$2");
-}
-
-function isValidVNPhone(phone) {
-  return /^(0[3-9]\d{8})$/.test(normalizePhone(phone));
-}
+const LS_PHONE_KEY   = "wish_phone";
+const LS_DEVICE_KEY  = "wish_device";
 
 function getTodayKey() {
   return new Date().toISOString().slice(0, 10);
 }
 
-function getUsageCount(phone) {
+function getDeviceCount() {
   try {
-    const norm = normalizePhone(phone);
-    const raw = JSON.parse(localStorage.getItem(LS_USAGE_KEY) ?? "{}");
-    const entry = raw[norm];
-    if (!entry || entry.date !== getTodayKey()) return 0;
-    return entry.count ?? 0;
+    const raw = JSON.parse(localStorage.getItem(LS_DEVICE_KEY) ?? "{}");
+    if (raw.date !== getTodayKey()) return 0;
+    return raw.count ?? 0;
   } catch { return 0; }
 }
 
-function incrementUsage(phone) {
+function incrementDeviceCount() {
   try {
-    const norm = normalizePhone(phone);
-    const raw = JSON.parse(localStorage.getItem(LS_USAGE_KEY) ?? "{}");
     const today = getTodayKey();
-    const prev = raw[norm]?.date === today ? (raw[norm].count ?? 0) : 0;
-    raw[norm] = { date: today, count: prev + 1 };
-    localStorage.setItem(LS_USAGE_KEY, JSON.stringify(raw));
+    const prev  = getDeviceCount();
+    localStorage.setItem(LS_DEVICE_KEY, JSON.stringify({ date: today, count: prev + 1 }));
     return prev + 1;
   } catch { return 1; }
 }
@@ -64,7 +56,11 @@ function savePhone(phone) {
   try { localStorage.setItem(LS_PHONE_KEY, normalizePhone(phone)); } catch {}
 }
 
-// ── Occasions ─────────────────────────────────────────────────────────────────
+function isValidVNPhone(phone) {
+  return /^(0[3-9]\d{8})$/.test(normalizePhone(phone));
+}
+
+// ── Static data ───────────────────────────────────────────────────────────────
 
 const OCCASIONS = [
   { key: "sinh-nhat",   label: "Sinh Nhật",     emoji: "🎂" },
@@ -77,15 +73,13 @@ const OCCASIONS = [
   { key: "khac",        label: "Khác",           emoji: "✨" },
 ];
 
-// ── Fonts ─────────────────────────────────────────────────────────────────────
-
 const FONTS = [
-  { key: "great-vibes",    label: "Thư Pháp",   family: "'Great Vibes', cursive",     size: "1.7rem",  preview: "Trân Trọng" },
-  { key: "dancing-script", label: "Sang Trọng", family: "'Dancing Script', cursive",  size: "1.5rem",  preview: "Kính Chúc" },
-  { key: "satisfy",        label: "Lãng Mạn",   family: "'Satisfy', cursive",         size: "1.45rem", preview: "Yêu Thương" },
-  { key: "pinyon-script",  label: "Cổ Điển",    family: "'Pinyon Script', cursive",   size: "1.65rem", preview: "Chúc Mừng" },
-  { key: "pacifico",       label: "Vui Tươi",   family: "'Pacifico', cursive",        size: "1.25rem", preview: "Hạnh Phúc" },
-  { key: "lora",           label: "Trang Nhã",  family: "'Lora', Georgia, serif",     size: "1.15rem", preview: "Kính Gửi" },
+  { key: "great-vibes",    label: "Thư Pháp",   family: "'Great Vibes', cursive",    size: "1.7rem",  preview: "Trân Trọng" },
+  { key: "dancing-script", label: "Sang Trọng", family: "'Dancing Script', cursive", size: "1.5rem",  preview: "Kính Chúc" },
+  { key: "satisfy",        label: "Lãng Mạn",   family: "'Satisfy', cursive",        size: "1.45rem", preview: "Yêu Thương" },
+  { key: "pinyon-script",  label: "Cổ Điển",    family: "'Pinyon Script', cursive",  size: "1.65rem", preview: "Chúc Mừng" },
+  { key: "pacifico",       label: "Vui Tươi",   family: "'Pacifico', cursive",       size: "1.25rem", preview: "Hạnh Phúc" },
+  { key: "lora",           label: "Trang Nhã",  family: "'Lora', Georgia, serif",    size: "1.15rem", preview: "Kính Gửi" },
 ];
 
 const COUNT_OPTIONS = [1, 2, 3];
@@ -104,35 +98,46 @@ const OCCASION_GRADIENTS = {
 // ── Phone Gate ────────────────────────────────────────────────────────────────
 
 function PhoneGate({ onConfirm }) {
-  const [phone, setPhone] = useState("");
-  const [error, setError] = useState("");
+  const [phone, setPhone]   = useState("");
+  const [error, setError]   = useState("");
+  const [loading, setLoading] = useState(false);
   const inputRef = useRef(null);
 
   useEffect(() => { setTimeout(() => inputRef.current?.focus(), 120); }, []);
 
-  const handleSubmit = () => {
-    const norm = normalizePhone(phone);
+  const handleSubmit = async () => {
     if (!isValidVNPhone(phone)) {
-      setError("Số điện thoại không hợp lệ (VD: 0901234567)");
+      setError("Số điện thoại không hợp lệ (VD: 0901 234 567)");
       return;
     }
-    savePhone(norm);
-    onConfirm(norm);
+    const norm = normalizePhone(phone);
+
+    setLoading(true);
+    try {
+      const count = await getWishPhoneCount(norm);
+      savePhone(norm);
+      onConfirm(norm, count);
+    } catch {
+      // Supabase không kết nối được — vẫn cho vào, dùng device-only limit
+      savePhone(norm);
+      onConfirm(norm, 0);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <Box sx={{
-      minHeight: "80vh", display: "flex", alignItems: "center", justifyContent: "center",
-      background: "var(--color-background)", px: 2,
+      minHeight: "80vh", display: "flex", alignItems: "center",
+      justifyContent: "center", background: "var(--color-background)", px: 2,
     }}>
       <Paper elevation={0} sx={{
-        maxWidth: 420, width: "100%", p: { xs: 3.5, md: 5 }, borderRadius: 5,
+        maxWidth: 440, width: "100%", p: { xs: 3.5, md: 5 }, borderRadius: 5,
         border: "1px solid rgba(0,0,0,0.07)",
         boxShadow: "0 12px 48px rgba(0,0,0,0.10)",
         animation: "gate-in 0.45s cubic-bezier(0.22,1,0.36,1)",
         "@keyframes gate-in": { from: { opacity: 0, transform: "translateY(24px)" }, to: { opacity: 1, transform: "none" } },
       }}>
-        {/* Icon */}
         <Box sx={{
           width: 64, height: 64, borderRadius: "50%", mx: "auto", mb: 3,
           background: "linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)",
@@ -143,17 +148,21 @@ function PhoneGate({ onConfirm }) {
         </Box>
 
         <Typography variant="h5" sx={{
-          fontFamily: "'Dancing Script', cursive", fontWeight: 700,
-          textAlign: "center", mb: 0.5, color: "var(--color-text)", fontSize: "1.8rem",
+          fontFamily: "'Dancing Script', cursive", fontWeight: 700, textAlign: "center",
+          mb: 0.5, color: "var(--color-text)", fontSize: "1.9rem",
         }}>
           Tạo Lời Chúc AI
         </Typography>
 
         <Typography sx={{
-          textAlign: "center", color: "var(--color-subtle)", fontSize: "0.9rem", mb: 3.5, lineHeight: 1.55,
+          textAlign: "center", color: "var(--color-subtle)", fontSize: "0.9rem", mb: 3.5, lineHeight: 1.6,
         }}>
           Nhập số điện thoại để bắt đầu.
-          <br />Miễn phí · <Box component="span" sx={{ fontWeight: 700, color: "var(--color-primary)" }}>{DAILY_LIMIT} lượt/ngày</Box> · Không cần đăng ký
+          <br />
+          <Box component="span" sx={{ fontWeight: 700, color: "var(--color-primary)" }}>
+            {WISH_DAILY_LIMIT} lượt/ngày
+          </Box>
+          {" · "}Miễn phí{" · "}Không cần đăng ký
         </Typography>
 
         <TextField
@@ -185,23 +194,125 @@ function PhoneGate({ onConfirm }) {
 
         <Button
           fullWidth variant="contained" size="large"
-          onClick={handleSubmit}
+          onClick={handleSubmit} disabled={loading}
+          startIcon={loading && <CircularProgress size={18} color="inherit" />}
           sx={{
             borderRadius: 3, py: 1.5, fontWeight: 800, fontSize: "1rem",
             textTransform: "none",
             background: "linear-gradient(135deg, #a18cd1 0%, #f5576c 100%)",
             boxShadow: "0 6px 20px rgba(161,140,209,0.4)",
-            "&:hover": { boxShadow: "0 8px 28px rgba(161,140,209,0.5)", transform: "translateY(-1px)" },
+            "&:hover": { transform: "translateY(-1px)", boxShadow: "0 8px 28px rgba(161,140,209,0.5)" },
+            "&.Mui-disabled": { background: "rgba(0,0,0,0.1)" },
             transition: "all 0.2s",
           }}
         >
-          Bắt đầu tạo lời chúc ✨
+          {loading ? "Đang kiểm tra…" : "Bắt đầu tạo lời chúc ✨"}
         </Button>
 
-        <Typography sx={{ textAlign: "center", mt: 2, fontSize: "0.78rem", color: "var(--color-subtle)" }}>
-          Số điện thoại chỉ lưu trên thiết bị của bạn, không gửi lên server.
+        <Typography sx={{ textAlign: "center", mt: 2, fontSize: "0.77rem", color: "var(--color-subtle)", lineHeight: 1.5 }}>
+          Số điện thoại dùng để giới hạn {WISH_DAILY_LIMIT} lượt/ngày.
+          <br />Không lưu thông tin cá nhân khác.
         </Typography>
       </Paper>
+    </Box>
+  );
+}
+
+// ── Usage Badge ───────────────────────────────────────────────────────────────
+
+function UsageDot({ filled, color }) {
+  return (
+    <Box sx={{
+      width: 9, height: 9, borderRadius: "50%",
+      bgcolor: filled ? "rgba(0,0,0,0.16)" : color,
+      border: filled ? "1.5px solid rgba(0,0,0,0.12)" : "none",
+      transition: "all 0.3s",
+      flexShrink: 0,
+    }} />
+  );
+}
+
+function UsageBadge({ phone, phoneCount, deviceCount, onChangePhone }) {
+  const phoneRemaining  = Math.max(0, WISH_DAILY_LIMIT - phoneCount);
+  const deviceRemaining = Math.max(0, WISH_DAILY_LIMIT - deviceCount);
+  const remaining       = Math.min(phoneRemaining, deviceRemaining);
+  const color = remaining === 0 ? "#d32f2f" : remaining === 1 ? "#e65100" : "#2e7d32";
+
+  return (
+    <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+      {/* Phone row */}
+      <Box sx={{
+        display: "flex", alignItems: "center", gap: 1,
+        px: 1.8, py: 0.65, borderRadius: 99,
+        bgcolor: "rgba(255,255,255,0.82)", backdropFilter: "blur(10px)",
+        border: "1px solid rgba(255,255,255,0.55)",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+      }}>
+        <PhoneIcon sx={{ fontSize: "0.85rem", color: "rgba(0,0,0,0.4)" }} />
+        <Typography sx={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--color-text)" }}>
+          {phone}
+        </Typography>
+        <Tooltip title="Đổi số điện thoại">
+          <IconButton size="small" onClick={onChangePhone} sx={{ p: 0.3 }}>
+            <EditIcon sx={{ fontSize: "0.8rem", color: "rgba(0,0,0,0.35)" }} />
+          </IconButton>
+        </Tooltip>
+      </Box>
+
+      {/* Remaining row */}
+      <Box sx={{
+        display: "flex", alignItems: "center", gap: 0.8,
+        px: 1.8, py: 0.65, borderRadius: 99,
+        bgcolor: remaining === 0 ? "rgba(211,47,47,0.1)" : "rgba(255,255,255,0.82)",
+        border: `1.5px solid ${color}40`,
+        backdropFilter: "blur(10px)",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+      }}>
+        {[...Array(WISH_DAILY_LIMIT)].map((_, i) => (
+          <UsageDot key={i} filled={i < (WISH_DAILY_LIMIT - remaining)} color={color} />
+        ))}
+        <Typography sx={{ fontSize: "0.82rem", fontWeight: 800, color, ml: 0.3 }}>
+          {remaining === 0 ? "Hết lượt hôm nay" : `Còn ${remaining} lượt`}
+        </Typography>
+      </Box>
+    </Box>
+  );
+}
+
+// ── Blocked state detail ──────────────────────────────────────────────────────
+
+function BlockedBanner({ phone, phoneBlocked, deviceBlocked, onChangePhone }) {
+  return (
+    <Box sx={{ py: 1.5, px: 3, textAlign: "center", borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
+      {deviceBlocked && (
+        <Box sx={{
+          display: "inline-flex", alignItems: "center", gap: 1,
+          px: 2, py: 0.8, borderRadius: 2, bgcolor: "#fff3e0", mb: phoneBlocked ? 1 : 0,
+        }}>
+          <SmartphoneIcon sx={{ fontSize: "1rem", color: "#e65100" }} />
+          <Typography sx={{ fontSize: "0.88rem", fontWeight: 700, color: "#bf360c" }}>
+            Thiết bị này đã dùng hết {WISH_DAILY_LIMIT} lượt hôm nay
+          </Typography>
+        </Box>
+      )}
+      {phoneBlocked && (
+        <Box sx={{
+          display: "inline-flex", alignItems: "center", gap: 1,
+          px: 2, py: 0.8, borderRadius: 2, bgcolor: "#fce4ec",
+        }}>
+          <PhoneIcon sx={{ fontSize: "1rem", color: "#c62828" }} />
+          <Typography sx={{ fontSize: "0.88rem", fontWeight: 700, color: "#b71c1c" }}>
+            Số {phone} đã dùng hết {WISH_DAILY_LIMIT} lượt hôm nay
+          </Typography>
+        </Box>
+      )}
+      <Typography sx={{ mt: 1, fontSize: "0.82rem", color: "var(--color-subtle)" }}>
+        Quay lại ngày mai, hoặc{" "}
+        <Box component="span" onClick={onChangePhone}
+          sx={{ fontWeight: 700, textDecoration: "underline", cursor: "pointer", color: "var(--color-primary)" }}>
+          đổi số điện thoại
+        </Box>
+      </Typography>
     </Box>
   );
 }
@@ -221,7 +332,7 @@ function WishCard({ text, fontFamily, fontSize, index, gradient, streaming }) {
   return (
     <Paper elevation={0} sx={{
       position: "relative", p: { xs: 3, md: 4 }, borderRadius: 4,
-      background: "rgba(255,255,255,0.92)", backdropFilter: "blur(16px)",
+      background: "rgba(255,255,255,0.94)", backdropFilter: "blur(16px)",
       border: "1px solid rgba(255,255,255,0.8)",
       boxShadow: "0 8px 32px rgba(0,0,0,0.10)",
       transition: "transform 0.25s, box-shadow 0.25s",
@@ -229,10 +340,7 @@ function WishCard({ text, fontFamily, fontSize, index, gradient, streaming }) {
       animation: "wish-in 0.5s ease",
       animationDelay: `${index * 0.12}s`,
       animationFillMode: "both",
-      "@keyframes wish-in": {
-        from: { opacity: 0, transform: "translateY(20px)" },
-        to:   { opacity: 1, transform: "translateY(0)" },
-      },
+      "@keyframes wish-in": { from: { opacity: 0, transform: "translateY(20px)" }, to: { opacity: 1, transform: "translateY(0)" } },
       overflow: "hidden",
       "&::before": {
         content: '""', position: "absolute",
@@ -285,98 +393,76 @@ function WishCard({ text, fontFamily, fontSize, index, gradient, streaming }) {
   );
 }
 
-// ── Usage Badge ───────────────────────────────────────────────────────────────
-
-function UsageBadge({ phone, usedToday, onChangePhone }) {
-  const remaining = DAILY_LIMIT - usedToday;
-  const color = remaining === 0 ? "#d32f2f" : remaining === 1 ? "#e65100" : "#2e7d32";
-
-  return (
-    <Box sx={{
-      display: "flex", alignItems: "center", gap: 1.5,
-      flexWrap: "wrap",
-    }}>
-      <Box sx={{
-        display: "flex", alignItems: "center", gap: 1,
-        px: 2, py: 0.7, borderRadius: 99,
-        bgcolor: "rgba(255,255,255,0.85)", backdropFilter: "blur(10px)",
-        border: "1px solid rgba(255,255,255,0.6)",
-        boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
-      }}>
-        <PhoneIcon sx={{ fontSize: "0.9rem", color: "rgba(0,0,0,0.45)" }} />
-        <Typography sx={{ fontSize: "0.88rem", fontWeight: 700, color: "var(--color-text)" }}>
-          {phone}
-        </Typography>
-        <Tooltip title="Đổi số điện thoại">
-          <IconButton size="small" onClick={onChangePhone} sx={{ p: 0.3, ml: 0.5 }}>
-            <EditIcon sx={{ fontSize: "0.85rem", color: "rgba(0,0,0,0.4)" }} />
-          </IconButton>
-        </Tooltip>
-      </Box>
-
-      <Box sx={{
-        display: "flex", alignItems: "center", gap: 0.7,
-        px: 1.8, py: 0.7, borderRadius: 99,
-        bgcolor: remaining === 0 ? "rgba(211,47,47,0.08)" : "rgba(255,255,255,0.85)",
-        border: `1px solid ${color}30`,
-        backdropFilter: "blur(10px)",
-      }}>
-        {[...Array(DAILY_LIMIT)].map((_, i) => (
-          <Box key={i} sx={{
-            width: 10, height: 10, borderRadius: "50%",
-            bgcolor: i < (DAILY_LIMIT - remaining) ? "rgba(0,0,0,0.18)" : color,
-            transition: "background 0.3s",
-          }} />
-        ))}
-        <Typography sx={{ fontSize: "0.82rem", fontWeight: 800, color, ml: 0.5 }}>
-          {remaining === 0 ? "Hết lượt hôm nay" : `Còn ${remaining} lượt hôm nay`}
-        </Typography>
-      </Box>
-    </Box>
-  );
-}
-
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function WishGenerator() {
-  const [phone, setPhone] = useState(() => getSavedPhone());
-  const [usedToday, setUsedToday] = useState(() => getSavedPhone() ? getUsageCount(getSavedPhone()) : 0);
+  // Phone state
+  const [phone, setPhone]         = useState(getSavedPhone);
+  const [phoneCount, setPhoneCount] = useState(0);   // from Supabase
+  const [deviceCount, setDeviceCount] = useState(getDeviceCount); // from localStorage
+  const [countLoading, setCountLoading] = useState(false);
 
-  const [occasion, setOccasion] = useState("sinh-nhat");
-  const [description, setDescription] = useState("");
+  // Form
+  const [occasion, setOccasion]         = useState("sinh-nhat");
+  const [description, setDescription]   = useState("");
   const [selectedFont, setSelectedFont] = useState("dancing-script");
-  const [count, setCount] = useState(2);
+  const [count, setCount]               = useState(2);
 
-  const [wishes, setWishes] = useState([]);
-  const [loading, setLoading] = useState(false);
+  // Results
+  const [wishes, setWishes]           = useState([]);
+  const [loading, setLoading]         = useState(false);
   const [streamingIdx, setStreamingIdx] = useState(-1);
-  const [error, setError] = useState("");
-  const [snack, setSnack] = useState(false);
+  const [error, setError]             = useState("");
+  const [snack, setSnack]             = useState(false);
 
-  const occasionObj = OCCASIONS.find((o) => o.key === occasion) ?? OCCASIONS[0];
-  const fontObj = FONTS.find((f) => f.key === selectedFont) ?? FONTS[1];
-  const gradient = OCCASION_GRADIENTS[occasion] ?? "linear-gradient(135deg, #667eea 0%, #764ba2 100%)";
-  const isBlocked = usedToday >= DAILY_LIMIT;
+  // Derived
+  const occasionObj    = OCCASIONS.find((o) => o.key === occasion) ?? OCCASIONS[0];
+  const fontObj        = FONTS.find((f) => f.key === selectedFont) ?? FONTS[1];
+  const gradient       = OCCASION_GRADIENTS[occasion] ?? "linear-gradient(135deg, #667eea 0%, #764ba2 100%)";
+  const phoneBlocked   = phoneCount >= WISH_DAILY_LIMIT;
+  const deviceBlocked  = deviceCount >= WISH_DAILY_LIMIT;
+  const isBlocked      = phoneBlocked || deviceBlocked;
 
-  const handlePhoneConfirm = (norm) => {
+  // Fetch phone count from Supabase when phone is set
+  useEffect(() => {
+    if (!phone) return;
+    setCountLoading(true);
+    getWishPhoneCount(phone)
+      .then(setPhoneCount)
+      .catch(() => {}) // network fail → rely on device limit only
+      .finally(() => setCountLoading(false));
+  }, [phone]);
+
+  const handlePhoneConfirm = (norm, serverCount) => {
     setPhone(norm);
-    setUsedToday(getUsageCount(norm));
+    setPhoneCount(serverCount);
+    setDeviceCount(getDeviceCount());
   };
 
   const handleChangePhone = () => {
     setPhone("");
+    setPhoneCount(0);
     setWishes([]);
     setError("");
   };
 
   const handleGenerate = useCallback(async () => {
-    if (loading || isBlocked) return;
+    if (loading) return;
 
-    // Re-check usage at time of click (could have opened in another tab)
-    const currentCount = getUsageCount(phone);
-    if (currentCount >= DAILY_LIMIT) {
-      setUsedToday(DAILY_LIMIT);
-      setError(`Số ${phone} đã dùng hết ${DAILY_LIMIT} lượt hôm nay. Quay lại ngày mai nhé!`);
+    // Recheck both limits at click time
+    const freshDevice = getDeviceCount();
+    let freshPhone = phoneCount;
+    try { freshPhone = await getWishPhoneCount(phone); } catch {}
+
+    setDeviceCount(freshDevice);
+    setPhoneCount(freshPhone);
+
+    if (freshDevice >= WISH_DAILY_LIMIT) {
+      setError(`Thiết bị này đã dùng hết ${WISH_DAILY_LIMIT} lượt hôm nay. Quay lại ngày mai nhé!`);
+      return;
+    }
+    if (freshPhone >= WISH_DAILY_LIMIT) {
+      setError(`Số ${phone} đã dùng hết ${WISH_DAILY_LIMIT} lượt hôm nay. Quay lại ngày mai nhé!`);
       return;
     }
 
@@ -399,10 +485,16 @@ export default function WishGenerator() {
         }
       );
 
-      // Increment only after successful generation
-      const newCount = incrementUsage(phone);
-      setUsedToday(newCount);
-      setStreamingIdx(-1);
+      // Increment both counters after successful generation
+      const newDevice = incrementDeviceCount();
+      setDeviceCount(newDevice);
+
+      try {
+        const newPhone = await incrementWishPhoneCount(phone);
+        setPhoneCount(newPhone);
+      } catch {
+        setPhoneCount((p) => p + 1); // optimistic if Supabase fails
+      }
     } catch (err) {
       setError(err?.message ?? "Đã có lỗi xảy ra, vui lòng thử lại.");
       setWishes([]);
@@ -410,20 +502,18 @@ export default function WishGenerator() {
       setLoading(false);
       setStreamingIdx(-1);
     }
-  }, [loading, isBlocked, phone, count, occasionObj, description]);
+  }, [loading, phone, phoneCount, count, occasionObj, description]);
 
   const handleCopyAll = () => {
-    const allText = wishes.map((w, i) => `— Lời chúc ${i + 1} —\n${w.text}`).join("\n\n");
-    navigator.clipboard.writeText(allText).then(() => setSnack(true));
+    const text = wishes.map((w, i) => `— Lời chúc ${i + 1} —\n${w.text}`).join("\n\n");
+    navigator.clipboard.writeText(text).then(() => setSnack(true));
   };
 
-  // Show phone gate if no phone saved
+  // ── Phone gate ──
   if (!phone) {
     return (
       <>
-        <Helmet>
-          <title>Tạo Lời Chúc AI – Tất tần tật Phú Tân</title>
-        </Helmet>
+        <Helmet><title>Tạo Lời Chúc AI – Tất tần tật Phú Tân</title></Helmet>
         <PhoneGate onConfirm={handlePhoneConfirm} />
       </>
     );
@@ -438,12 +528,12 @@ export default function WishGenerator() {
 
       {/* ── Hero ── */}
       <Box sx={{
-        background: gradient, py: { xs: 4, md: 6 },
+        background: gradient, py: { xs: 4, md: 5.5 },
         transition: "background 0.5s ease",
         position: "relative", overflow: "hidden",
         "&::before": {
           content: '""', position: "absolute", inset: 0,
-          background: "radial-gradient(ellipse at 20% 80%, rgba(255,255,255,0.22) 0%, transparent 55%)",
+          background: "radial-gradient(ellipse at 20% 80%, rgba(255,255,255,0.2) 0%, transparent 55%)",
           pointerEvents: "none",
         },
       }}>
@@ -461,22 +551,23 @@ export default function WishGenerator() {
                 Mô tả → AI tạo lời chúc chân thành với font chữ đẹp
               </Typography>
             </Box>
-            <UsageBadge phone={phone} usedToday={usedToday} onChangePhone={handleChangePhone} />
+
+            {countLoading
+              ? <CircularProgress size={22} sx={{ color: "rgba(255,255,255,0.7)", mt: 0.5 }} />
+              : <UsageBadge phone={phone} phoneCount={phoneCount} deviceCount={deviceCount} onChangePhone={handleChangePhone} />
+            }
           </Box>
         </Container>
       </Box>
 
-      {/* ── Blocked Banner ── */}
+      {/* ── Blocked banner ── */}
       {isBlocked && (
-        <Box sx={{ background: "#fff3e0", borderBottom: "1px solid #ffe0b2", py: 1.5, px: 3, textAlign: "center" }}>
-          <Typography sx={{ color: "#e65100", fontWeight: 700, fontSize: "0.92rem" }}>
-            Số {phone} đã dùng hết {DAILY_LIMIT} lượt hôm nay 😊  Quay lại ngày mai hoặc{" "}
-            <Box component="span" onClick={handleChangePhone}
-              sx={{ textDecoration: "underline", cursor: "pointer", fontWeight: 800 }}>
-              đổi số điện thoại
-            </Box>
-          </Typography>
-        </Box>
+        <BlockedBanner
+          phone={phone}
+          phoneBlocked={phoneBlocked}
+          deviceBlocked={deviceBlocked}
+          onChangePhone={handleChangePhone}
+        />
       )}
 
       {/* ── Form ── */}
@@ -487,12 +578,12 @@ export default function WishGenerator() {
             bgcolor: "var(--color-surface)",
             border: "1px solid rgba(0,0,0,0.06)",
             boxShadow: "0 4px 24px rgba(0,0,0,0.07)",
-            opacity: isBlocked ? 0.55 : 1,
+            opacity: isBlocked ? 0.5 : 1,
             pointerEvents: isBlocked ? "none" : "auto",
             transition: "opacity 0.3s",
           }}>
 
-            {/* Step 1 */}
+            {/* 1. Occasion */}
             <Typography variant="overline" sx={{ fontWeight: 800, color: "var(--color-primary)", letterSpacing: "0.1em", display: "block", mb: 1.5 }}>
               1. Dịp gì?
             </Typography>
@@ -514,13 +605,13 @@ export default function WishGenerator() {
               ))}
             </Box>
 
-            {/* Step 2 */}
+            {/* 2. Description */}
             <Typography variant="overline" sx={{ fontWeight: 800, color: "var(--color-primary)", letterSpacing: "0.1em", display: "block", mb: 1.5 }}>
               2. Mô tả thêm (không bắt buộc)
             </Typography>
             <TextField
               fullWidth multiline minRows={3} maxRows={6}
-              placeholder={`VD: Chúc mừng sinh nhật ba, 60 tuổi, giọng văn ấm áp con cái dành cho cha…\nHoặc: Chúc mừng đám cưới bạn thân, vui tươi hài hước, phong cách miền Tây…`}
+              placeholder={`VD: Chúc mừng sinh nhật ba, 60 tuổi, giọng văn ấm áp con cái dành cho cha…\nVD: Chúc mừng đám cưới bạn thân, vui tươi hài hước phong cách miền Tây…`}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               sx={{
@@ -533,46 +624,34 @@ export default function WishGenerator() {
               }}
             />
 
-            {/* Step 3 */}
+            {/* 3. Font */}
             <Typography variant="overline" sx={{ fontWeight: 800, color: "var(--color-primary)", letterSpacing: "0.1em", display: "block", mb: 1.5 }}>
               3. Chọn font chữ
             </Typography>
-            <Box sx={{
-              display: "grid",
-              gridTemplateColumns: { xs: "repeat(2, 1fr)", sm: "repeat(3, 1fr)" },
-              gap: 1.5, mb: 3.5,
-            }}>
+            <Box sx={{ display: "grid", gridTemplateColumns: { xs: "repeat(2, 1fr)", sm: "repeat(3, 1fr)" }, gap: 1.5, mb: 3.5 }}>
               {FONTS.map((f) => (
-                <Paper
-                  key={f.key} elevation={0}
-                  onClick={() => setSelectedFont(f.key)}
-                  sx={{
-                    p: 1.8, borderRadius: 2.5, cursor: "pointer", textAlign: "center",
-                    border: selectedFont === f.key ? "2px solid var(--color-primary)" : "2px solid rgba(0,0,0,0.08)",
-                    bgcolor: selectedFont === f.key ? "rgba(46,125,50,0.05)" : "var(--color-background)",
-                    transition: "all 0.2s",
-                    "&:hover": { borderColor: "var(--color-primary)", transform: "translateY(-2px)", boxShadow: "0 4px 16px rgba(0,0,0,0.1)" },
-                  }}
-                >
+                <Paper key={f.key} elevation={0} onClick={() => setSelectedFont(f.key)} sx={{
+                  p: 1.8, borderRadius: 2.5, cursor: "pointer", textAlign: "center",
+                  border: selectedFont === f.key ? "2px solid var(--color-primary)" : "2px solid rgba(0,0,0,0.08)",
+                  bgcolor: selectedFont === f.key ? "rgba(46,125,50,0.05)" : "var(--color-background)",
+                  transition: "all 0.2s",
+                  "&:hover": { borderColor: "var(--color-primary)", transform: "translateY(-2px)", boxShadow: "0 4px 16px rgba(0,0,0,0.1)" },
+                }}>
                   <Typography sx={{ fontFamily: f.family, fontSize: f.size, color: "var(--color-text)", lineHeight: 1.3, mb: 0.5 }}>
                     {f.preview}
                   </Typography>
-                  <Typography sx={{ fontSize: "0.72rem", fontWeight: 700, color: selectedFont === f.key ? "var(--color-primary)" : "var(--color-subtle)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                  <Typography sx={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: selectedFont === f.key ? "var(--color-primary)" : "var(--color-subtle)" }}>
                     {f.label}
                   </Typography>
                 </Paper>
               ))}
             </Box>
 
-            {/* Step 4 */}
+            {/* 4. Count */}
             <Typography variant="overline" sx={{ fontWeight: 800, color: "var(--color-primary)", letterSpacing: "0.1em", display: "block", mb: 1.5 }}>
               4. Số lượng lời chúc
             </Typography>
-            <ToggleButtonGroup
-              value={count} exclusive
-              onChange={(_, v) => v && setCount(v)}
-              sx={{ mb: 3.5 }}
-            >
+            <ToggleButtonGroup value={count} exclusive onChange={(_, v) => v && setCount(v)} sx={{ mb: 3.5 }}>
               {COUNT_OPTIONS.map((n) => (
                 <ToggleButton key={n} value={n} sx={{
                   fontWeight: 800, px: 3.5,
@@ -653,9 +732,9 @@ export default function WishGenerator() {
                 ))}
               </Box>
 
-              {/* Font switcher */}
+              {/* Font switcher strip */}
               <Box sx={{ mt: 4, p: 2.5, borderRadius: 3, textAlign: "center", bgcolor: "rgba(0,0,0,0.03)", border: "1px dashed rgba(0,0,0,0.1)" }}>
-                <Typography sx={{ fontSize: "0.8rem", color: "var(--color-subtle)", mb: 1, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                <Typography sx={{ fontSize: "0.8rem", color: "var(--color-subtle)", mb: 1.2, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>
                   Thử font chữ khác
                 </Typography>
                 <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, justifyContent: "center" }}>
@@ -667,8 +746,7 @@ export default function WishGenerator() {
                         border: selectedFont === f.key ? "2px solid var(--color-primary)" : "1px solid rgba(0,0,0,0.15)",
                         bgcolor: selectedFont === f.key ? "rgba(46,125,50,0.08)" : "transparent",
                         color: "var(--color-text)", fontWeight: selectedFont === f.key ? 700 : 400,
-                        cursor: "pointer",
-                        "&:hover": { bgcolor: "rgba(46,125,50,0.05)" },
+                        cursor: "pointer", "&:hover": { bgcolor: "rgba(46,125,50,0.05)" },
                       }}
                     />
                   ))}
