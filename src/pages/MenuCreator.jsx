@@ -577,6 +577,7 @@ export default function MenuCreator() {
   const [aiPrompt,     setAiPrompt]     = useState(DEFAULT_AI_PROMPT);
   const [aiLoading,    setAiLoading]    = useState(false);
   const [exporting,    setExporting]    = useState(false);
+  const [exportPreview, setExportPreview] = useState(null); // data URL for WebView save dialog
   const [history,      setHistory]      = useState([[]]);
   const [hIdx,         setHIdx]         = useState(0);
   const [propsOpen,    setPropsOpen]    = useState(false); // mobile props drawer
@@ -663,6 +664,16 @@ export default function MenuCreator() {
     const n = [...p]; [n[i], n[i - 1]] = [n[i - 1], n[i]];
     return n.map((e, j) => ({ ...e, zIndex: j }));
   });
+
+  // ── Prevent browser native pinch-zoom on mobile (iOS ignores user-scalable=no) ──
+  // Only block 2-finger touchmove; single-finger scroll still works everywhere.
+
+  useEffect(() => {
+    if (!isMobile) return;
+    const block = (e) => { if (e.touches && e.touches.length >= 2) e.preventDefault(); };
+    document.addEventListener("touchmove", block, { passive: false });
+    return () => document.removeEventListener("touchmove", block);
+  }, [isMobile]);
 
   // ── Drag & Drop (pointer events — works on both touch & mouse) ──
 
@@ -839,12 +850,54 @@ export default function MenuCreator() {
 
   const handleExport = async () => {
     setSelectedId(null); setExporting(true);
-    await new Promise((r) => setTimeout(r, 180));
+    await new Promise((r) => setTimeout(r, 200));
     try {
       const { toPng } = await import("html-to-image");
-      const url = await toPng(boardRef.current, { pixelRatio: 2 });
-      const a = document.createElement("a");
-      a.download = `menu-${Date.now()}.png`; a.href = url; a.click();
+
+      // Remove CSS transform + shadow before capture so html-to-image renders the
+      // board at its natural dimensions (boardSize.w × boardSize.h).
+      // Without this, on mobile the board has transform:scale(effectiveScale) and
+      // the captured canvas contains the scaled-down content surrounded by empty space.
+      const node = boardRef.current;
+      const savedTransform = node.style.transform;
+      const savedShadow    = node.style.boxShadow;
+      node.style.transform = "none";
+      node.style.boxShadow = "none";
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+      let dataUrl;
+      try {
+        dataUrl = await toPng(node, { pixelRatio: 2, width: boardSize.w, height: boardSize.h });
+      } finally {
+        node.style.transform = savedTransform;
+        node.style.boxShadow = savedShadow;
+      }
+
+      const filename = `menu-${Date.now()}.png`;
+
+      // 1️⃣ Web Share API — iOS 15+ / Android Chrome / nhiều WebView hỗ trợ
+      if (isMobile && navigator.share) {
+        try {
+          const blob  = await (await fetch(dataUrl)).blob();
+          const file  = new File([blob], filename, { type: "image/png" });
+          if (navigator.canShare?.({ files: [file] })) {
+            await navigator.share({ files: [file], title: "Menu thực đơn" });
+            return;
+          }
+        } catch {
+          // user dismissed share sheet hoặc WebView không hỗ trợ → fall through
+        }
+      }
+
+      // 2️⃣ Desktop: <a download> hoạt động bình thường
+      if (!isMobile) {
+        const a = document.createElement("a");
+        a.download = filename; a.href = dataUrl; a.click();
+        return;
+      }
+
+      // 3️⃣ Fallback WebView: hiện ảnh trong dialog → user long-press để lưu
+      setExportPreview(dataUrl);
     } catch (err) {
       alert("Không xuất được ảnh: " + err.message);
     } finally {
@@ -1011,7 +1064,7 @@ export default function MenuCreator() {
 
       {/* ══════════════════ MOBILE LAYOUT (<md) ══════════════════ */}
       {isMobile && (
-        <Box sx={{ display: "flex", flexDirection: "column", minHeight: "calc(100vh - 100px)", bgcolor: "#d8d8d8" }}>
+        <Box sx={{ display: "flex", flexDirection: "column", minHeight: "calc(100vh - 100px)", bgcolor: "#d8d8d8", touchAction: "pan-x pan-y" }}>
 
           {/* Board area – pinch-to-zoom + scroll when zoomed in */}
           <Box ref={containerRef}
@@ -1021,10 +1074,10 @@ export default function MenuCreator() {
             onPointerCancel={handleContainerPU}
             sx={{
               flex: "0 0 auto", p: 1, position: "relative",
-              overflow: zoomLevel > 1 ? "auto" : "hidden",
+              overflow: "auto",
               touchAction: "none",
               background: "repeating-linear-gradient(45deg,transparent,transparent 10px,rgba(0,0,0,0.025) 10px,rgba(0,0,0,0.025) 20px), #d0d0d0",
-              minHeight: Math.min(boardSize.h * effectiveScale + 16, 420),
+              height: Math.min(boardSize.h * boardScale + 16, 440),
             }}
             onClick={() => setSelectedId(null)}
           >
@@ -1134,6 +1187,59 @@ export default function MenuCreator() {
           <PropsPanel el={selected} onUpdate={updateEl} onDelete={deleteEl} onUp={bringUp} onDown={sendDown} />
         </Box>
       </Drawer>
+
+      {/* ── Export Preview Dialog (WebView fallback) ── */}
+      <Dialog
+        open={!!exportPreview}
+        onClose={() => setExportPreview(null)}
+        maxWidth="sm" fullWidth
+        fullScreen={isMobile}
+        PaperProps={{ sx: { borderRadius: isMobile ? 0 : 3, m: isMobile ? 0 : 2 } }}
+      >
+        <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1, pb: 1 }}>
+          <DownloadIcon sx={{ color: "var(--color-primary)", fontSize: 20 }} />
+          <Typography sx={{ fontWeight: 800, flex: 1, fontSize: "1rem" }}>Lưu ảnh menu</Typography>
+          <IconButton size="small" onClick={() => setExportPreview(null)}><CloseIcon sx={{ fontSize: 18 }} /></IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ p: 1.5, display: "flex", flexDirection: "column", gap: 1.5 }}>
+          <Box sx={{
+            p: 1.5, borderRadius: 2,
+            bgcolor: "rgba(25,118,210,0.07)", border: "1px solid rgba(25,118,210,0.18)",
+            display: "flex", alignItems: "flex-start", gap: 1,
+          }}>
+            <Typography sx={{ fontSize: "0.82rem", color: "primary.main", lineHeight: 1.55 }}>
+              📱 <strong>Nhấn giữ vào ảnh</strong> bên dưới → chọn <strong>"Lưu ảnh"</strong> / <strong>"Tải xuống"</strong> để lưu về máy.
+            </Typography>
+          </Box>
+          {exportPreview && (
+            <Box sx={{ borderRadius: 2, overflow: "hidden", border: "1px solid rgba(0,0,0,0.1)", bgcolor: "#f5f5f5" }}>
+              <img
+                src={exportPreview}
+                alt="Menu preview"
+                style={{ width: "100%", display: "block", userSelect: "none" }}
+                onContextMenu={(e) => e.stopPropagation()}
+              />
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 2, pb: 2, gap: 1 }}>
+          <Button onClick={() => setExportPreview(null)} sx={{ borderRadius: 2, textTransform: "none" }}>Đóng</Button>
+          <Button
+            variant="contained"
+            startIcon={<DownloadIcon sx={{ fontSize: 16 }} />}
+            onClick={() => {
+              if (!exportPreview) return;
+              const a = document.createElement("a");
+              a.download = `menu-${Date.now()}.png`;
+              a.href = exportPreview;
+              a.click();
+            }}
+            sx={{ borderRadius: 2, textTransform: "none", fontWeight: 700, bgcolor: "var(--color-primary)" }}
+          >
+            Tải xuống
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* ── AI Dialog ── */}
       <Dialog open={aiOpen} onClose={() => setAiOpen(false)} maxWidth="sm" fullWidth
