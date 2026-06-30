@@ -53,6 +53,7 @@ const Footer = () => {
             .map((s) => (
               <Link key={s.slug} to={s.to} style={{ marginRight: "1rem" }}>{s.label}</Link>
             ))}
+          <Link to="/wishes" style={{ marginRight: "1rem" }}>✨ Tạo lời chúc</Link>
           <Link to="/search">Tìm kiếm</Link>
         </nav>
       </div>

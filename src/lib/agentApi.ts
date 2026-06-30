@@ -184,6 +184,90 @@ export async function callAgent(messages: Message[], section: string, agent: Age
   return result;
 }
 
+// ── Wish Generator ───────────────────────────────────────────────────────────
+
+export interface WishResult {
+  text: string;
+}
+
+export async function generateWishes(
+  occasion: string,
+  description: string,
+  count: number,
+  onChunk?: (partial: string) => void
+): Promise<WishResult[]> {
+  const apiKey = (import.meta as any).env?.VITE_GEMINI_API_KEY;
+  if (!apiKey) throw new Error("Gemini API key chưa được cấu hình");
+
+  const model = GEMINI_MODELS[_currentGeminiModelIdx] ?? GEMINI_MODELS[0];
+  const prompt = `Bạn là chuyên gia viết lời chúc tiếng Việt. Hãy tạo ${count} lời chúc ${occasion} khác nhau theo yêu cầu sau:
+
+Yêu cầu: ${description}
+
+Quy tắc:
+- Mỗi lời chúc chân thành, ý nghĩa, đúng văn hóa Việt Nam
+- Độ dài 60–130 từ
+- Không dùng markdown, không gạch đầu dòng, viết thành đoạn văn tự nhiên
+- Mỗi lời chúc bắt đầu bằng "---WISH---" trên một dòng riêng
+- Không thêm số thứ tự hay tiêu đề, chỉ viết thẳng nội dung sau "---WISH---"
+
+Ví dụ format:
+---WISH---
+Nội dung lời chúc 1 ở đây...
+
+---WISH---
+Nội dung lời chúc 2 ở đây...`;
+
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1/models/${model}:streamGenerateContent?alt=sse&key=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: { maxOutputTokens: 1200, temperature: 0.85 },
+      }),
+    }
+  );
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(`Lỗi tạo lời chúc: ${body?.error?.message ?? `HTTP ${res.status}`}`);
+  }
+
+  const reader = res.body!.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let full = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() ?? "";
+    for (const line of lines) {
+      if (!line.startsWith("data: ")) continue;
+      const jsonStr = line.slice(6).trim();
+      if (!jsonStr || jsonStr === "[DONE]") continue;
+      try {
+        const data = JSON.parse(jsonStr);
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (text) { full += text; onChunk?.(full); }
+      } catch { /* skip malformed */ }
+    }
+  }
+
+  const wishes = full
+    .split("---WISH---")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .slice(0, count)
+    .map((text) => ({ text }));
+
+  return wishes.length > 0 ? wishes : [{ text: full.trim() }];
+}
+
 // ── Claude (non-streaming, proxy-based) ──────────────────────────────────────
 
 function getClaudeEndpoint(): string | null {

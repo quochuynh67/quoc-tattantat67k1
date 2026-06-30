@@ -16,6 +16,7 @@ import AgentChatDashboard from "../components/AgentChatDashboard";
 import SEOIntroSection from "../components/sections/SEOIntroSection";
 import GenericSection from "../components/sections/GenericSection";
 import VoiceChat from "../components/VoiceChat";
+import WishBannerSection from "../components/sections/WishBannerSection";
 import { useSiteSettings } from "../contexts/SiteSettingsContext";
 
 // Slug → specific component mapping for built-in sections
@@ -55,6 +56,7 @@ const Home = () => {
           : <GenericSection key={slug} slug={slug} title={title} subtitle={description} />;
       })}
 
+      <WishBannerSection />
       <VlogsMapSection />
       <ContributorsSection />
       <SEOIntroSection />

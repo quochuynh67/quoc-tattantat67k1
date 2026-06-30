@@ -8,7 +8,7 @@ const TOOLS = [
   { id: "relax", label: "Relax", icon: "🧘", url: "https://quoc-research-retrogame.web.app/?feature=vlog" },
   { id: "retro", label: "Chơi game thùng", icon: "🕹️", url: "https://quoc-research-retrogame.web.app/?feature=retro" },
   { id: "trade", label: "Mua bán rau cải", icon: "🌿", url: "/trading" },
-  { id: "wish", label: "Tạo văn lời chúc hay", icon: "🎉", url: "#" },
+  { id: "wish", label: "Tạo văn lời chúc hay", icon: "🎉", url: "/wishes" },
   { id: "scale", label: "Tính toán cân lúa", icon: "🧮", url: "#" },
 ];
 
