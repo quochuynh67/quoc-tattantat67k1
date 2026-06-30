@@ -54,6 +54,7 @@ const Footer = () => {
               <Link key={s.slug} to={s.to} style={{ marginRight: "1rem" }}>{s.label}</Link>
             ))}
           <Link to="/wishes" style={{ marginRight: "1rem" }}>✨ Tạo lời chúc</Link>
+          <Link to="/menu"   style={{ marginRight: "1rem" }}>🍽️ Tạo thực đơn</Link>
           <Link to="/search">Tìm kiếm</Link>
         </nav>
       </div>
