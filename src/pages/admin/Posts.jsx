@@ -504,7 +504,15 @@ export default function AdminPosts() {
                         transition: "opacity 0.2s",
                       }}
                     >
-                      <TableCell sx={{ fontWeight: 500 }}>{post.title}</TableCell>
+                      <TableCell sx={{ maxWidth: 260 }}>
+                        <Typography sx={{
+                          fontWeight: 600, fontSize: "0.875rem",
+                          display: "-webkit-box", WebkitBoxOrient: "vertical",
+                          WebkitLineClamp: 2, overflow: "hidden",
+                        }}>
+                          {post.title}
+                        </Typography>
+                      </TableCell>
                       <TableCell>
                         <Typography variant="body2" sx={{ display: "inline-block", bgcolor: "primary.light", color: "primary.contrastText", px: 1.5, py: 0.5, borderRadius: 1.5, fontSize: "0.75rem", fontWeight: 600 }}>
                           {sections.find((sec) => sec.slug === post.section_slug)?.title || post.section_slug}
@@ -574,7 +582,15 @@ export default function AdminPosts() {
                 <TableBody>
                   {guestPosts.map((g) => (
                     <TableRow key={g.id} hover sx={{ "&:last-child td": { border: 0 } }}>
-                      <TableCell sx={{ fontWeight: 500, maxWidth: 280, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.title}</TableCell>
+                      <TableCell sx={{ maxWidth: 280 }}>
+                        <Typography sx={{
+                          fontWeight: 600, fontSize: "0.875rem",
+                          display: "-webkit-box", WebkitBoxOrient: "vertical",
+                          WebkitLineClamp: 2, overflow: "hidden",
+                        }}>
+                          {g.title}
+                        </Typography>
+                      </TableCell>
                       <TableCell>
                         <Chip label={sections.find((s) => s.slug === g.section_slug)?.title || g.section_slug || "—"} size="small" variant="outlined" />
                       </TableCell>
@@ -668,8 +684,14 @@ export default function AdminPosts() {
                           "&:last-child td": { border: 0 },
                         }}
                       >
-                        <TableCell sx={{ fontWeight: 600, maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {post.title}
+                        <TableCell sx={{ maxWidth: 260 }}>
+                          <Typography sx={{
+                            fontWeight: 600, fontSize: "0.875rem",
+                            display: "-webkit-box", WebkitBoxOrient: "vertical",
+                            WebkitLineClamp: 2, overflow: "hidden",
+                          }}>
+                            {post.title}
+                          </Typography>
                         </TableCell>
                         <TableCell>
                           {post.severity ? (

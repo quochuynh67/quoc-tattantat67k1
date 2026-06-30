@@ -1,5 +1,6 @@
 // src/pages/admin/Vlogs.jsx
 import React, { useEffect, useState, useRef, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Grid, FormControlLabel, Switch, Divider, Card, CardContent, FormControl, InputLabel, Select, MenuItem, Chip, Alert, Tabs, Tab, Autocomplete, Tooltip } from "@mui/material";
 import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
@@ -26,6 +27,7 @@ const formatDuration = (seconds) => {
 
 export default function AdminVlogs() {
   const { refreshVlogs } = useVlogCache();
+  const navigate = useNavigate();
   const [vlogs, setVlogs] = useState([]);
   const [posts, setPosts] = useState([]);
   const [open, setOpen] = useState(false);
@@ -562,9 +564,22 @@ export default function AdminVlogs() {
                 <TableBody>
                   {guestVlogs.map((g) => (
                     <TableRow key={g.id} hover sx={{ "&:last-child td": { border: 0 } }}>
-                      <TableCell>
-                        <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>{g.title}</Typography>
-                        {g.subtitle && <Typography variant="caption" color="text.secondary">{g.subtitle}</Typography>}
+                      <TableCell sx={{ maxWidth: 240 }}>
+                        <Typography variant="subtitle2" sx={{
+                          fontWeight: 600,
+                          display: "-webkit-box", WebkitBoxOrient: "vertical",
+                          WebkitLineClamp: 2, overflow: "hidden",
+                        }}>
+                          {g.title}
+                        </Typography>
+                        {g.subtitle && (
+                          <Typography variant="caption" color="text.secondary" sx={{
+                            display: "-webkit-box", WebkitBoxOrient: "vertical",
+                            WebkitLineClamp: 1, overflow: "hidden",
+                          }}>
+                            {g.subtitle}
+                          </Typography>
+                        )}
                       </TableCell>
                       <TableCell>
                         <Chip label={g.uploader_phone || "—"} size="small" color="warning" variant="outlined" sx={{ fontWeight: 600, fontSize: "0.72rem" }} />
@@ -956,13 +971,23 @@ export default function AdminVlogs() {
             ) : (
               filteredVlogs.map((vlog) => (
                 <TableRow key={vlog.id} hover sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
-                  <TableCell>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                  <TableCell sx={{ maxWidth: 240 }}>
+                    <Typography variant="subtitle2" sx={{
+                      fontWeight: 600,
+                      display: "-webkit-box", WebkitBoxOrient: "vertical",
+                      WebkitLineClamp: 2, overflow: "hidden",
+                    }}>
                       {vlog.title}
                     </Typography>
-                    <Typography variant="caption" sx={{ color: "text.secondary" }}>
-                      {vlog.subtitle}
-                    </Typography>
+                    {vlog.subtitle && (
+                      <Typography variant="caption" sx={{
+                        color: "text.secondary",
+                        display: "-webkit-box", WebkitBoxOrient: "vertical",
+                        WebkitLineClamp: 1, overflow: "hidden",
+                      }}>
+                        {vlog.subtitle}
+                      </Typography>
+                    )}
                   </TableCell>
                   <TableCell>
                     {(() => {
@@ -982,10 +1007,29 @@ export default function AdminVlogs() {
                     )}
                   </TableCell>
                   <TableCell>{vlog.host || "N/A"}</TableCell>
-                  <TableCell>
-                    {posts.find(p => p.id === vlog.content_item_id)?.title || (
-                      <Typography variant="caption" color="text.disabled">Không liên kết</Typography>
-                    )}
+                  <TableCell sx={{ maxWidth: 200 }}>
+                    {(() => {
+                      const linked = posts.find((p) => p.id === vlog.content_item_id);
+                      return linked ? (
+                        <Tooltip title={`Xem: ${linked.title}`} arrow>
+                          <Typography
+                            variant="caption"
+                            onClick={() => window.open(`/post-detail/${linked.id}`, "_blank")}
+                            sx={{
+                              display: "-webkit-box", WebkitBoxOrient: "vertical",
+                              WebkitLineClamp: 2, overflow: "hidden",
+                              color: "primary.main", fontWeight: 600,
+                              cursor: "pointer",
+                              "&:hover": { textDecoration: "underline" },
+                            }}
+                          >
+                            {linked.title}
+                          </Typography>
+                        </Tooltip>
+                      ) : (
+                        <Typography variant="caption" color="text.disabled">—</Typography>
+                      );
+                    })()}
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2" sx={{ display: "inline-block", bgcolor: "success.light", color: "success.contrastText", px: 1.5, py: 0.5, borderRadius: 1.5, fontSize: "0.75rem", fontWeight: 600 }}>
