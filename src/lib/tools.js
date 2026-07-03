@@ -49,6 +49,14 @@ export const TOOLS = [
     gradient: "linear-gradient(135deg, #2193B0 0%, #6DD5ED 100%)",
   },
   {
+    id: "agristats",
+    label: "Biến động nông thuỷ sản",
+    icon: "📈",
+    url: "/agri-stats",
+    tagline: "Giá & sản lượng theo mùa",
+    gradient: "linear-gradient(135deg, #0F2027 0%, #2C5364 100%)",
+  },
+  {
     id: "scale",
     label: "Tính toán cân lúa",
     icon: "🧮",

@@ -224,8 +224,27 @@ a {
   --shadow-strong: 0 8px 20px rgba(43, 36, 27, 0.14), 0 24px 48px rgba(43, 36, 27, 0.22);
 }
 
+/* Data-viz tokens — categorical palette validated (CVD + contrast) against site surfaces */
+:root {
+  --viz-series-1: #2a78d6;
+  --viz-series-2: #1baf7a;
+  --viz-series-3: #eda100;
+  --viz-grid: #e9e6de;
+  --viz-axis: #c6c1b6;
+  --viz-ink-muted: #8a8477;
+  --viz-up: #006300;
+  --viz-down: #c62828;
+}
+
 /* Dark mode – apply .dark to <html> */
 html.dark {
+  --viz-series-1: #3987e5;
+  --viz-series-2: #199e70;
+  --viz-series-3: #c98500;
+  --viz-grid: #35312c;
+  --viz-axis: #4a453f;
+  --viz-up: #0ca30c;
+  --viz-down: #e57373;
   --color-background: var(--color-dm-background);
   --color-background-alt: var(--color-dm-background-alt);
   --color-surface: var(--color-dm-surface);

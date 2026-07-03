@@ -25,6 +25,7 @@ const GuestSubmit = lazy(() => import("./pages/GuestSubmit"));
 const WishGenerator = lazy(() => import("./pages/WishGenerator"));
 const MenuCreator   = lazy(() => import("./pages/MenuCreator"));
 const PhotoRestore  = lazy(() => import("./pages/PhotoRestore"));
+const AgriStats     = lazy(() => import("./pages/AgriStats"));
 
 // Admin — separate chunk, rarely visited
 const AdminLogin = lazy(() => import("./pages/AdminLogin"));
@@ -92,6 +93,7 @@ const AppLayout = () => {
             <Route path="/wishes" element={<WishGenerator />} />
             <Route path="/menu"   element={<MenuCreator />} />
             <Route path="/photo-restore" element={<PhotoRestore />} />
+            <Route path="/agri-stats" element={<AgriStats />} />
             <Route path="/admin-login" element={<AdminLogin />} />
             <Route path="/admin/*" element={<ProtectedAdminRoute><AdminLayout /></ProtectedAdminRoute>}>
               <Route index element={<AdminDashboard />} />
