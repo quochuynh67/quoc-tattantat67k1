@@ -1599,3 +1599,108 @@ html.dark .vlog-info-panel {
   50%       { transform: scale(1.15); filter: brightness(1.4); }
 }
 
+/* ── Photo Restore tool (/photo-restore) ──────────────────────────────── */
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.restore-dropzone {
+  border: 2px dashed var(--color-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  transition: border-color 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
+  cursor: pointer;
+}
+.restore-dropzone.drag-active {
+  border-color: var(--color-primary);
+  background: rgba(46, 125, 50, 0.07);
+  transform: scale(1.01);
+}
+
+.restore-fade-in {
+  animation: restore-fade-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes restore-fade-in {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.restore-example-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.restore-example-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-medium);
+}
+.restore-example-card:hover .restore-example-overlay {
+  opacity: 1;
+}
+.restore-example-overlay {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+/* 3D gallery carousel — perspective ring with real near/far depth, drag + click to rotate */
+.restore-carousel-viewport {
+  position: relative;
+  height: 280px;
+  perspective: 1100px;
+  perspective-origin: 50% 45%;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.restore-carousel-viewport:active {
+  cursor: grabbing;
+}
+.restore-carousel-stage {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+}
+.restore-carousel-item {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100px;
+  height: 100px;
+  margin: -50px 0 0 -50px;
+  transform-style: preserve-3d;
+}
+.restore-carousel-card {
+  width: 100%;
+  height: 100%;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 3px solid var(--color-accent-gold);
+  cursor: pointer;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+  backface-visibility: hidden;
+}
+.restore-carousel-card:hover {
+  border-color: #fff;
+  box-shadow: 0 0 0 4px rgba(249, 168, 37, 0.4);
+}
+.restore-carousel-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  pointer-events: none;
+}
+.restore-carousel-floor {
+  position: absolute;
+  left: 50%;
+  bottom: 4%;
+  width: 240px;
+  height: 40px;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.2) 0%, transparent 72%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+@media (max-width: 600px) {
+  .restore-carousel-viewport { height: 220px; }
+  .restore-carousel-item { width: 76px; height: 76px; margin: -38px 0 0 -38px; }
+}
+

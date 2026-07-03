@@ -10,6 +10,7 @@ const TOOLS = [
   { id: "trade", label: "Mua bán rau cải", icon: "🌿", url: "/trading" },
   { id: "wish", label: "Tạo văn lời chúc hay", icon: "🎉", url: "/wishes" },
   { id: "menu",  label: "Tạo menu thực đơn",  icon: "🍽️", url: "/menu" },
+  { id: "restore", label: "Phục dựng ảnh cũ", icon: "🖼️", url: "/photo-restore" },
   { id: "scale", label: "Tính toán cân lúa", icon: "🧮", url: "#" },
 ];
 

@@ -55,6 +55,7 @@ const Footer = () => {
             ))}
           <Link to="/wishes" style={{ marginRight: "1rem" }}>✨ Tạo lời chúc</Link>
           <Link to="/menu"   style={{ marginRight: "1rem" }}>🍽️ Tạo thực đơn</Link>
+          <Link to="/photo-restore" style={{ marginRight: "1rem" }}>🖼️ Phục dựng ảnh cũ</Link>
           <Link to="/search">Tìm kiếm</Link>
         </nav>
       </div>
