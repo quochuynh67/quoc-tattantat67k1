@@ -1643,9 +1643,9 @@ html.dark .vlog-info-panel {
 /* 3D gallery carousel — perspective ring with real near/far depth, drag + click to rotate */
 .restore-carousel-viewport {
   position: relative;
-  height: 280px;
+  height: 300px;
   perspective: 1100px;
-  perspective-origin: 50% 45%;
+  perspective-origin: 50% 10%;
   cursor: grab;
   touch-action: none;
   user-select: none;
@@ -1657,6 +1657,8 @@ html.dark .vlog-info-panel {
   position: absolute;
   inset: 0;
   transform-style: preserve-3d;
+  /* Nghiêng cả vòng quay ra như một chiếc bàn xoay — tạo cảm giác nhìn từ trên xuống */
+  transform: rotateX(32deg);
 }
 .restore-carousel-item {
   position: absolute;
