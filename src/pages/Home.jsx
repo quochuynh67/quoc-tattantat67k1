@@ -17,6 +17,7 @@ import SEOIntroSection from "../components/sections/SEOIntroSection";
 import GenericSection from "../components/sections/GenericSection";
 import VoiceChat from "../components/VoiceChat";
 import WishBannerSection from "../components/sections/WishBannerSection";
+import ToolsSection from "../components/sections/ToolsSection";
 import { useSiteSettings } from "../contexts/SiteSettingsContext";
 
 // Slug → specific component mapping for built-in sections
@@ -58,6 +59,7 @@ const Home = () => {
 
       <WishBannerSection />
       <VlogsMapSection />
+      <ToolsSection />
       <ContributorsSection />
       <SEOIntroSection />
       {/* <NewsletterCTA /> */}

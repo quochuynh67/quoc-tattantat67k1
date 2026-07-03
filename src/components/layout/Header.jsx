@@ -3,16 +3,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import ThemeToggle from "../ui/ThemeToggle";
 import { useSiteSettings } from "../../contexts/SiteSettingsContext";
-
-const TOOLS = [
-  { id: "relax", label: "Relax", icon: "🧘", url: "https://quoc-research-retrogame.web.app/?feature=vlog" },
-  { id: "retro", label: "Chơi game thùng", icon: "🕹️", url: "https://quoc-research-retrogame.web.app/?feature=retro" },
-  { id: "trade", label: "Mua bán rau cải", icon: "🌿", url: "/trading" },
-  { id: "wish", label: "Tạo văn lời chúc hay", icon: "🎉", url: "/wishes" },
-  { id: "menu",  label: "Tạo menu thực đơn",  icon: "🍽️", url: "/menu" },
-  { id: "restore", label: "Phục dựng ảnh cũ", icon: "🖼️", url: "/photo-restore" },
-  { id: "scale", label: "Tính toán cân lúa", icon: "🧮", url: "#" },
-];
+import { TOOLS, openTool } from "../../lib/tools";
 
 // Map from slug → { to, label } for nav rendering
 const SECTION_NAV = [
@@ -32,16 +23,7 @@ const Header = () => {
 
   const handleToolClick = (url) => {
     setToolsOpen(false);
-    if (!url || url === "#") return;
-    if (url.startsWith("/")) {
-      navigate(url);
-    } else {
-      // window.open bị block trong webview/iframe → fallback về location.href
-      const popup = window.open(url, "_blank");
-      if (!popup || popup.closed || typeof popup.closed === "undefined") {
-        window.location.href = url;
-      }
-    }
+    openTool(url, navigate);
   };
 
   useEffect(() => {

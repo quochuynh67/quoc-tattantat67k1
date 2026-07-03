@@ -24,8 +24,8 @@ import {
 
 // ── Device-limit helpers (localStorage) ──────────────────────────────────────
 
-const LS_PHONE_KEY   = "wish_phone";
-const LS_DEVICE_KEY  = "wish_device";
+const LS_PHONE_KEY = "wish_phone";
+const LS_DEVICE_KEY = "wish_device";
 
 function getTodayKey() {
   return new Date().toISOString().slice(0, 10);
@@ -42,7 +42,7 @@ function getDeviceCount() {
 function incrementDeviceCount() {
   try {
     const today = getTodayKey();
-    const prev  = getDeviceCount();
+    const prev = getDeviceCount();
     localStorage.setItem(LS_DEVICE_KEY, JSON.stringify({ date: today, count: prev + 1 }));
     return prev + 1;
   } catch { return 1; }
@@ -53,7 +53,7 @@ function getSavedPhone() {
 }
 
 function savePhone(phone) {
-  try { localStorage.setItem(LS_PHONE_KEY, normalizePhone(phone)); } catch {}
+  try { localStorage.setItem(LS_PHONE_KEY, normalizePhone(phone)); } catch { }
 }
 
 function isValidVNPhone(phone) {
@@ -63,43 +63,43 @@ function isValidVNPhone(phone) {
 // ── Static data ───────────────────────────────────────────────────────────────
 
 const OCCASIONS = [
-  { key: "sinh-nhat",   label: "Sinh Nhật",     emoji: "🎂" },
-  { key: "tet",         label: "Tết / Năm Mới", emoji: "🎊" },
-  { key: "dam-cuoi",    label: "Đám Cưới",      emoji: "💍" },
-  { key: "tot-nghiep",  label: "Tốt Nghiệp",    emoji: "🎓" },
-  { key: "khai-truong", label: "Khai Trương",   emoji: "🏪" },
-  { key: "tinh-yeu",    label: "Tình Yêu",      emoji: "❤️" },
-  { key: "suc-khoe",    label: "Sức Khỏe",      emoji: "💪" },
-  { key: "khac",        label: "Khác",           emoji: "✨" },
+  { key: "sinh-nhat", label: "Sinh Nhật", emoji: "🎂" },
+  { key: "tet", label: "Tết / Năm Mới", emoji: "🎊" },
+  { key: "dam-cuoi", label: "Đám Cưới", emoji: "💍" },
+  { key: "tot-nghiep", label: "Tốt Nghiệp", emoji: "🎓" },
+  { key: "khai-truong", label: "Khai Trương", emoji: "🏪" },
+  { key: "tinh-yeu", label: "Tình Yêu", emoji: "❤️" },
+  { key: "suc-khoe", label: "Sức Khỏe", emoji: "💪" },
+  { key: "khac", label: "Khác", emoji: "✨" },
 ];
 
 const FONTS = [
-  { key: "great-vibes",    label: "Thư Pháp",   family: "'Great Vibes', cursive",    size: "1.7rem",  preview: "Trân Trọng" },
-  { key: "dancing-script", label: "Sang Trọng", family: "'Dancing Script', cursive", size: "1.5rem",  preview: "Kính Chúc" },
-  { key: "satisfy",        label: "Lãng Mạn",   family: "'Satisfy', cursive",        size: "1.45rem", preview: "Yêu Thương" },
-  { key: "pinyon-script",  label: "Cổ Điển",    family: "'Pinyon Script', cursive",  size: "1.65rem", preview: "Chúc Mừng" },
-  { key: "pacifico",       label: "Vui Tươi",   family: "'Pacifico', cursive",       size: "1.25rem", preview: "Hạnh Phúc" },
-  { key: "lora",           label: "Trang Nhã",  family: "'Lora', Georgia, serif",    size: "1.15rem", preview: "Kính Gửi" },
+  { key: "great-vibes", label: "Thư Pháp", family: "'Great Vibes', cursive", size: "1.7rem", preview: "Trân Trọng" },
+  { key: "dancing-script", label: "Sang Trọng", family: "'Dancing Script', cursive", size: "1.5rem", preview: "Kính Chúc" },
+  { key: "satisfy", label: "Lãng Mạn", family: "'Satisfy', cursive", size: "1.45rem", preview: "Yêu Thương" },
+  { key: "pinyon-script", label: "Cổ Điển", family: "'Pinyon Script', cursive", size: "1.65rem", preview: "Chúc Mừng" },
+  { key: "pacifico", label: "Vui Tươi", family: "'Pacifico', cursive", size: "1.25rem", preview: "Hạnh Phúc" },
+  { key: "lora", label: "Trang Nhã", family: "'Lora', Georgia, serif", size: "1.15rem", preview: "Kính Gửi" },
 ];
 
 const COUNT_OPTIONS = [1, 2, 3];
 
 const OCCASION_GRADIENTS = {
-  "sinh-nhat":   "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
-  "tet":         "linear-gradient(135deg, #f6d365 0%, #fda085 100%)",
-  "dam-cuoi":    "linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)",
-  "tot-nghiep":  "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
+  "sinh-nhat": "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
+  "tet": "linear-gradient(135deg, #f6d365 0%, #fda085 100%)",
+  "dam-cuoi": "linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)",
+  "tot-nghiep": "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
   "khai-truong": "linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)",
-  "tinh-yeu":    "linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)",
-  "suc-khoe":    "linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%)",
-  "khac":        "linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)",
+  "tinh-yeu": "linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)",
+  "suc-khoe": "linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%)",
+  "khac": "linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)",
 };
 
 // ── Phone Gate ────────────────────────────────────────────────────────────────
 
 function PhoneGate({ onConfirm }) {
-  const [phone, setPhone]   = useState("");
-  const [error, setError]   = useState("");
+  const [phone, setPhone] = useState("");
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const inputRef = useRef(null);
 
@@ -162,7 +162,7 @@ function PhoneGate({ onConfirm }) {
           <Box component="span" sx={{ fontWeight: 700, color: "var(--color-primary)" }}>
             {WISH_DAILY_LIMIT} lượt/ngày
           </Box>
-          {" · "}Miễn phí{" · "}Không cần đăng ký
+          {" · "}Không cần đăng ký
         </Typography>
 
         <TextField
@@ -233,9 +233,9 @@ function UsageDot({ filled, color }) {
 }
 
 function UsageBadge({ phone, phoneCount, deviceCount, onChangePhone }) {
-  const phoneRemaining  = Math.max(0, WISH_DAILY_LIMIT - phoneCount);
+  const phoneRemaining = Math.max(0, WISH_DAILY_LIMIT - phoneCount);
   const deviceRemaining = Math.max(0, WISH_DAILY_LIMIT - deviceCount);
-  const remaining       = Math.min(phoneRemaining, deviceRemaining);
+  const remaining = Math.min(phoneRemaining, deviceRemaining);
   const color = remaining === 0 ? "#d32f2f" : remaining === 1 ? "#e65100" : "#2e7d32";
 
   return (
@@ -397,31 +397,31 @@ function WishCard({ text, fontFamily, fontSize, index, gradient, streaming }) {
 
 export default function WishGenerator() {
   // Phone state
-  const [phone, setPhone]         = useState(getSavedPhone);
+  const [phone, setPhone] = useState(getSavedPhone);
   const [phoneCount, setPhoneCount] = useState(0);   // from Supabase
   const [deviceCount, setDeviceCount] = useState(getDeviceCount); // from localStorage
   const [countLoading, setCountLoading] = useState(false);
 
   // Form
-  const [occasion, setOccasion]         = useState("sinh-nhat");
-  const [description, setDescription]   = useState("");
+  const [occasion, setOccasion] = useState("sinh-nhat");
+  const [description, setDescription] = useState("");
   const [selectedFont, setSelectedFont] = useState("dancing-script");
-  const [count, setCount]               = useState(2);
+  const [count, setCount] = useState(2);
 
   // Results
-  const [wishes, setWishes]           = useState([]);
-  const [loading, setLoading]         = useState(false);
+  const [wishes, setWishes] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [streamingIdx, setStreamingIdx] = useState(-1);
-  const [error, setError]             = useState("");
-  const [snack, setSnack]             = useState(false);
+  const [error, setError] = useState("");
+  const [snack, setSnack] = useState(false);
 
   // Derived
-  const occasionObj    = OCCASIONS.find((o) => o.key === occasion) ?? OCCASIONS[0];
-  const fontObj        = FONTS.find((f) => f.key === selectedFont) ?? FONTS[1];
-  const gradient       = OCCASION_GRADIENTS[occasion] ?? "linear-gradient(135deg, #667eea 0%, #764ba2 100%)";
-  const phoneBlocked   = phoneCount >= WISH_DAILY_LIMIT;
-  const deviceBlocked  = deviceCount >= WISH_DAILY_LIMIT;
-  const isBlocked      = phoneBlocked || deviceBlocked;
+  const occasionObj = OCCASIONS.find((o) => o.key === occasion) ?? OCCASIONS[0];
+  const fontObj = FONTS.find((f) => f.key === selectedFont) ?? FONTS[1];
+  const gradient = OCCASION_GRADIENTS[occasion] ?? "linear-gradient(135deg, #667eea 0%, #764ba2 100%)";
+  const phoneBlocked = phoneCount >= WISH_DAILY_LIMIT;
+  const deviceBlocked = deviceCount >= WISH_DAILY_LIMIT;
+  const isBlocked = phoneBlocked || deviceBlocked;
 
   // Fetch phone count from Supabase when phone is set
   useEffect(() => {
@@ -429,7 +429,7 @@ export default function WishGenerator() {
     setCountLoading(true);
     getWishPhoneCount(phone)
       .then(setPhoneCount)
-      .catch(() => {}) // network fail → rely on device limit only
+      .catch(() => { }) // network fail → rely on device limit only
       .finally(() => setCountLoading(false));
   }, [phone]);
 
@@ -452,7 +452,7 @@ export default function WishGenerator() {
     // Recheck both limits at click time
     const freshDevice = getDeviceCount();
     let freshPhone = phoneCount;
-    try { freshPhone = await getWishPhoneCount(phone); } catch {}
+    try { freshPhone = await getWishPhoneCount(phone); } catch { }
 
     setDeviceCount(freshDevice);
     setPhoneCount(freshPhone);
