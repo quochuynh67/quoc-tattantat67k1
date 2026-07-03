@@ -13,6 +13,7 @@ import RestartAltIcon from "@mui/icons-material/RestartAlt";
 import CompareArrowsIcon from "@mui/icons-material/CompareArrows";
 import ScienceIcon from "@mui/icons-material/Science";
 import { useGlobalToast } from "../contexts/ToastContext";
+import { useCarousel3D } from "../hooks/useCarousel3D";
 
 const OLD_FILTER = "sepia(0.55) contrast(0.85) brightness(0.92) saturate(0.75) blur(0.3px)";
 const ENHANCE_FILTER = "contrast(1.08) saturate(1.15) brightness(1.03)";
@@ -83,10 +84,6 @@ const ORBIT_PHOTOS = [
 ];
 
 const CAROUSEL_RADIUS = 150; // px — khoảng cách translateZ tạo chiều sâu 3D
-const CAROUSEL_AUTO_SPEED = 0.014; // độ/ms khi tự xoay
-const CAROUSEL_DRAG_SENSITIVITY = 0.4; // độ xoay trên mỗi px kéo
-
-const normalizeAngle = (deg) => ((deg % 360) + 360) % 360;
 
 const PhotoRestore = () => {
   const toast = useGlobalToast();
@@ -101,82 +98,17 @@ const PhotoRestore = () => {
   const [sliderPos, setSliderPos] = useState(50);
   const [dragActive, setDragActive] = useState(false);
 
-  // ── 3D gallery carousel — rotation is driven by rAF (auto-spin + inertia + click-to-front) ──
-  const carouselRef = useRef(null);
-  const [carouselRotation, setCarouselRotation] = useState(0);
-  const rotationRef = useRef(0);
-  const targetRotationRef = useRef(null);
-  const velocityRef = useRef(0);
-  const draggingRef = useRef(false);
-  const pausedRef = useRef(false);
-  const lastPointerXRef = useRef(0);
-  const lastPointerTimeRef = useRef(0);
-
-  useEffect(() => {
-    let rafId;
-    let lastTime = performance.now();
-    const tick = (time) => {
-      const dt = Math.min(time - lastTime, 48);
-      lastTime = time;
-
-      if (targetRotationRef.current !== null) {
-        const diff = ((targetRotationRef.current - rotationRef.current + 540) % 360) - 180;
-        if (Math.abs(diff) < 0.3) {
-          rotationRef.current = targetRotationRef.current;
-          targetRotationRef.current = null;
-        } else {
-          rotationRef.current += diff * 0.1;
-        }
-        setCarouselRotation(rotationRef.current);
-      } else if (!draggingRef.current) {
-        if (Math.abs(velocityRef.current) > 0.0008) {
-          rotationRef.current += velocityRef.current * dt;
-          velocityRef.current *= Math.pow(0.94, dt / 16.67);
-        } else if (!pausedRef.current) {
-          rotationRef.current += CAROUSEL_AUTO_SPEED * dt;
-        }
-        setCarouselRotation(rotationRef.current);
-      }
-      rafId = requestAnimationFrame(tick);
-    };
-    rafId = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(rafId);
-  }, []);
-
-  const handleCarouselPointerDown = useCallback((e) => {
-    draggingRef.current = true;
-    targetRotationRef.current = null;
-    velocityRef.current = 0;
-    lastPointerXRef.current = e.clientX;
-    lastPointerTimeRef.current = e.timeStamp;
-    carouselRef.current?.setPointerCapture?.(e.pointerId);
-  }, []);
-
-  const handleCarouselPointerMove = useCallback((e) => {
-    if (!draggingRef.current) return;
-    const dx = e.clientX - lastPointerXRef.current;
-    const dt = Math.max(e.timeStamp - lastPointerTimeRef.current, 8);
-    lastPointerXRef.current = e.clientX;
-    lastPointerTimeRef.current = e.timeStamp;
-    const deltaDeg = dx * CAROUSEL_DRAG_SENSITIVITY;
-    rotationRef.current += deltaDeg;
-    velocityRef.current = (deltaDeg / dt) * 14;
-    setCarouselRotation(rotationRef.current);
-  }, []);
-
-  const handleCarouselPointerUp = useCallback(() => {
-    draggingRef.current = false;
-  }, []);
-
-  const handleCarouselPointerLeave = useCallback(() => {
-    draggingRef.current = false;
-  }, []);
+  // ── 3D gallery carousel — logic xoay dùng chung từ hook ──
+  const {
+    viewportRef: carouselRef,
+    rotation: carouselRotation,
+    viewportHandlers: carouselHandlers,
+    rotateItemToFront,
+  } = useCarousel3D();
 
   const handleCarouselItemClick = useCallback((index) => {
-    const itemAngle = (360 / ORBIT_PHOTOS.length) * index;
-    velocityRef.current = 0;
-    targetRotationRef.current = normalizeAngle(-itemAngle);
-  }, []);
+    rotateItemToFront((360 / ORBIT_PHOTOS.length) * index);
+  }, [rotateItemToFront]);
 
   useEffect(() => () => {
     if (timersRef.current) {
@@ -540,12 +472,7 @@ const PhotoRestore = () => {
           <Box
             ref={carouselRef}
             className="restore-carousel-viewport"
-            onPointerDown={handleCarouselPointerDown}
-            onPointerMove={handleCarouselPointerMove}
-            onPointerUp={handleCarouselPointerUp}
-            onPointerLeave={handleCarouselPointerLeave}
-            onMouseEnter={() => { pausedRef.current = true; }}
-            onMouseLeave={() => { pausedRef.current = false; }}
+            {...carouselHandlers}
           >
             <Box className="restore-carousel-floor" />
             <Box className="restore-carousel-stage">

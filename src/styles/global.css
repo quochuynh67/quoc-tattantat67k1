@@ -1688,6 +1688,80 @@ html.dark .vlog-info-panel {
   transition: opacity 0.2s ease;
 }
 
+/* ── Tools 3D carousel (trang chủ — Kho tiện ích) ─────────────────────── */
+.tools-carousel-viewport {
+  --tools-orbit-radius: 220px;
+  /* Nghiêng âm: mép gần của vòng xoay hạ xuống dưới → đúng cảm giác nhìn từ trên xuống */
+  --tools-tilt: -18deg;
+  position: relative;
+  height: 320px;
+  max-width: 900px;
+  margin: 0 auto;
+  perspective: 1250px;
+  perspective-origin: 50% 30%;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.tools-carousel-viewport:active {
+  cursor: grabbing;
+}
+.tools-carousel-stage {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transform: rotateX(var(--tools-tilt));
+}
+.tools-carousel-item {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 120px;
+  margin-left: -60px;
+  margin-top: -70px;
+  transform-style: preserve-3d;
+}
+.tools-carousel-tile {
+  position: relative;
+  width: 84px;
+  height: 84px;
+  border-radius: 26%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.4rem;
+  box-shadow: var(--shadow-subtle);
+  transition: box-shadow 0.2s ease;
+}
+.tools-carousel-tile::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0) 48%);
+  pointer-events: none;
+}
+.tools-carousel-card:hover .tools-carousel-tile {
+  box-shadow: var(--shadow-medium);
+}
+.tools-carousel-floor {
+  position: absolute;
+  left: 50%;
+  bottom: 6%;
+  width: 380px;
+  height: 54px;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.16) 0%, transparent 72%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+@media (max-width: 600px) {
+  .tools-carousel-viewport { --tools-orbit-radius: 148px; height: 260px; }
+  .tools-carousel-tile { width: 64px; height: 64px; font-size: 1.8rem; }
+  .tools-carousel-item { width: 96px; margin-left: -48px; margin-top: -56px; }
+  .tools-carousel-floor { width: 260px; height: 40px; }
+}
+
 /* 3D gallery carousel — perspective ring with real near/far depth, drag + click to rotate */
 .restore-carousel-viewport {
   position: relative;
