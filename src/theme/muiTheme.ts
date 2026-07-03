@@ -10,12 +10,13 @@ const muiTheme = createTheme({
     primary: { main: primaryColor },
     secondary: { main: secondaryColor },
     background: {
-      default: '#F9F6F0',
+      default: '#FAF8F3',
       paper: '#FFFFFF',
     },
   },
+  shape: { borderRadius: 12 },
   typography: {
-    fontFamily: `'Inter', 'Roboto', 'Helvetica', 'Arial', sans-serif`,
+    fontFamily: `'Be Vietnam Pro', 'Inter', 'Roboto', 'Helvetica', 'Arial', sans-serif`,
     h1: { fontSize: '2.5rem', fontWeight: 700, color: primaryColor },
     h2: { fontSize: '2rem', fontWeight: 600, color: primaryColor },
     body1: { fontSize: '1rem', color: '#333' },

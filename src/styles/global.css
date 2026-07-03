@@ -114,16 +114,55 @@ section {
 }
 
 body {
-  line-height: 1;
+  line-height: 1.6;
   background: var(--color-background) !important;
   color: var(--color-text) !important;
   font-family: var(--font-body);
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
   overscroll-behavior: none;
   /* Tắt bounce scroll trên iOS WebView/iframe */
   -webkit-overflow-scrolling: auto;
+}
+
+/* Typography defaults — only reach unstyled elements; MUI/sx overrides still win */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  font-weight: 700;
+}
+
+::selection {
+  background: rgba(46, 125, 50, 0.22);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Refined scrollbar (WebKit) */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(43, 36, 27, 0.22);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(43, 36, 27, 0.38);
+}
+html.dark ::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.22);
 }
 
 ol,
@@ -139,27 +178,31 @@ a {
 /* Custom properties – map tokens to CSS variables */
 :root {
   /* Colors */
-  --color-background: #F9F6F0;
+  --color-background: #FAF8F3;
+  --color-background-alt: #F3EFE6;
   --color-surface: #FFFFFF;
-  --color-text: #3A2B1D;
-  --color-subtle: #9F9278;
-  --color-text-subtle: #6F6250;
+  --color-text: #2B241B;
+  --color-subtle: #9A8F79;
+  --color-text-subtle: #6B6152;
+  --color-border: rgba(43, 36, 27, 0.10);
   --color-primary: #2E7D32;
   --color-secondary: #00695C;
   --color-accent-gold: #F9A825;
 
   /* Dark mode – will be swapped via .dark class */
-  --color-dm-background: #1E1A1A;
-  --color-dm-surface: #2A2626;
-  --color-dm-text: #E2E0DF;
+  --color-dm-background: #191613;
+  --color-dm-background-alt: #211D19;
+  --color-dm-surface: #262220;
+  --color-dm-text: #EDE9E2;
   --color-dm-subtle: #BDB6AD;
+  --color-dm-border: rgba(255, 255, 255, 0.12);
   --color-dm-primary: #81C784;
-  --color-dm-accent-gold: #FFEB3B;
+  --color-dm-accent-gold: #FFD54F;
 
   /* Typography */
-  --font-display: 'Merriweather', serif, Georgia, 'Times New Roman', serif;
-  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
-  --font-caps: 'Playfair Display SC', serif;
+  --font-display: 'Lora', 'Merriweather', Georgia, 'Times New Roman', serif;
+  --font-body: 'Be Vietnam Pro', 'Inter', system-ui, -apple-system, sans-serif;
+  --font-caps: 'Lora', 'Playfair Display SC', serif;
 
   /* Spacing */
   --spacing-xxxs: 4px;
@@ -171,25 +214,30 @@ a {
   --spacing-xxl: 72px;
 
   /* Radius */
-  --radius-sm: 6px;
-  --radius-md: 12px;
+  --radius-sm: 8px;
+  --radius-md: 14px;
   --radius-lg: 24px;
 
-  /* Shadows */
-  --shadow-subtle: 0 2px 8px rgba(0, 0, 0, 0.08);
-  --shadow-medium: 0 8px 24px rgba(0, 0, 0, 0.15);
-  --shadow-strong: 0 12px 40px rgba(0, 0, 0, 0.25);
+  /* Shadows – layered, softer & warmer */
+  --shadow-subtle: 0 1px 2px rgba(43, 36, 27, 0.05), 0 2px 10px rgba(43, 36, 27, 0.07);
+  --shadow-medium: 0 4px 12px rgba(43, 36, 27, 0.08), 0 12px 28px rgba(43, 36, 27, 0.13);
+  --shadow-strong: 0 8px 20px rgba(43, 36, 27, 0.14), 0 24px 48px rgba(43, 36, 27, 0.22);
 }
 
 /* Dark mode – apply .dark to <html> */
 html.dark {
   --color-background: var(--color-dm-background);
+  --color-background-alt: var(--color-dm-background-alt);
   --color-surface: var(--color-dm-surface);
   --color-text: var(--color-dm-text);
   --color-subtle: var(--color-dm-subtle);
   --color-text-subtle: var(--color-dm-subtle);
+  --color-border: var(--color-dm-border);
   --color-primary: var(--color-dm-primary);
   --color-accent-gold: var(--color-dm-accent-gold);
+  --shadow-subtle: 0 1px 2px rgba(0, 0, 0, 0.3), 0 2px 10px rgba(0, 0, 0, 0.35);
+  --shadow-medium: 0 4px 12px rgba(0, 0, 0, 0.4), 0 12px 28px rgba(0, 0, 0, 0.45);
+  --shadow-strong: 0 8px 20px rgba(0, 0, 0, 0.5), 0 24px 48px rgba(0, 0, 0, 0.6);
 }
 
 /* Utility classes */

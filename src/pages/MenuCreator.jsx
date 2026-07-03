@@ -58,7 +58,7 @@ const BG_PRESETS = [
 
 const FONT_OPTIONS = [
   { label: "Inter – Hiện đại", v: "Inter, sans-serif" },
-  { label: "Merriweather – Cổ điển", v: "'Merriweather', serif" },
+  { label: "Be Vietnam Pro – Việt hoá", v: "'Be Vietnam Pro', sans-serif" },
   { label: "Dancing Script – Chữ đẹp", v: "'Dancing Script', cursive" },
   { label: "Great Vibes – Thư pháp", v: "'Great Vibes', cursive" },
   { label: "Satisfy – Lãng mạn", v: "'Satisfy', cursive" },
@@ -82,7 +82,7 @@ const SHAPE_OPTIONS = [
 
 const TEXT_PRESETS = [
   { label: "Tiêu đề lớn", content: "THỰC ĐƠN", fontSize: 52, fontFamily: "'Dancing Script', cursive", bold: true, italic: false, color: "#2d1b00", align: "center" },
-  { label: "Tên mục", content: "Món Chính", fontSize: 28, fontFamily: "'Merriweather', serif", bold: true, italic: false, color: "#c62828", align: "left" },
+  { label: "Tên mục", content: "Món Chính", fontSize: 28, fontFamily: "'Lora', serif", bold: true, italic: false, color: "#c62828", align: "left" },
   { label: "Phụ đề", content: "Phong cách miền Tây Nam Bộ", fontSize: 18, fontFamily: "'Satisfy', cursive", bold: false, italic: true, color: "#6d4c41", align: "center" },
   { label: "Giá tiền", content: "35,000đ", fontSize: 22, fontFamily: "'Dancing Script', cursive", bold: true, italic: false, color: "#c62828", align: "right" },
   { label: "Mô tả", content: "Thêm mô tả món ăn tại đây", fontSize: 13, fontFamily: "Inter, sans-serif", bold: false, italic: false, color: "#777", align: "left" },
@@ -106,7 +106,7 @@ const DEFAULT_AI_PROMPT = `Bạn là chuyên gia thiết kế menu nhà hàng Vi
 const mkItems = (items, W, H, opts = {}) => {
   const {
     nameColor = "#2d1b00", priceColor = "#c62828", descColor = "#888",
-    nameFont = "'Merriweather', serif", accentColor = "#c62828",
+    nameFont = "'Lora', serif", accentColor = "#c62828",
     bgColor = "rgba(255,255,255,0.5)",
   } = opts;
   const startY = Math.floor(H * 0.22);
@@ -343,7 +343,7 @@ function ElementNode({ el, selected, onPointerDown }) {
           {el.emoji && <span style={{ fontSize: el.emojiSize ?? 22, lineHeight: 1.3, flexShrink: 0 }}>{el.emoji}</span>}
           <div style={{ minWidth: 0 }}>
             <div style={{
-              fontFamily: el.nameFont ?? "'Merriweather', serif",
+              fontFamily: el.nameFont ?? "'Lora', serif",
               fontSize: el.nameSize ?? 15,
               fontWeight: 700,
               color: el.nameColor ?? "#2d1b00",
@@ -529,7 +529,7 @@ function PropsPanel({ el, onUpdate, onDelete, onUp, onDown }) {
         {el.accent && colInput("Màu viền", "accentColor", "#c62828")}
         <FormControl size="small" fullWidth>
           <InputLabel>Font tên</InputLabel>
-          <Select value={el.nameFont ?? "'Merriweather', serif"} label="Font tên"
+          <Select value={el.nameFont ?? "'Lora', serif"} label="Font tên"
             onChange={(e) => set("nameFont", e.target.value)} sx={{ borderRadius: 1.5 }}>
             {FONT_OPTIONS.map((f) => <MuiMenuItem key={f.v} value={f.v} sx={{ fontFamily: f.v }}>{f.label}</MuiMenuItem>)}
           </Select>
@@ -964,7 +964,7 @@ export default function MenuCreator() {
     emoji: "🍜", name: "Tên món ăn", price: "35,000đ",
     desc: "Mô tả ngắn món ăn",
     nameColor: "#2d1b00", priceColor: "#c62828", descColor: "#888",
-    nameFont: "'Merriweather', serif",
+    nameFont: "'Lora', serif",
     nameSize: 15, priceSize: 18, emojiSize: 22,
     accent: true, accentColor: "#c62828",
     bgColor: "rgba(255,248,240,0.65)",
@@ -1050,7 +1050,7 @@ export default function MenuCreator() {
         emoji: item.emoji || "🍜", name: item.name || "Món ăn",
         price: item.price || "30,000đ", desc: item.desc || "",
         nameColor: "#2d1b00", priceColor: "#c62828", descColor: "#888",
-        nameFont: "'Merriweather', serif",
+        nameFont: "'Lora', serif",
         nameSize: 15, priceSize: 18, emojiSize: 22,
         accent: true, accentColor: "#c62828",
         bgColor: "rgba(255,248,240,0.65)",
