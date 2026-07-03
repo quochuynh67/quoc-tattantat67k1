@@ -7,7 +7,9 @@ import {
 import SendIcon from "@mui/icons-material/Send";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
+import PhoneIcon from "@mui/icons-material/Phone";
 import { Conversation } from "@elevenlabs/client";
+import { normalizePhone } from "../../lib/supabaseClient";
 
 const AGENT_ID = import.meta.env.VITE_ELEVENLABS_HERO_AGENT_ID;
 
@@ -173,8 +175,20 @@ const ConversationDisplay = ({ messages, loading }) => {
 const COOLDOWN_SECS = 45;
 const DAILY_LIMIT = 5;
 const SESSION_LIMIT = 5;
+// Từ câu hỏi thứ 2 trở đi phải nhập SĐT — dùng làm user id cho phiên ElevenLabs
+const FREE_QUESTIONS = 1;
 const LS_COOLDOWN = "phutan_hero_cooldown_until";
 const LS_DAILY = "phutan_hero_daily";
+const LS_PHONE = "phutan_hero_phone";
+
+const isValidPhone = (phone) => /^(0[3-9]\d{8})$/.test(normalizePhone(phone));
+
+function getStoredPhone() {
+  try {
+    const p = localStorage.getItem(LS_PHONE) ?? "";
+    return isValidPhone(p) ? p : "";
+  } catch { return ""; }
+}
 
 function getInitialCooldown() {
   try {
@@ -213,10 +227,16 @@ export default function HeroAskSection() {
   const [loading, setLoading] = useState(false);
   const [cooldownLeft, setCooldownLeft] = useState(getInitialCooldown);
   const [dailyCount, setDailyCount] = useState(getDailyCount);
+  const [phoneGateOpen, setPhoneGateOpen] = useState(false);
+  const [phoneInput, setPhoneInput] = useState("");
+  const [phoneError, setPhoneError] = useState("");
   const inputRef = useRef(null);
+  const phoneInputRef = useRef(null);
   const convRef = useRef(null);
   const pendingRef = useRef(false);
   const connectingRef = useRef(false);
+  const phoneRef = useRef(getStoredPhone());
+  const pendingQuestionRef = useRef("");
 
   useEffect(() => {
     if (cooldownLeft <= 0) return;
@@ -247,6 +267,8 @@ export default function HeroAskSection() {
       const conv = await Conversation.startSession({
         agentId: AGENT_ID,
         textOnly: true,
+        // SĐT (nếu đã nhập) làm user id — SDK gửi thành user_id trong conversation_initiation_client_data
+        ...(phoneRef.current ? { userId: normalizePhone(phoneRef.current) } : {}),
         onMessage: ({ role, message }) => {
           if (role === "agent") {
             setLoading(false);
@@ -275,6 +297,15 @@ export default function HeroAskSection() {
     const question = (questionOverride ?? input).trim();
     if (!question || loading || isBlocked) return;
 
+    // Quá số câu miễn phí mà chưa có SĐT → mở phone gate, giữ lại câu hỏi để gửi sau khi xác nhận
+    const askedCount = messages.filter((m) => m.role === "user").length;
+    if (askedCount >= FREE_QUESTIONS && !phoneRef.current) {
+      pendingQuestionRef.current = question;
+      setPhoneGateOpen(true);
+      setTimeout(() => phoneInputRef.current?.focus(), 80);
+      return;
+    }
+
     setMessages((m) => [...m, { role: "user", content: question }]);
     setInput("");
     setLoading(true);
@@ -289,6 +320,28 @@ export default function HeroAskSection() {
       conv.sendUserMessage(question);
     }
     setTimeout(() => inputRef.current?.focus(), 50);
+  };
+
+  const confirmPhone = async () => {
+    if (!isValidPhone(phoneInput)) {
+      setPhoneError("Số điện thoại chưa đúng, kiểm tra lại nha (VD: 0901234567)");
+      return;
+    }
+    const norm = normalizePhone(phoneInput);
+    phoneRef.current = norm;
+    try { localStorage.setItem(LS_PHONE, norm); } catch { }
+    setPhoneError("");
+    setPhoneGateOpen(false);
+
+    // Đóng phiên cũ (tạo lúc chưa có SĐT) để phiên mới mang userId = SĐT
+    if (convRef.current) {
+      try { await convRef.current.endSession(); } catch { }
+      convRef.current = null;
+    }
+
+    const pending = pendingQuestionRef.current;
+    pendingQuestionRef.current = "";
+    if (pending) send(pending);
   };
 
   const reset = () => {
@@ -395,6 +448,65 @@ export default function HeroAskSection() {
             {loading ? <CircularProgress size={18} color="inherit" /> : <SendIcon sx={{ fontSize: 18 }} />}
           </IconButton>
         </Paper>
+
+        {/* Phone gate — yêu cầu SĐT từ câu hỏi thứ 2 */}
+        {phoneGateOpen && (
+          <Box sx={{
+            mt: 2, mx: "auto", maxWidth: 480,
+            animation: "gate-in 0.35s ease",
+            "@keyframes gate-in": { from: { opacity: 0, transform: "translateY(-8px)" }, to: { opacity: 1, transform: "translateY(0)" } },
+          }}>
+            <Paper elevation={0} sx={{
+              px: 2.5, py: 2, borderRadius: 3,
+              bgcolor: "rgba(255,255,255,0.96)", backdropFilter: "blur(16px)",
+              boxShadow: "0 8px 36px rgba(0,0,0,0.22)", border: "2px solid rgba(255,255,255,0.75)",
+            }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
+                <PhoneIcon sx={{ fontSize: 18, color: HERO_AGENT.color }} />
+                <Typography sx={{ fontWeight: 700, fontSize: "0.9rem", color: "#1a1a1a" }}>
+                  Nhập số điện thoại để hỏi tiếp nha~
+                </Typography>
+              </Box>
+              <Typography sx={{ fontSize: "0.78rem", color: "#666", mb: 1.5, lineHeight: 1.5 }}>
+                Từ câu hỏi thứ {FREE_QUESTIONS + 1}, {HERO_AGENT.name} cần số điện thoại của bạn để nhớ cuộc trò chuyện và hỗ trợ tốt hơn.
+              </Typography>
+              <Box sx={{ display: "flex", gap: 1 }}>
+                <InputBase
+                  inputRef={phoneInputRef}
+                  fullWidth
+                  type="tel"
+                  placeholder="VD: 0901 234 567"
+                  value={phoneInput}
+                  onChange={(e) => { setPhoneInput(e.target.value); setPhoneError(""); }}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); confirmPhone(); } }}
+                  sx={{
+                    px: 1.5, py: 0.5, fontSize: "0.92rem", color: "#1a1a1a",
+                    border: `1.5px solid ${phoneError ? "#e57373" : "#d0d0d0"}`,
+                    borderRadius: 2,
+                    "&:focus-within": { borderColor: HERO_AGENT.color },
+                  }}
+                />
+                <IconButton
+                  onClick={confirmPhone}
+                  disabled={!phoneInput.trim()}
+                  sx={{
+                    bgcolor: HERO_AGENT.color, color: "#fff", width: 42, height: 42, borderRadius: 2,
+                    "&:hover": { bgcolor: "#1b4332" },
+                    "&.Mui-disabled": { bgcolor: "#d0d0d0", color: "#b0b0b0" },
+                  }}
+                >
+                  <SendIcon sx={{ fontSize: 17 }} />
+                </IconButton>
+              </Box>
+              {phoneError && (
+                <Typography sx={{ fontSize: "0.75rem", color: "#d32f2f", mt: 0.8 }}>{phoneError}</Typography>
+              )}
+              <Typography sx={{ fontSize: "0.68rem", color: "#999", mt: 1 }}>
+                Số điện thoại chỉ dùng để định danh cuộc trò chuyện, không chia sẻ cho bên khác.
+              </Typography>
+            </Paper>
+          </Box>
+        )}
 
         {/* Daily / session limit notice */}
         {(isDailyMaxed || isSessionMaxed) && (
