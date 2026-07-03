@@ -1,10 +1,11 @@
 // src/pages/AgriStats.jsx
 // Thử nghiệm: biểu đồ biến động giá & sản lượng nông thuỷ sản theo tháng/năm.
 // Dữ liệu MÔ PHỎNG (deterministic) — chưa nối nguồn thống kê thật.
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Helmet } from "react-helmet-async";
-import { Box, Container, Typography, Paper, Chip, ToggleButtonGroup, ToggleButton, FormControl, InputLabel, Select, MenuItem } from "@mui/material";
+import { Box, Container, Typography, Paper, Chip, ToggleButtonGroup, ToggleButton, FormControl, InputLabel, Select, MenuItem, Button } from "@mui/material";
 import ScienceIcon from "@mui/icons-material/Science";
+import RefreshIcon from "@mui/icons-material/Refresh";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import {
@@ -33,26 +34,26 @@ const CATEGORIES = {
 // wild = đánh bắt/khai thác tự nhiên → không đưa vào gợi ý "nên nuôi trồng"
 const CATALOG = {
   luagao: [
-    ["Lúa tẻ (thóc tươi)", 6800], ["Nếp Phú Tân", 7900], ["Lúa thơm", 7600],
+    ["Lúa tẻ (thóc tươi)", 6800], ["Nếp Phú Tân", 7900, { tet: true }], ["Lúa thơm", 7600],
     ["Lúa Jasmine", 7400], ["Lúa ST24", 8600], ["Lúa ST25", 9200],
     ["Bắp (ngô)", 7200, { emoji: "🌽" }], ["Khoai lang", 9500, { emoji: "🍠" }],
     ["Khoai mì (sắn)", 4200, { emoji: "🥔" }],
   ],
   traicay: [
-    ["Xoài cát Hòa Lộc", 38000, { emoji: "🥭" }], ["Xoài Cát Chu", 26000, { emoji: "🥭" }],
+    ["Xoài cát Hòa Lộc", 38000, { emoji: "🥭", tet: true }], ["Xoài Cát Chu", 26000, { emoji: "🥭" }],
     ["Xoài tượng", 18000, { emoji: "🥭" }],
     ["Sầu riêng Ri6", 62000, { emoji: "🫒" }], ["Sầu riêng Monthong", 75000, { emoji: "🫒" }],
-    ["Bưởi Năm Roi", 28000, { emoji: "🍊" }], ["Bưởi da xanh", 38000, { emoji: "🍊" }],
+    ["Bưởi Năm Roi", 28000, { emoji: "🍊", tet: true }], ["Bưởi da xanh", 38000, { emoji: "🍊", tet: true }],
     ["Bưởi lông Cổ Cò", 22000, { emoji: "🍊" }],
     ["Nhãn xuồng cơm vàng", 42000, { emoji: "🟤" }], ["Nhãn tiêu", 25000, { emoji: "🟤" }],
     ["Vải thiều", 35000, { emoji: "🔴" }],
     ["Chôm chôm nhãn", 28000, { emoji: "🔴" }], ["Chôm chôm Java", 18000, { emoji: "🔴" }],
     ["Măng cụt", 45000, { emoji: "🟣" }],
-    ["Thanh long ruột trắng", 12000, { emoji: "🐉" }], ["Thanh long ruột đỏ", 18000, { emoji: "🐉" }],
+    ["Thanh long ruột trắng", 12000, { emoji: "🐉" }], ["Thanh long ruột đỏ", 18000, { emoji: "🐉", tet: true }],
     ["Dừa xiêm", 8000, { emoji: "🥥", unit: "đ/trái" }], ["Dừa ta", 6000, { emoji: "🥥", unit: "đ/trái" }],
     ["Dừa sáp", 90000, { emoji: "🥥", unit: "đ/trái" }],
     ["Cam sành", 15000, { emoji: "🍊" }], ["Cam mật", 18000, { emoji: "🍊" }],
-    ["Quýt đường", 28000, { emoji: "🍊" }], ["Quýt hồng", 35000, { emoji: "🍊" }],
+    ["Quýt đường", 28000, { emoji: "🍊" }], ["Quýt hồng", 35000, { emoji: "🍊", tet: true }],
     ["Chanh không hạt", 14000, { emoji: "🍋" }], ["Chanh giấy", 18000, { emoji: "🍋" }],
     ["Ổi xá lị", 12000, { emoji: "🍐" }], ["Ổi không hạt", 16000, { emoji: "🍐" }],
     ["Mận hồng đào", 20000, { emoji: "🍎" }], ["Mận An Phước", 25000, { emoji: "🍎" }],
@@ -61,7 +62,7 @@ const CATALOG = {
     ["Khóm Cầu Đúc", 8500, { emoji: "🍍", unit: "đ/trái" }], ["Khóm Bến Lức", 8000, { emoji: "🍍", unit: "đ/trái" }],
     ["Mít Thái", 18500, { emoji: "🍈" }], ["Mít tố nữ", 30000, { emoji: "🍈" }],
     ["Đu đủ", 8500, { emoji: "🧡" }],
-    ["Mãng cầu xiêm", 28000, { emoji: "💚" }], ["Mãng cầu ta (na)", 40000, { emoji: "💚" }],
+    ["Mãng cầu xiêm", 28000, { emoji: "💚" }], ["Mãng cầu ta (na)", 40000, { emoji: "💚", tet: true }],
     ["Sa-bô-chê", 18000, { emoji: "🟫" }], ["Dâu da", 15000, { emoji: "🟡" }],
     ["Khế", 10000, { emoji: "⭐" }], ["Phật thủ", 60000, { emoji: "🖐️" }],
     ["Bồ quân", 20000, { emoji: "🟣" }], ["Mắc mật", 35000, { emoji: "🟢" }],
@@ -83,8 +84,8 @@ const CATALOG = {
     ["Củ sen", 30000, { emoji: "🪷" }], ["Ngó sen", 35000, { emoji: "🪷" }],
     ["Củ cải trắng", 10000], ["Củ cải đỏ", 12000], ["Cà rốt", 15000, { emoji: "🥕" }],
     ["Su hào", 14000], ["Dưa leo", 12000, { emoji: "🥒" }],
-    ["Dưa hấu", 9000, { emoji: "🍉", cycle: 3 }], ["Dưa gang", 8000, { emoji: "🍈" }],
-    ["Củ kiệu", 40000, { emoji: "🧅" }], ["Hành lá", 25000, { emoji: "🧅" }],
+    ["Dưa hấu", 9000, { emoji: "🍉", cycle: 3, tet: true }], ["Dưa gang", 8000, { emoji: "🍈" }],
+    ["Củ kiệu", 40000, { emoji: "🧅", tet: true }], ["Hành lá", 25000, { emoji: "🧅" }],
     ["Hành tây", 18000, { emoji: "🧅" }], ["Tỏi", 45000, { emoji: "🧄" }],
     ["Ớt", 35000, { emoji: "🌶️" }], ["Ngò gai", 30000, { emoji: "🌿" }],
     ["Rau răm", 20000, { emoji: "🌿" }], ["Húng quế", 25000, { emoji: "🌿" }],
@@ -112,7 +113,7 @@ const CATALOG = {
   ],
   cangot: [
     ["Cá tra", 27500], ["Cá basa", 26000],
-    ["Cá lóc", 48000, { cycle: 5 }], ["Cá rô đồng", 55000, { cycle: 4 }],
+    ["Cá lóc", 48000, { cycle: 5, tet: true }], ["Cá rô đồng", 55000, { cycle: 4 }],
     ["Cá trê vàng", 45000, { cycle: 4 }], ["Cá trê trắng", 40000, { cycle: 4 }],
     ["Cá trê phi", 32000, { cycle: 4 }],
     ["Cá chốt", 70000, { wild: true }], ["Cá he", 38000],
@@ -128,7 +129,7 @@ const CATALOG = {
   ],
   tomtep: [
     ["Tôm sú", 180000, { cycle: 4 }], ["Tôm thẻ chân trắng", 110000, { cycle: 3 }],
-    ["Tôm càng xanh", 195000, { cycle: 6 }],
+    ["Tôm càng xanh", 195000, { cycle: 6, tet: true }],
     ["Tôm đất", 160000, { wild: true }], ["Tôm bạc", 140000, { wild: true }],
     ["Tôm he", 200000, { wild: true }],
   ],
@@ -241,6 +242,7 @@ Object.entries(CATALOG).forEach(([catKey, items]) => {
       cycleMonths: opts.cycle ?? cat.cycle,
       verb: opts.verb ?? cat.verb,
       wild: !!opts.wild,
+      tet: !!opts.tet || catKey === "hoakieng",
       unit: opts.unit ?? "đ/kg",
       prodUnit: opts.prodUnit ?? "tấn",
       seasonal: ov.seasonal ?? genSeasonal(key, amp, phase),
@@ -267,12 +269,20 @@ const wobble = (seed) => {
   return (x - Math.floor(x) - 0.5) * 0.08; // ±4%
 };
 
+// "Làm mới dữ liệu": tăng salt → re-draw nhiễu của THÁNG HIỆN TẠI + DỰ BÁO.
+// Lịch sử (tháng đã chốt) không đổi — mô phỏng việc kéo số liệu mới nhất về.
+let REFRESH_SALT = 0;
+export const bumpRefreshSalt = () => { REFRESH_SALT += 1; return REFRESH_SALT; };
+
 function monthlyValue(productKey, metric, year, month) {
   const p = PRODUCTS[productKey];
   const base = metric === "price" ? p.priceBase : p.prodBase;
   const season = metric === "price" ? p.seasonal[month - 1] : p.prodSeasonal[month - 1];
   const growth = 1 + p.trend * (year - 2023);
-  const seed = productKey.length * 1000 + year * 12 + month + (metric === "price" ? 0 : 500);
+  const isFresh = year > CURRENT_YEAR || (year === CURRENT_YEAR && month >= CURRENT_MONTH);
+  const seed = productKey.length * 1000 + year * 12 + month
+    + (metric === "price" ? 0 : 500)
+    + (isFresh ? REFRESH_SALT * 7919 : 0);
   return Math.round(base * growth * season * (1 + wobble(seed)));
 }
 
@@ -298,26 +308,115 @@ const HORIZONS = [
   { key: "quy", label: "Quý tới", offset: 3 - ((CURRENT_MONTH - 1) % 3) },
 ];
 
-// Xuống giống tại thời điểm start → bán ra sau cycleMonths; chấm điểm theo:
-// mùa giá lúc bán (so mức nền năm) + xu hướng giá dài hạn − độ biến động (rủi ro)
+// ── Khí hậu & giai đoạn (mô phỏng theo chuẩn khí hậu An Giang) ───────────────
+// Lượng mưa tương đối (mùa mưa T5–T11, đỉnh T9–T10), nhiệt độ (nóng nhất T4–T5),
+// mực nước lũ/nước nổi (T8–T11, đỉnh T9–T10)
+const CLIMATE = {
+  rain:  [0.1, 0.1, 0.2, 0.5, 1.0, 1.2, 1.3, 1.4, 1.6, 1.5, 0.9, 0.3],
+  heat:  [0.5, 0.7, 0.9, 1.0, 1.0, 0.8, 0.7, 0.7, 0.6, 0.6, 0.5, 0.4],
+  flood: [0.1, 0.0, 0.0, 0.0, 0.1, 0.3, 0.6, 1.0, 1.4, 1.3, 0.8, 0.3],
+};
+
+// Chỉ số ENSO mô phỏng theo năm: >0.35 El Niño (khô hạn), <−0.35 La Niña (mưa lũ nhiều)
+const ensoOf = (year) => +((hash01(`enso-${year}`, 9) - 0.5) * 2).toFixed(2);
+const ensoLabel = (e) => (e >= 0.35 ? "El Niño — khô hạn, ít mưa hơn trung bình"
+  : e <= -0.35 ? "La Niña — mưa & lũ nhiều hơn trung bình"
+  : "Trung tính — thời tiết gần mức trung bình nhiều năm");
+
+const stageOf = (month) => {
+  if (month >= 11 || month <= 2) return "vụ Đông Xuân";
+  if (month >= 4 && month <= 7) return "vụ Hè Thu";
+  return "vụ Thu Đông";
+};
+const isTetWindow = (month) => month === 12 || month === 1;
+const inFlood = (month) => CLIMATE.flood[month - 1] >= 0.8;
+
+// Trung bình một chỉ số khí hậu trên cửa sổ canh tác [start → sale], có hiệu chỉnh ENSO
+function climateAvg(kind, start, months) {
+  let sum = 0;
+  for (let i = 0; i < months; i++) {
+    const m = addMonths(start.year, start.month, i);
+    const enso = ensoOf(m.year);
+    let v = CLIMATE[kind][m.month - 1];
+    if (kind === "rain" || kind === "flood") v *= 1 - enso * 0.3; // El Niño → giảm mưa/lũ
+    if (kind === "heat") v *= 1 + enso * 0.15; // El Niño → nóng hơn
+    sum += v;
+  }
+  return sum / Math.max(months, 1);
+}
+
+// Xuống giống tại start → bán sau cycleMonths. Điểm = mùa giá lúc bán + xu hướng
+// − biến động ± thời tiết (mưa/lũ/nóng × độ nhạy từng nhóm) ± lịch sử giá ± hiệu ứng Tết
 function buildRecommendations(offset) {
   const start = addMonths(CURRENT_YEAR, CURRENT_MONTH, offset);
-  // Chỉ xét loại nuôi trồng được — bỏ hàng đánh bắt/khai thác tự nhiên
   return Object.entries(PRODUCTS).filter(([, p]) => !p.wild && p.cycleMonths > 0).map(([key, p]) => {
     const sale = addMonths(start.year, start.month, p.cycleMonths);
     const forecastPrice = monthlyValue(key, "price", sale.year, sale.month);
     const seasonalAdvPct = (p.seasonal[sale.month - 1] - 1) * 100;
     const riskPct = stdev(p.seasonal) * 100;
     const trendPct = p.trend * 100;
-    const score = seasonalAdvPct + trendPct * 0.5 - riskPct * 0.35;
-
     const reasons = [];
+    let score = seasonalAdvPct + trendPct * 0.5 - riskPct * 0.35;
+
+    // 1) Mùa giá & xu hướng (như cũ)
     if (seasonalAdvPct >= 3) reasons.push(`Bán ra đúng mùa giá cao (+${seasonalAdvPct.toFixed(0)}% so mức nền năm)`);
     else if (seasonalAdvPct <= -3) reasons.push(`Rơi vào mùa giá thấp (${seasonalAdvPct.toFixed(0)}% so mức nền năm)`);
-    else reasons.push("Giá lúc bán quanh mức nền năm");
     if (trendPct >= 5) reasons.push(`Xu hướng giá tăng khoảng ${trendPct.toFixed(0)}%/năm`);
-    if (riskPct <= 6) reasons.push("Giá ổn định, ít biến động");
-    else if (riskPct >= 12) reasons.push("Giá biến động mạnh — cân nhắc rủi ro");
+
+    // 2) Thời tiết trên cửa sổ canh tác — độ nhạy theo nhóm
+    const rain = climateAvg("rain", start, p.cycleMonths);
+    const heat = climateAvg("heat", start, p.cycleMonths);
+    const flood = climateAvg("flood", start, p.cycleMonths);
+    const cat = p.category;
+    if ((cat === "raucu" || cat === "hoakieng") && rain >= 1.1) {
+      score -= 5;
+      reasons.push("⛈️ Vụ trồng trùng cao điểm mưa — rau/hoa dễ dập úng, tốn công che chắn");
+    }
+    if ((cat === "raucu" || cat === "hoakieng") && rain <= 0.5) {
+      score += 3;
+      reasons.push("☀️ Vụ trồng vào mùa khô — thuận lợi cho rau màu, hoa kiểng");
+    }
+    // Nước nổi chỉ lợi cho thuỷ sản thương phẩm (đ/kg) — không áp dụng cho cá cảnh
+    if ((cat === "tomtep" || cat === "cangot") && p.unit === "đ/kg" && flood >= 0.7) {
+      score += 4;
+      reasons.push("🌊 Trùng mùa nước nổi — nguồn nước & thức ăn tự nhiên dồi dào cho thuỷ sản");
+    }
+    if ((cat === "tomtep" || cat === "cangot" || cat === "haisan") && heat >= 0.9) {
+      score -= 4;
+      reasons.push("🌡️ Cao điểm nắng nóng T4–T5 — ao nuôi dễ thiếu oxy, cần quạt nước");
+    }
+    if (cat === "luagao" && flood >= 0.9) {
+      score -= 6;
+      reasons.push("⚠️ Vụ 3 (Thu Đông) trùng đỉnh lũ — rủi ro vỡ đê bao, cân nhắc xả lũ");
+    }
+    if (cat === "traicay" && rain >= 1.3) {
+      score -= 3;
+      reasons.push("🌧️ Mưa dầm lúc xử lý ra hoa — tỉ lệ đậu trái giảm");
+    }
+
+    // 3) Lịch sử giá — hồi quy về trung bình 5 năm cùng kỳ + momentum 3 tháng
+    const hist5 = Array.from({ length: 5 }, (_, i) => monthlyValue(key, "price", sale.year - 1 - i, sale.month));
+    const histAvg = hist5.reduce((a, b) => a + b, 0) / 5;
+    const expected = histAvg * (1 + p.trend); // mức "hợp lý" nếu tiếp đà tăng bình thường
+    const vsHistPct = ((forecastPrice - expected) / expected) * 100;
+    if (vsHistPct >= 6) {
+      score -= 3;
+      reasons.push(`📉 Giá dự báo cao hơn trung bình 5 năm cùng kỳ +${vsHistPct.toFixed(0)}% — coi chừng điều chỉnh`);
+    } else if (vsHistPct <= -6) {
+      score += 3;
+      reasons.push(`📈 Giá dự báo thấp hơn trung bình 5 năm cùng kỳ ${vsHistPct.toFixed(0)}% — còn dư địa phục hồi`);
+    }
+    const ago3 = addMonths(CURRENT_YEAR, CURRENT_MONTH, -3);
+    const momentumPct = ((monthlyValue(key, "price", CURRENT_YEAR, CURRENT_MONTH) - monthlyValue(key, "price", ago3.year, ago3.month))
+      / monthlyValue(key, "price", ago3.year, ago3.month)) * 100;
+    if (momentumPct >= 8) reasons.push(`🔥 Giá 3 tháng gần đây đang tăng +${momentumPct.toFixed(0)}%`);
+
+    // 4) Giai đoạn — hiệu ứng cận Tết cho nhóm hàng chưng/biếu/tiêu dùng Tết
+    if (isTetWindow(sale.month) && p.tet) {
+      score += 6;
+      reasons.push("🧧 Thu hoạch rơi đúng cận Tết — nhu cầu chưng, biếu, tiệc tăng mạnh");
+    }
+    if (riskPct >= 12) reasons.push("Giá biến động mạnh — cân nhắc rủi ro");
 
     return { key, product: p, start, sale, forecastPrice, seasonalAdvPct, score, reasons };
   }).sort((a, b) => b.score - a.score);
@@ -396,11 +495,101 @@ const StatTile = ({ label, value, unit, delta, deltaLabel }) => (
   </Paper>
 );
 
+// Sticker mặt cười nổi — nhắc dữ liệu chỉ để tham khảo, không chịu trách nhiệm
+const DisclaimerSticker = () => {
+  const [open, setOpen] = useState(true);
+  return (
+    <Box sx={{
+      position: "fixed", bottom: 20, right: 16, zIndex: 1300,
+      display: "flex", alignItems: "flex-end", gap: 1, pointerEvents: "none",
+    }}>
+      {open && (
+        <Box sx={{
+          pointerEvents: "auto", position: "relative",
+          maxWidth: { xs: 220, sm: 260 }, px: 1.75, py: 1.25,
+          bgcolor: "var(--color-surface)", border: "1.5px solid var(--color-accent-gold)",
+          borderRadius: "14px 14px 4px 14px", boxShadow: "var(--shadow-medium)",
+          animation: "sticker-bubble-in 0.35s cubic-bezier(0.34,1.56,0.64,1)",
+          "@keyframes sticker-bubble-in": {
+            from: { opacity: 0, transform: "translateY(10px) scale(0.9)" },
+            to: { opacity: 1, transform: "none" },
+          },
+        }}>
+          <Box
+            component="button"
+            type="button"
+            aria-label="Đóng nhắc nhở"
+            onClick={() => setOpen(false)}
+            sx={{
+              position: "absolute", top: 4, right: 6, border: "none", background: "none",
+              cursor: "pointer", fontSize: "0.7rem", color: "var(--viz-ink-muted)",
+              p: 0.25, lineHeight: 1, "&:hover": { color: "var(--color-text)" },
+            }}
+          >
+            ✕
+          </Box>
+          <Typography sx={{ fontSize: "0.72rem", color: "var(--color-text)", lineHeight: 1.5, pr: 1.5 }}>
+            Hì hì, mình chỉ là <b>số liệu mô phỏng để tham khảo</b> thôi nha —
+            không chính xác và <b>không chịu trách nhiệm dưới mọi hình thức</b> cho
+            quyết định canh tác, mua bán của bạn đâu đó! 🙏
+          </Typography>
+        </Box>
+      )}
+      <Box
+        role="button"
+        aria-label="Nhắc nhở: dữ liệu chỉ mang tính tham khảo"
+        onClick={() => setOpen((v) => !v)}
+        sx={{
+          pointerEvents: "auto", cursor: "pointer", fontSize: "2.2rem",
+          lineHeight: 1, userSelect: "none", filter: "drop-shadow(0 4px 8px rgba(0,0,0,0.25))",
+          animation: "sticker-bob 2.4s ease-in-out infinite",
+          "@keyframes sticker-bob": {
+            "0%, 100%": { transform: "translateY(0) rotate(-6deg)" },
+            "30%": { transform: "translateY(-7px) rotate(6deg)" },
+            "60%": { transform: "translateY(-2px) rotate(-3deg)" },
+          },
+          "&:hover": { animationPlayState: "paused" },
+          "@media (prefers-reduced-motion: reduce)": { animation: "none" },
+        }}
+      >
+        😅
+      </Box>
+    </Box>
+  );
+};
+
 // ── Page ─────────────────────────────────────────────────────────────────────
+const REFRESH_COOLDOWN_SECS = 30;
+const LS_REFRESH_UNTIL = "agri_refresh_until";
+
 const AgriStats = () => {
   const [categoryKey, setCategoryKey] = useState("luagao");
   const [productKey, setProductKey] = useState("lua-te-thoc-tuoi");
   const [metric, setMetric] = useState("price");
+
+  // Làm mới dữ liệu (mô phỏng kéo nguồn mới nhất) + cooldown chống bấm liên tục
+  const [dataVersion, setDataVersion] = useState(0);
+  const [lastRefresh, setLastRefresh] = useState(null);
+  const [refreshCooldown, setRefreshCooldown] = useState(() => {
+    try {
+      const until = parseInt(localStorage.getItem(LS_REFRESH_UNTIL) ?? "0", 10);
+      return Math.max(0, Math.ceil((until - Date.now()) / 1000));
+    } catch { return 0; }
+  });
+
+  useEffect(() => {
+    if (refreshCooldown <= 0) return;
+    const t = setInterval(() => setRefreshCooldown((s) => Math.max(0, s - 1)), 1000);
+    return () => clearInterval(t);
+  }, [refreshCooldown]);
+
+  const handleRefresh = () => {
+    if (refreshCooldown > 0) return;
+    setDataVersion(bumpRefreshSalt());
+    setLastRefresh(new Date());
+    setRefreshCooldown(REFRESH_COOLDOWN_SECS);
+    try { localStorage.setItem(LS_REFRESH_UNTIL, String(Date.now() + REFRESH_COOLDOWN_SECS * 1000)); } catch { }
+  };
   const product = PRODUCTS[productKey];
   const metricInfo = METRICS[metric];
   // Đơn vị theo từng sản phẩm (đ/kg, đ/trái, đ/chậu... / tấn, nghìn cành...)
@@ -416,6 +605,16 @@ const AgriStats = () => {
     if (first) setProductKey(first[0]);
   };
 
+  // Fade "còn nữa" ở mép phải hàng chips danh mục (mobile) — ẩn khi đã cuộn tới cuối
+  const catRowRef = useRef(null);
+  const [catAtEnd, setCatAtEnd] = useState(false);
+  const handleCatScroll = () => {
+    const el = catRowRef.current;
+    if (!el) return;
+    setCatAtEnd(el.scrollLeft + el.clientWidth >= el.scrollWidth - 8);
+  };
+  useEffect(() => { handleCatScroll(); }, []);
+
   const monthlyData = useMemo(() => (
     Array.from({ length: 12 }, (_, i) => {
       const month = i + 1;
@@ -427,7 +626,7 @@ const AgriStats = () => {
       row.forecast = month >= CURRENT_MONTH ? monthlyValue(productKey, metric, CURRENT_YEAR, month) : null;
       return row;
     })
-  ), [productKey, metric]);
+  ), [productKey, metric, dataVersion]);
 
   const yearlyData = useMemo(() => (
     BAR_YEARS.map((y) => {
@@ -446,7 +645,19 @@ const AgriStats = () => {
 
   const [horizonKey, setHorizonKey] = useState("now");
   const horizon = HORIZONS.find((h) => h.key === horizonKey);
-  const recommendations = useMemo(() => buildRecommendations(horizon.offset), [horizon.offset]);
+  const recommendations = useMemo(() => buildRecommendations(horizon.offset), [horizon.offset, dataVersion]);
+
+  // Bối cảnh thời tiết & giai đoạn tại thời điểm bắt đầu của mốc đang chọn
+  const ctxStart = addMonths(CURRENT_YEAR, CURRENT_MONTH, horizon.offset);
+  const ctxEnso = ensoOf(ctxStart.year);
+  const contextChips = [
+    { icon: "📅", text: `T${ctxStart.month}/${ctxStart.year} — ${stageOf(ctxStart.month)}` },
+    { icon: "🌦️", text: ensoLabel(ctxEnso) },
+    ...(inFlood(ctxStart.month) ? [{ icon: "🌊", text: "Đang mùa nước nổi (T8–T11)" }] : []),
+    ...(CLIMATE.heat[ctxStart.month - 1] >= 0.9 ? [{ icon: "🌡️", text: "Cao điểm nắng nóng" }] : []),
+    ...(ctxStart.month >= 10 || ctxStart.month === 1
+      ? [{ icon: "🧧", text: "Giai đoạn chuẩn bị hàng Tết" }] : []),
+  ];
 
   // Dự báo giá 6 tháng tới cho toàn bộ sản phẩm (từ mô hình mùa vụ)
   const FORECAST_MONTHS = 6;
@@ -465,7 +676,7 @@ const AgriStats = () => {
       });
       return { key, product: p, cells };
     })
-  ), [forecastMonths, categoryProducts]);
+  ), [forecastMonths, categoryProducts, dataVersion]);
 
   const yearLegend = (
     <Box sx={{ display: "flex", gap: 1.5, flexWrap: "wrap" }}>
@@ -514,30 +725,59 @@ const AgriStats = () => {
 
       <Box sx={{ py: { xs: 3, md: 4 }, background: "var(--color-background)" }}>
         <Container maxWidth="md">
-          {/* Filter row: danh mục → sản phẩm → chỉ số. Mobile: chips cuộn ngang 1 hàng */}
-          <Box sx={{
-            display: "flex", gap: 0.75, mb: 1.5,
-            flexWrap: { xs: "nowrap", md: "wrap" },
-            overflowX: { xs: "auto", md: "visible" },
-            pb: { xs: 0.5, md: 0 },
-            scrollbarWidth: "none", "&::-webkit-scrollbar": { display: "none" },
-            "& .MuiChip-root": { flexShrink: 0 },
-          }}>
-            {Object.entries(CATEGORIES).map(([key, c]) => (
-              <Chip
-                key={key}
-                label={`${c.emoji} ${c.name}`}
-                onClick={() => handleCategoryChange(key)}
-                variant={key === categoryKey ? "filled" : "outlined"}
-                size="small"
-                sx={{
-                  fontWeight: 600,
-                  ...(key === categoryKey
-                    ? { bgcolor: "var(--color-primary)", color: "#fff", "&:hover": { bgcolor: "var(--color-secondary)" } }
-                    : { color: "var(--color-text)", borderColor: "var(--color-border)" }),
-                }}
-              />
-            ))}
+          {/* Filter row: danh mục → sản phẩm → chỉ số. Mobile: chips cuộn ngang 1 hàng,
+              tràn lề phải để lộ một phần chip kế tiếp + fade gợi ý còn nữa */}
+          <Box sx={{ position: "relative", mb: 1.5, mx: { xs: -2, sm: -3, md: 0 } }}>
+            <Box
+              ref={catRowRef}
+              onScroll={handleCatScroll}
+              sx={{
+                display: "flex", gap: 0.75,
+                flexWrap: { xs: "nowrap", md: "wrap" },
+                overflowX: { xs: "auto", md: "visible" },
+                px: { xs: 2, sm: 3, md: 0 },
+                pb: { xs: 0.5, md: 0 },
+                scrollbarWidth: "none", "&::-webkit-scrollbar": { display: "none" },
+                "& .MuiChip-root": { flexShrink: 0 },
+              }}
+            >
+              {Object.entries(CATEGORIES).map(([key, c]) => (
+                <Chip
+                  key={key}
+                  label={`${c.emoji} ${c.name}`}
+                  onClick={() => handleCategoryChange(key)}
+                  variant={key === categoryKey ? "filled" : "outlined"}
+                  size="small"
+                  sx={{
+                    fontWeight: 600,
+                    ...(key === categoryKey
+                      ? { bgcolor: "var(--color-primary)", color: "#fff", "&:hover": { bgcolor: "var(--color-secondary)" } }
+                      : { color: "var(--color-text)", borderColor: "var(--color-border)" }),
+                  }}
+                />
+              ))}
+            </Box>
+            {/* Fade mép phải — chỉ hiện trên mobile khi chưa cuộn tới cuối */}
+            {!catAtEnd && (
+              <Box sx={{
+                display: { xs: "flex", md: "none" },
+                alignItems: "center", justifyContent: "flex-end",
+                position: "absolute", top: 0, right: 0, bottom: 0, width: 56,
+                background: "linear-gradient(90deg, transparent, var(--color-background) 78%)",
+                pointerEvents: "none", pr: 0.25,
+              }}>
+                <Typography component="span" sx={{
+                  fontSize: "0.85rem", color: "var(--viz-ink-muted)", lineHeight: 1,
+                  animation: "cat-hint-nudge 1.4s ease-in-out infinite",
+                  "@keyframes cat-hint-nudge": {
+                    "0%, 100%": { transform: "translateX(0)", opacity: 0.6 },
+                    "50%": { transform: "translateX(3px)", opacity: 1 },
+                  },
+                }}>
+                  ›
+                </Typography>
+              </Box>
+            )}
           </Box>
           <Box sx={{ display: "flex", gap: 1.5, flexWrap: "wrap", alignItems: "center", mb: 2.5 }}>
             <FormControl size="small" sx={{ minWidth: 240, flex: 1, maxWidth: 340 }}>
@@ -570,7 +810,27 @@ const AgriStats = () => {
               <ToggleButton value="price">Giá bán</ToggleButton>
               <ToggleButton value="prod">Sản lượng</ToggleButton>
             </ToggleButtonGroup>
+            <Button
+              size="small"
+              variant="outlined"
+              startIcon={<RefreshIcon />}
+              disabled={refreshCooldown > 0}
+              onClick={handleRefresh}
+              sx={{
+                textTransform: "none", fontWeight: 700, fontSize: "0.78rem",
+                borderRadius: "var(--radius-md)", borderColor: "var(--color-border)",
+                color: "var(--color-text)", whiteSpace: "nowrap",
+                "&.Mui-disabled": { color: "var(--viz-ink-muted)" },
+              }}
+            >
+              {refreshCooldown > 0 ? `Chờ ${refreshCooldown}s` : "Làm mới dữ liệu"}
+            </Button>
           </Box>
+          {lastRefresh && (
+            <Typography sx={{ fontSize: "0.7rem", color: "var(--viz-ink-muted)", mt: -1.5, mb: 2 }}>
+              🔄 Đã kéo số liệu mới nhất lúc {lastRefresh.toLocaleTimeString("vi-VN")} — cập nhật tháng hiện tại &amp; dự báo (lịch sử giữ nguyên)
+            </Typography>
+          )}
 
           {/* Stat tiles */}
           <Box sx={{ display: "flex", gap: 1.5, flexWrap: "wrap", mb: 2.5 }}>
@@ -657,7 +917,7 @@ const AgriStats = () => {
             {/* Gợi ý nuôi trồng theo mốc thời gian */}
             <ChartCard
               title="🧭 Nên nuôi trồng gì?"
-              subtitle="Chấm điểm theo mùa giá lúc bán ra + xu hướng dài hạn − độ biến động (mô phỏng, chỉ để tham khảo)"
+              subtitle="Chấm điểm theo mùa giá lúc bán + thời tiết (mưa/lũ/nóng, ENSO) + lịch sử giá 5 năm + hiệu ứng Tết − rủi ro biến động (mô phỏng, chỉ để tham khảo)"
               legend={(
                 <ToggleButtonGroup
                   value={horizonKey} exclusive size="small"
@@ -674,6 +934,28 @@ const AgriStats = () => {
                 </ToggleButtonGroup>
               )}
             >
+              {/* Bối cảnh dự báo: giai đoạn + ENSO + nước nổi + nắng nóng + Tết */}
+              <Box sx={{
+                display: "flex", gap: 0.75, mb: 2,
+                flexWrap: { xs: "nowrap", md: "wrap" },
+                overflowX: { xs: "auto", md: "visible" },
+                pb: { xs: 0.5, md: 0 },
+                scrollbarWidth: "none", "&::-webkit-scrollbar": { display: "none" },
+              }}>
+                {contextChips.map((c) => (
+                  <Box key={c.text} sx={{
+                    display: "flex", alignItems: "center", gap: 0.6, flexShrink: 0,
+                    px: 1.25, py: 0.5, borderRadius: 99,
+                    bgcolor: "var(--color-background-alt)", border: "1px solid var(--color-border)",
+                  }}>
+                    <span style={{ fontSize: "0.85rem" }}>{c.icon}</span>
+                    <Typography sx={{ fontSize: "0.72rem", fontWeight: 600, color: "var(--color-text-subtle)", whiteSpace: "nowrap" }}>
+                      {c.text}
+                    </Typography>
+                  </Box>
+                ))}
+              </Box>
+
               <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(3, 1fr)" }, gap: 1.5, mb: 2 }}>
                 {recommendations.slice(0, 3).map((rec, i) => (
                   <Box key={rec.key} sx={{
@@ -697,7 +979,7 @@ const AgriStats = () => {
                     <Typography sx={{ fontSize: "1.05rem", fontWeight: 700, color: "var(--color-text)", mb: 0.6 }}>
                       ≈{fmt(rec.forecastPrice)} <Box component="span" sx={{ fontSize: "0.72rem", fontWeight: 500, color: "var(--color-text-subtle)" }}>{rec.product.unit} lúc thu</Box>
                     </Typography>
-                    {rec.reasons.map((r) => (
+                    {rec.reasons.slice(0, 4).map((r) => (
                       <Typography key={r} sx={{ fontSize: "0.7rem", color: "var(--color-text-subtle)", lineHeight: 1.45 }}>
                         · {r}
                       </Typography>
@@ -806,6 +1088,8 @@ const AgriStats = () => {
           </Box>
         </Container>
       </Box>
+
+      <DisclaimerSticker />
     </>
   );
 };
