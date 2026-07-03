@@ -1,12 +1,13 @@
 // src/pages/VlogFeed.jsx
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link as RouterLink, useLocation } from "react-router-dom";
-import { Box, Button, Switch, Typography, Snackbar, Alert } from "@mui/material";
+import { Box, Button, Switch, Typography, Snackbar, Alert, Menu, MenuItem, ListItemIcon, ListItemText } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import PauseIcon from "@mui/icons-material/Pause";
 import ArticleIcon from "@mui/icons-material/Article";
 import ShareIcon from "@mui/icons-material/Share";
+import LinkIcon from "@mui/icons-material/Link";
 import MapIcon from "@mui/icons-material/Map";
 import MyLocationIcon from "@mui/icons-material/MyLocation";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
@@ -19,7 +20,7 @@ import { useGlobalToast } from "../contexts/ToastContext";
 import { getVlogCategories } from "../lib/supabaseClient";
 import { getVlogById } from "../lib/phuTanApi";
 import { getCurrentLocation, isInsideIframe, openCurrentPageInNewTab } from "../utils/geolocation";
-import { getUrlParams } from "../utils/urlParams";
+import { getUrlParams, getZaloVlogShareUrl } from "../utils/urlParams";
 
 const SHEET_COLLAPSED = 120;
 const SHEET_EXPANDED = 380;
@@ -325,19 +326,40 @@ const VlogFeed = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleShareVlog = useCallback((vlogId) => {
-    const shareUrl = `${window.location.origin}/vlogs?v=${vlogId}`;
-    navigator.clipboard.writeText(shareUrl)
-      .then(() => toast.show("Đã copy link Vlog", "success"))
-      .catch(() => toast.show("Không thể copy link", "error"));
-  }, [toast]);
+  const [shareMenuAnchor, setShareMenuAnchor] = useState(null);
+  const [shareMenuTarget, setShareMenuTarget] = useState(null);
 
-  const handleShareMarker = useCallback((vlogId, lat, long) => {
-    const shareUrl = `${window.location.origin}/vlogs?v=${vlogId}&map=1&lat=${lat}&long=${long}`;
+  const openShareMenu = useCallback((e, vlogId, lat, long) => {
+    e.stopPropagation?.();
+    setShareMenuAnchor(e.currentTarget);
+    setShareMenuTarget({ vlogId, lat, long });
+  }, []);
+
+  const closeShareMenu = useCallback(() => {
+    setShareMenuAnchor(null);
+    setShareMenuTarget(null);
+  }, []);
+
+  const handleCopyShareLink = useCallback(() => {
+    if (!shareMenuTarget) return;
+    const { vlogId, lat, long } = shareMenuTarget;
+    const shareUrl = lat && long
+      ? `${window.location.origin}/vlogs?v=${vlogId}&map=1&lat=${lat}&long=${long}`
+      : `${window.location.origin}/vlogs?v=${vlogId}`;
     navigator.clipboard.writeText(shareUrl)
-      .then(() => toast.show("Đã copy link vị trí Vlog", "success"))
+      .then(() => toast.show(lat && long ? "Đã copy link vị trí Vlog" : "Đã copy link Vlog", "success"))
       .catch(() => toast.show("Không thể copy link", "error"));
-  }, [toast]);
+    closeShareMenu();
+  }, [shareMenuTarget, toast, closeShareMenu]);
+
+  const handleCopyShareLinkZalo = useCallback(() => {
+    if (!shareMenuTarget) return;
+    const shareUrl = getZaloVlogShareUrl(shareMenuTarget.vlogId);
+    navigator.clipboard.writeText(shareUrl)
+      .then(() => toast.show("Đã copy link chia sẻ Zalo Mini App", "success"))
+      .catch(() => toast.show("Không thể copy link", "error"));
+    closeShareMenu();
+  }, [shareMenuTarget, toast, closeShareMenu]);
 
   // Pause all videos when navigating away
   useEffect(() => {
@@ -692,7 +714,7 @@ const VlogFeed = () => {
                         ▶ Xem Vlog
                       </button>
                       {lat && long && (
-                        <button type="button" className="vlog-map-popup-btn" onClick={() => handleShareMarker(vlog.id, lat, long)} style={{ background: "#2c2f3f", flex: 1, padding: "6px 4px" }}>
+                        <button type="button" className="vlog-map-popup-btn" onClick={(e) => openShareMenu(e, vlog.id, lat, long)} style={{ background: "#2c2f3f", flex: 1, padding: "6px 4px" }}>
                           <ShareIcon sx={{ fontSize: 14, mr: 0.5, verticalAlign: "middle" }} /> Chia sẻ
                         </button>
                       )}
@@ -864,7 +886,7 @@ const VlogFeed = () => {
                   <Button
                     className="vlog-scroll-action"
                     aria-label="Chia sẻ Vlog"
-                    onClick={() => handleShareVlog(vlog.id)}
+                    onClick={(e) => openShareMenu(e, vlog.id)}
                   >
                     <ShareIcon />
                   </Button>
@@ -1028,6 +1050,17 @@ const VlogFeed = () => {
           {locationError.message}
         </Alert>
       </Snackbar>
+
+      <Menu anchorEl={shareMenuAnchor} open={!!shareMenuAnchor} onClose={closeShareMenu}>
+        <MenuItem onClick={handleCopyShareLink}>
+          <ListItemIcon><LinkIcon fontSize="small" /></ListItemIcon>
+          <ListItemText>Sao chép link</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={handleCopyShareLinkZalo}>
+          <ListItemIcon><ShareIcon fontSize="small" sx={{ color: "#0068ff" }} /></ListItemIcon>
+          <ListItemText>Chia sẻ qua Zalo Mini App</ListItemText>
+        </MenuItem>
+      </Menu>
     </main>
   );
 };

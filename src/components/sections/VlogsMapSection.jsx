@@ -1,16 +1,17 @@
 // src/components/sections/VlogsMapSection.jsx
 import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { Link as RouterLink, useNavigate, useLocation } from "react-router-dom";
-import { Container, Button, Card, CardActionArea, CardMedia, CardContent, Typography, Box, Snackbar, Alert } from "@mui/material";
+import { Container, Button, Card, CardActionArea, CardMedia, CardContent, Typography, Box, Snackbar, Alert, Menu, MenuItem, ListItemIcon, ListItemText } from "@mui/material";
 import MyLocationIcon from "@mui/icons-material/MyLocation";
 import ShareIcon from "@mui/icons-material/Share";
+import LinkIcon from "@mui/icons-material/Link";
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { getVlogReviews, getSectionItems } from "../../lib/phuTanApi";
 import { getVlogCategories } from "../../lib/supabaseClient";
 import { getCurrentLocation, isInsideIframe, openCurrentPageInNewTab } from "../../utils/geolocation";
-import { getUrlParams } from "../../utils/urlParams";
+import { getUrlParams, getZaloVlogShareUrl } from "../../utils/urlParams";
 import { useGlobalToast } from "../../contexts/ToastContext";
 
 const getDistance = (lat1, lon1, lat2, lon2) => {
@@ -235,12 +236,38 @@ const VlogsMapSection = () => {
     setMapCenter(center);
   }, []);
 
-  const handleShareMarker = useCallback((vlogId, lat, long) => {
+  const [shareMenuAnchor, setShareMenuAnchor] = useState(null);
+  const [shareMenuTarget, setShareMenuTarget] = useState(null);
+
+  const openShareMenu = useCallback((e, vlogId, lat, long) => {
+    e.stopPropagation?.();
+    setShareMenuAnchor(e.currentTarget);
+    setShareMenuTarget({ vlogId, lat, long });
+  }, []);
+
+  const closeShareMenu = useCallback(() => {
+    setShareMenuAnchor(null);
+    setShareMenuTarget(null);
+  }, []);
+
+  const handleCopyShareLink = useCallback(() => {
+    if (!shareMenuTarget) return;
+    const { vlogId, lat, long } = shareMenuTarget;
     const shareUrl = `${window.location.origin}/vlogs?v=${vlogId}&map=1&lat=${lat}&long=${long}`;
     navigator.clipboard.writeText(shareUrl)
       .then(() => toast.show("Đã copy link vị trí Vlog", "success"))
       .catch(() => toast.show("Không thể copy link", "error"));
-  }, [toast]);
+    closeShareMenu();
+  }, [shareMenuTarget, toast, closeShareMenu]);
+
+  const handleCopyShareLinkZalo = useCallback(() => {
+    if (!shareMenuTarget) return;
+    const shareUrl = getZaloVlogShareUrl(shareMenuTarget.vlogId);
+    navigator.clipboard.writeText(shareUrl)
+      .then(() => toast.show("Đã copy link chia sẻ Zalo Mini App", "success"))
+      .catch(() => toast.show("Không thể copy link", "error"));
+    closeShareMenu();
+  }, [shareMenuTarget, toast, closeShareMenu]);
 
   const sortedVlogs = useMemo(() => {
     if (!mapCenter) return vlogs;
@@ -435,7 +462,7 @@ const VlogsMapSection = () => {
                       <button
                         type="button"
                         className="vlog-map-popup-btn"
-                        onClick={(e) => { e.stopPropagation(); handleShareMarker(vlog.id, lat, long); }}
+                        onClick={(e) => openShareMenu(e, vlog.id, lat, long)}
                         style={{ background: "#2c2f3f", flex: 1, padding: "6px 4px" }}
                       >
                         <ShareIcon sx={{ fontSize: 14, mr: 0.5, verticalAlign: "middle" }} /> Chia sẻ
@@ -606,6 +633,17 @@ const VlogsMapSection = () => {
             {error.message}
           </Alert>
         </Snackbar>
+
+        <Menu anchorEl={shareMenuAnchor} open={!!shareMenuAnchor} onClose={closeShareMenu}>
+          <MenuItem onClick={handleCopyShareLink}>
+            <ListItemIcon><LinkIcon fontSize="small" /></ListItemIcon>
+            <ListItemText>Sao chép link</ListItemText>
+          </MenuItem>
+          <MenuItem onClick={handleCopyShareLinkZalo}>
+            <ListItemIcon><ShareIcon fontSize="small" sx={{ color: "#0068ff" }} /></ListItemIcon>
+            <ListItemText>Chia sẻ qua Zalo Mini App</ListItemText>
+          </MenuItem>
+        </Menu>
       </Container>
     </section>
   );
