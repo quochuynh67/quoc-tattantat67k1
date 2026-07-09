@@ -417,6 +417,21 @@ export const uploadGalaxyImage = async (file) => {
   return publicUrlData.publicUrl;
 };
 
+export const uploadGalaxyTimelineImage = async (file) => {
+  try {
+    await supabase.storage.createBucket('galaxy-feature-assets', { public: true });
+  } catch (e) {
+    // ignore if already exists
+  }
+  const fileExt = file.name.split('.').pop();
+  const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
+  const filePath = `timeline/${fileName}`;
+  const { error } = await supabase.storage.from('galaxy-feature-assets').upload(filePath, file);
+  if (error) throw error;
+  const { data: publicUrlData } = supabase.storage.from('galaxy-feature-assets').getPublicUrl(filePath);
+  return publicUrlData.publicUrl;
+};
+
 export const uploadTimelineImage = async (file) => {
   try {
     await supabase.storage.createBucket('vlogs-posts', { public: true });

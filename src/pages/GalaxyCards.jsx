@@ -1099,7 +1099,7 @@ function PlanetSelector({ selected, onChange, autoSwitch, onToggleAutoSwitch }) 
   );
 }
 
-function TopBar({ cardCount, onAddCard, onDeleteAll, isPlaying, onToggleMusic, isAdmin, onBack }) {
+function TopBar({ cardCount, onAddCard, onDeleteAll, isPlaying, onToggleMusic, isAdmin, onBack, showTimeline, onToggleTimeline, hasTimeline }) {
   return (
     <div style={{
       position: "fixed",
@@ -1224,6 +1224,25 @@ function TopBar({ cardCount, onAddCard, onDeleteAll, isPlaying, onToggleMusic, i
             <span style={{ fontSize: 16 }}>+</span> Thêm thẻ bài
           </button>
         )}
+        {hasTimeline && (
+          <button
+            onClick={onToggleTimeline}
+            style={{
+              padding: "10px 14px",
+              borderRadius: 12,
+              border: "1px solid rgba(255,255,255,0.2)",
+              background: showTimeline ? "rgba(124,77,255,0.25)" : "rgba(255,255,255,0.05)",
+              color: "#fff",
+              fontSize: 16,
+              cursor: "pointer",
+              backdropFilter: "blur(8px)",
+              transition: "all 0.2s",
+            }}
+            title={showTimeline ? "Ẩn cột mốc" : "Xem cột mốc"}
+          >
+            {showTimeline ? "⏳" : "📅"}
+          </button>
+        )}
       </div>
     </div>
   );
@@ -1305,6 +1324,26 @@ function EmptyState({ onAddCard, planetGlow, isAdmin }) {
 export default function GalaxyCards() {
   const { isLoggedIn: isAdmin } = useAdminAuth();
   const navigate = useNavigate();
+
+  // ── Passcode gate ─────────────────────────────────────────────────────────
+  const [isUnlocked, setIsUnlocked] = useState(
+    () => isAdmin || sessionStorage.getItem("galaxy_unlocked") === "true"
+  );
+  const [passcode, setPasscode] = useState("");
+  const [passcodeError, setPasscodeError] = useState(false);
+
+  const handlePasscodeSubmit = useCallback((e) => {
+    e.preventDefault();
+    if (passcode === "quocs2tram") {
+      sessionStorage.setItem("galaxy_unlocked", "true");
+      setIsUnlocked(true);
+    } else {
+      setPasscodeError(true);
+      setTimeout(() => setPasscodeError(false), 1200);
+    }
+  }, [passcode]);
+
+  // ── Galaxy state ──────────────────────────────────────────────────────────
   const [cards, setCards] = useState(MOCK_CARDS);
   const [selectedPlanet, setSelectedPlanet] = useState(loadPlanet);
   const [selectedCard, setSelectedCard] = useState(null);
@@ -1313,6 +1352,8 @@ export default function GalaxyCards() {
   const [autoSwitch, setAutoSwitch] = useState(true);
   const [bgmList, setBgmList] = useState([]);
   const [bgmIndex, setBgmIndex] = useState(0);
+  const [timeline, setTimeline] = useState([]);
+  const [showTimeline, setShowTimeline] = useState(true);
   const audioRef = useRef(null);
 
   const planet = PLANETS.find((p) => p.key === selectedPlanet) || PLANETS[0];
@@ -1342,6 +1383,11 @@ export default function GalaxyCards() {
       // Auto switch planet
       if (typeof value.auto_switch_planet === "boolean") {
         setAutoSwitch(value.auto_switch_planet);
+      }
+
+      // Timeline milestones
+      if (Array.isArray(value.timeline)) {
+        setTimeline(value.timeline);
       }
     });
   }, []);
@@ -1434,6 +1480,102 @@ export default function GalaxyCards() {
 
   const selectedIdx = selectedCard ? cards.findIndex((c) => c.id === selectedCard.id) : -1;
 
+  // ── Passcode lock screen ─────────────────────────────────────────────────
+  if (!isUnlocked) {
+    return (
+      <div style={{
+        position: "fixed", inset: 0,
+        background: "radial-gradient(ellipse at 50% 60%, #0d0025 0%, #000005 100%)",
+        display: "flex", flexDirection: "column",
+        alignItems: "center", justifyContent: "center",
+        fontFamily: "'Inter', sans-serif",
+        zIndex: 9999,
+      }}>
+        <style>{`
+          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+          @keyframes lockGlow { 0%,100%{box-shadow:0 0 24px #7c4dff40;} 50%{box-shadow:0 0 48px #7c4dff90;} }
+          @keyframes lockShake { 0%,100%{transform:translateX(0);} 20%,60%{transform:translateX(-8px);} 40%,80%{transform:translateX(8px);} }
+        `}</style>
+
+        {/* Stars bg */}
+        <div style={{ position:"fixed", inset:0, overflow:"hidden", pointerEvents:"none" }}>
+          {Array.from({length:80}).map((_,i)=>(
+            <div key={i} style={{
+              position:"absolute",
+              width: Math.random()*2+1+"px",
+              height: Math.random()*2+1+"px",
+              borderRadius:"50%",
+              background:"#fff",
+              opacity: Math.random()*0.7+0.1,
+              left: Math.random()*100+"%",
+              top: Math.random()*100+"%",
+            }}/>
+          ))}
+        </div>
+
+        <div style={{ fontSize: 64, marginBottom: 8 }}>🌌</div>
+        <h1 style={{ color:"#fff", fontSize: 26, fontWeight:800, margin:"0 0 6px", letterSpacing:"-0.5px" }}>
+          Vũ Trụ Ký Ức
+        </h1>
+        <p style={{ color:"rgba(255,255,255,0.45)", fontSize:13, margin:"0 0 36px" }}>
+          Chỉ dành cho người được chọn ✨
+        </p>
+
+        <form onSubmit={handlePasscodeSubmit} style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:14, width:280 }}>
+          <input
+            type="password"
+            placeholder="Nhập mã vũ trụ..."
+            value={passcode}
+            onChange={(e) => setPasscode(e.target.value)}
+            autoFocus
+            style={{
+              width:"100%", padding:"14px 20px",
+              borderRadius:14,
+              border: passcodeError ? "1.5px solid #ff5252" : "1.5px solid rgba(255,255,255,0.15)",
+              background:"rgba(255,255,255,0.06)",
+              backdropFilter:"blur(12px)",
+              color:"#fff", fontSize:16, outline:"none",
+              textAlign:"center", letterSpacing:4,
+              transition:"border 0.2s",
+              animation: passcodeError ? "lockShake 0.4s ease" : "none",
+              boxSizing:"border-box",
+            }}
+          />
+          {passcodeError && (
+            <p style={{ color:"#ff5252", fontSize:12, margin:"-6px 0 0", fontWeight:500 }}>
+              ❌ Mã không đúng. Thử lại nhé!
+            </p>
+          )}
+          <button type="submit" style={{
+            width:"100%", padding:"14px",
+            borderRadius:14, border:"none",
+            background:"linear-gradient(135deg, #7c4dff, #536dfe)",
+            color:"#fff", fontSize:15, fontWeight:700,
+            cursor:"pointer", letterSpacing:0.5,
+            animation:"lockGlow 2.5s infinite",
+            transition:"transform 0.15s",
+          }}
+          onMouseEnter={e=>e.currentTarget.style.transform="scale(1.02)"}
+          onMouseLeave={e=>e.currentTarget.style.transform="scale(1)"}
+          >
+            🚀 Mở cửa vũ trụ
+          </button>
+        </form>
+
+        <button
+          onClick={() => navigate("/")}
+          style={{
+            marginTop:32, background:"none", border:"none",
+            color:"rgba(255,255,255,0.4)", fontSize:13,
+            cursor:"pointer", textDecoration:"underline",
+          }}
+        >
+          ← Quay về Trang chủ
+        </button>
+      </div>
+    );
+  }
+
   return (
     <>
 
@@ -1452,7 +1594,15 @@ export default function GalaxyCards() {
           50% { box-shadow: 0 0 0 10px rgba(255, 255, 255, 0); transform: scale(1.1); }
           100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); transform: scale(1); }
         }
+        @keyframes timelineFadeIn {
+          from { opacity: 0; transform: translateX(20px); }
+          to { opacity: 1; transform: translateX(0); }
+        }
+        .galaxy-timeline::-webkit-scrollbar { width: 3px; }
+        .galaxy-timeline::-webkit-scrollbar-track { background: transparent; }
+        .galaxy-timeline::-webkit-scrollbar-thumb { background: rgba(124,77,255,0.4); border-radius: 3px; }
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
       `}</style>
 
       {/* Full-screen 3D Canvas */}
@@ -1491,10 +1641,100 @@ export default function GalaxyCards() {
         onToggleMusic={handleToggleMusic}
         isAdmin={isAdmin}
         onBack={handleBack}
+        showTimeline={showTimeline}
+        onToggleTimeline={() => setShowTimeline(p => !p)}
+        hasTimeline={timeline.length > 0}
       />
 
       {currentBgmUrl && (
         <audio ref={audioRef} src={currentBgmUrl} loop={bgmList.length === 1} onEnded={handleMusicEnded} />
+      )}
+
+      {/* Timeline Sidebar */}
+      {timeline.length > 0 && showTimeline && (
+        <div
+          className="galaxy-timeline"
+          style={{
+            position: "fixed",
+            top: 70,
+            right: 16,
+            bottom: 90,
+            width: 260,
+            zIndex: 90,
+            overflowY: "auto",
+            overflowX: "hidden",
+            background: "rgba(0,0,15,0.55)",
+            backdropFilter: "blur(14px)",
+            WebkitBackdropFilter: "blur(14px)",
+            border: "1px solid rgba(255,255,255,0.08)",
+            borderRadius: 20,
+            padding: "20px 16px 24px",
+            animation: "timelineFadeIn 0.4s ease",
+            boxShadow: "0 8px 40px rgba(0,0,0,0.6)",
+          }}
+        >
+          <p style={{ color:"rgba(255,255,255,0.5)", fontSize:10, fontWeight:600, letterSpacing:3, textTransform:"uppercase", margin:"0 0 20px", textAlign:"center" }}>
+            ⏳ Hành trình ký ức
+          </p>
+          <div style={{ position:"relative" }}>
+            {/* Vertical neon line */}
+            <div style={{
+              position:"absolute", left:13, top:8, bottom:8,
+              width:2,
+              background:"linear-gradient(to bottom, transparent, #7c4dff80, #7c4dff, #7c4dff80, transparent)",
+              borderRadius:2,
+            }} />
+
+            {timeline.map((m, i) => (
+              <div key={i} style={{
+                display:"flex", gap:12, marginBottom:24, position:"relative",
+              }}>
+                {/* Dot */}
+                <div style={{
+                  width:14, height:14, borderRadius:"50%", flexShrink:0, marginTop:4,
+                  background:"linear-gradient(135deg, #7c4dff, #536dfe)",
+                  boxShadow:"0 0 8px #7c4dff80",
+                  border:"2px solid rgba(255,255,255,0.2)",
+                  zIndex:1,
+                }} />
+                {/* Content */}
+                <div style={{ flex:1 }}>
+                  {m.year && (
+                    <span style={{
+                      display:"inline-block", fontSize:9, fontWeight:700,
+                      color:"#a78bfa", letterSpacing:1.5, textTransform:"uppercase",
+                      marginBottom:3,
+                    }}>{m.year}</span>
+                  )}
+                  {m.title && (
+                    <p style={{ color:"#fff", fontSize:12, fontWeight:700, margin:"0 0 4px", lineHeight:1.4 }}>
+                      {m.title}
+                    </p>
+                  )}
+                  {m.img && (
+                    <img
+                      src={processDriveUrl(m.img)}
+                      alt={m.title || ""}
+                      style={{
+                        width:"100%", aspectRatio:"16/9", objectFit:"cover",
+                        borderRadius:8, marginBottom:6,
+                        border:"1px solid rgba(255,255,255,0.07)",
+                      }}
+                    />
+                  )}
+                  {m.quote && (
+                    <p style={{
+                      color:"rgba(255,255,255,0.55)", fontSize:11,
+                      fontStyle:"italic", lineHeight:1.5, margin:0,
+                    }}>
+                      “{m.quote}”
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
 
       {cards.length === 0 && (

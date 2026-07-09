@@ -24,12 +24,13 @@ import SaveIcon from "@mui/icons-material/Save";
 import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
 import MusicNoteIcon from "@mui/icons-material/MusicNote";
 import { getSiteSetting, upsertSiteSetting } from "../../lib/phuTanApi";
-import { uploadGalaxyImage } from "../../lib/supabaseClient";
+import { uploadGalaxyImage, uploadGalaxyTimelineImage } from "../../lib/supabaseClient";
 
 const DEFAULT_GALAXY = {
   memories: [],
   bgm: [],
   auto_switch_planet: true,
+  timeline: [],
 };
 
 function MemoryCard({ memory, index, onUpdate, onDelete }) {
@@ -141,6 +142,84 @@ function MemoryCard({ memory, index, onUpdate, onDelete }) {
   );
 }
 
+function MilestoneCard({ milestone, index, onUpdate, onDelete, onMoveUp, onMoveDown, isFirst, isLast }) {
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef();
+
+  const handleFile = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const url = await uploadGalaxyTimelineImage(file);
+      onUpdate(index, "img", url);
+    } catch (err) {
+      alert("Upload ảnh thất bại: " + err.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <Paper
+      variant="outlined"
+      sx={{ p: 2, display: "flex", gap: 2, alignItems: "flex-start", borderRadius: 2, "&:hover": { boxShadow: 2 } }}
+    >
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5, pt: 0.5 }}>
+        <IconButton size="small" onClick={() => onMoveUp(index)} disabled={isFirst}>▲</IconButton>
+        <IconButton size="small" onClick={() => onMoveDown(index)} disabled={isLast}>▼</IconButton>
+      </Box>
+
+      <Box sx={{ width: 110, flexShrink: 0 }}>
+        <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleFile} />
+        <Box
+          onClick={() => fileRef.current?.click()}
+          sx={{
+            width: 110, height: 80, borderRadius: 1.5, overflow: "hidden",
+            border: "2px dashed", borderColor: "divider", cursor: "pointer",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            bgcolor: "grey.100", "&:hover": { borderColor: "primary.main" },
+          }}
+        >
+          {uploading ? <CircularProgress size={22} /> : milestone.img
+            ? <img src={milestone.img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            : <Typography variant="caption" color="text.secondary" textAlign="center" px={1}>Chọn ảnh</Typography>
+          }
+        </Box>
+        <TextField
+          size="small" fullWidth placeholder="Hoặc dán URL..."
+          value={milestone.img || ""} onChange={(e) => onUpdate(index, "img", e.target.value)}
+          sx={{ mt: 0.5 }} inputProps={{ style: { fontSize: 10 } }}
+        />
+      </Box>
+
+      <Box sx={{ flex: 1, display: "flex", flexDirection: "column", gap: 1.5 }}>
+        <Box sx={{ display: "flex", gap: 1.5 }}>
+          <TextField
+            label="Mốc thời gian" size="small" placeholder="vd: Tháng 8/2022"
+            value={milestone.year || ""} onChange={(e) => onUpdate(index, "year", e.target.value)}
+            sx={{ width: "40%" }}
+          />
+          <TextField
+            label="Tiêu đề giai đoạn" size="small" value={milestone.title || ""}
+            onChange={(e) => onUpdate(index, "title", e.target.value)} sx={{ flex: 1 }}
+          />
+        </Box>
+        <TextField
+          label="Mô tả / Quote lãng mạn" fullWidth multiline rows={2} size="small"
+          value={milestone.quote || ""} onChange={(e) => onUpdate(index, "quote", e.target.value)}
+        />
+      </Box>
+
+      <Tooltip title="Xóa cột mốc">
+        <IconButton onClick={() => onDelete(index)} size="small" sx={{ color: "error.main" }}>
+          <DeleteIcon />
+        </IconButton>
+      </Tooltip>
+    </Paper>
+  );
+}
+
 export default function GalaxySettings() {
   const [galaxy, setGalaxy] = useState(DEFAULT_GALAXY);
   const [loading, setLoading] = useState(true);
@@ -155,6 +234,7 @@ export default function GalaxySettings() {
           memories: value.memories ?? [],
           bgm: value.bgm ?? [],
           auto_switch_planet: value.auto_switch_planet ?? true,
+          timeline: value.timeline ?? [],
         });
       }
       setLoading(false);
@@ -197,6 +277,48 @@ export default function GalaxySettings() {
 
   const deleteBgm = (index) =>
     setGalaxy((g) => ({ ...g, bgm: g.bgm.filter((_, i) => i !== index) }));
+
+  // Timeline handlers
+  const addMilestone = () =>
+    setGalaxy((g) => ({
+      ...g,
+      timeline: [...(g.timeline || []), { year: "", title: "", quote: "", img: "" }]
+    }));
+
+  const updateMilestone = (index, field, value) =>
+    setGalaxy((g) => {
+      const updated = [...(g.timeline || [])];
+      updated[index] = { ...updated[index], [field]: value };
+      return { ...g, timeline: updated };
+    });
+
+  const deleteMilestone = (index) =>
+    setGalaxy((g) => ({
+      ...g,
+      timeline: (g.timeline || []).filter((_, i) => i !== index)
+    }));
+
+  const moveMilestoneUp = (index) => {
+    if (index === 0) return;
+    setGalaxy((g) => {
+      const updated = [...(g.timeline || [])];
+      const temp = updated[index];
+      updated[index] = updated[index - 1];
+      updated[index - 1] = temp;
+      return { ...g, timeline: updated };
+    });
+  };
+
+  const moveMilestoneDown = (index) => {
+    setGalaxy((g) => {
+      const updated = [...(g.timeline || [])];
+      if (index >= updated.length - 1) return g;
+      const temp = updated[index];
+      updated[index] = updated[index + 1];
+      updated[index + 1] = temp;
+      return { ...g, timeline: updated };
+    });
+  };
 
   return (
     <Box sx={{ maxWidth: 900 }}>
@@ -276,7 +398,7 @@ export default function GalaxySettings() {
       </Paper>
 
       {/* BGM Playlist */}
-      <Paper variant="outlined" sx={{ p: 3, borderRadius: 2 }}>
+      <Paper variant="outlined" sx={{ p: 3, mb: 3, borderRadius: 2 }}>
         <Typography variant="subtitle1" fontWeight={600} mb={0.5}>🎵 Nhạc nền (BGM Playlist)</Typography>
         <Typography variant="caption" color="text.secondary" display="block" mb={2}>
           Nhập URL trực tiếp đến file .mp3 hoặc .ogg. Galaxy sẽ phát theo thứ tự.
@@ -317,6 +439,45 @@ export default function GalaxySettings() {
               </Button>
             </Box>
           </>
+        )}
+      </Paper>
+
+      {/* Timeline Milestones */}
+      <Paper variant="outlined" sx={{ p: 3, borderRadius: 2 }}>
+        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 2 }}>
+          <Box>
+            <Typography variant="subtitle1" fontWeight={600}>⏳ Cột mốc thời gian (Timeline)</Typography>
+            <Typography variant="caption" color="text.secondary">
+              Hiển thị các cột mốc kỷ niệm/giai đoạn đáng nhớ ở thanh bên phải của Galaxy.
+            </Typography>
+          </Box>
+          <Button startIcon={<AddIcon />} onClick={addMilestone} disabled={loading} variant="outlined" size="small">
+            Thêm cột mốc ({(galaxy.timeline || []).length})
+          </Button>
+        </Box>
+
+        {loading ? (
+          [1, 2].map((i) => <Skeleton key={i} height={120} sx={{ mb: 1, borderRadius: 2 }} />)
+        ) : !galaxy.timeline || galaxy.timeline.length === 0 ? (
+          <Alert severity="info" sx={{ borderRadius: 2 }}>
+            Chưa có cột mốc nào. Nhấn "+ Thêm cột mốc" để bắt đầu.
+          </Alert>
+        ) : (
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            {galaxy.timeline.map((milestone, i) => (
+              <MilestoneCard
+                key={i}
+                milestone={milestone}
+                index={i}
+                onUpdate={updateMilestone}
+                onDelete={deleteMilestone}
+                onMoveUp={moveMilestoneUp}
+                onMoveDown={moveMilestoneDown}
+                isFirst={i === 0}
+                isLast={i === galaxy.timeline.length - 1}
+              />
+            ))}
+          </Box>
         )}
       </Paper>
 
