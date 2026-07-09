@@ -456,42 +456,54 @@ const SPRITE_W = 1.6;
 const SPRITE_H = SPRITE_W * (CARD_TEX_H / CARD_TEX_W);
 
 function OrbitCard({ card, index, total, radius, speed, onSelect }) {
-  const spriteRef = useRef();
+  const meshRef = useRef();
   const hoverRef = useRef(false);
   const scaleRef = useRef(1);
+  const yawRef = useRef(0);
+  const rollRef = useRef(0);
   const angleOffset = (index / Math.max(total, 1)) * Math.PI * 2;
   const texture = useMemo(() => getCardTexture(card), [card.id]);
-  // Nghiêng ngẫu nhiên mỗi thẻ (±14°) + đung đưa nhẹ, hover thì dựng thẳng lại
+  // Mỗi thẻ nghiêng ngẫu nhiên: yaw = xoay quanh trục Y (nghiêng phối cảnh 3D,
+  // ±~26°), roll = nghiêng trong mặt phẳng (±~9°), kèm đung đưa nhẹ lệch pha.
+  // Hover thì dựng thẳng mặt về camera cho dễ đọc.
   const tilt = useMemo(() => ({
-    base: (Math.random() - 0.5) * 0.5,
-    swayAmp: 0.04 + Math.random() * 0.05,
+    yaw: (Math.random() - 0.5) * 0.9,
+    roll: (Math.random() - 0.5) * 0.3,
+    swayAmp: 0.05 + Math.random() * 0.06,
     swaySpeed: 0.4 + Math.random() * 0.4,
     phase: Math.random() * Math.PI * 2,
   }), [card.id]);
 
-  useFrame(({ clock }, delta) => {
-    const sprite = spriteRef.current;
-    if (!sprite) return;
+  useFrame(({ clock, camera }, delta) => {
+    const mesh = meshRef.current;
+    if (!mesh) return;
     const time = clock.getElapsedTime();
     const t = time * speed + angleOffset;
-    sprite.position.set(
+    mesh.position.set(
       Math.cos(t) * radius,
       Math.sin(t * 0.5) * 0.3,
       Math.sin(t) * radius
     );
     const hovered = hoverRef.current;
-    const target = hovered ? 1.12 : 1;
-    scaleRef.current += (target - scaleRef.current) * Math.min(1, delta * 12);
-    sprite.scale.set(SPRITE_W * scaleRef.current, SPRITE_H * scaleRef.current, 1);
+    const k = Math.min(1, delta * 8);
+
+    const targetScale = hovered ? 1.12 : 1;
+    scaleRef.current += (targetScale - scaleRef.current) * Math.min(1, delta * 12);
+    mesh.scale.setScalar(scaleRef.current);
+
     const sway = Math.sin(time * tilt.swaySpeed + tilt.phase) * tilt.swayAmp;
-    const targetRot = hovered ? 0 : tilt.base + sway;
-    sprite.material.rotation += (targetRot - sprite.material.rotation) * Math.min(1, delta * 8);
+    yawRef.current += ((hovered ? 0 : tilt.yaw + sway) - yawRef.current) * k;
+    rollRef.current += ((hovered ? 0 : tilt.roll) - rollRef.current) * k;
+
+    // Billboard thủ công: hướng mặt về camera rồi cộng thêm góc nghiêng riêng
+    mesh.quaternion.copy(camera.quaternion);
+    mesh.rotateY(yawRef.current);
+    mesh.rotateZ(rollRef.current);
   });
 
   return (
-    <sprite
-      ref={spriteRef}
-      scale={[SPRITE_W, SPRITE_H, 1]}
+    <mesh
+      ref={meshRef}
       onClick={(e) => { e.stopPropagation(); onSelect(card); }}
       onPointerOver={(e) => {
         e.stopPropagation();
@@ -503,8 +515,9 @@ function OrbitCard({ card, index, total, radius, speed, onSelect }) {
         document.body.style.cursor = "";
       }}
     >
-      <spriteMaterial map={texture} transparent depthWrite={false} />
-    </sprite>
+      <planeGeometry args={[SPRITE_W, SPRITE_H]} />
+      <meshBasicMaterial map={texture} transparent depthWrite={false} side={THREE.DoubleSide} />
+    </mesh>
   );
 }
 
