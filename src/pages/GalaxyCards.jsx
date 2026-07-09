@@ -461,19 +461,31 @@ function OrbitCard({ card, index, total, radius, speed, onSelect }) {
   const scaleRef = useRef(1);
   const angleOffset = (index / Math.max(total, 1)) * Math.PI * 2;
   const texture = useMemo(() => getCardTexture(card), [card.id]);
+  // Nghiêng ngẫu nhiên mỗi thẻ (±14°) + đung đưa nhẹ, hover thì dựng thẳng lại
+  const tilt = useMemo(() => ({
+    base: (Math.random() - 0.5) * 0.5,
+    swayAmp: 0.04 + Math.random() * 0.05,
+    swaySpeed: 0.4 + Math.random() * 0.4,
+    phase: Math.random() * Math.PI * 2,
+  }), [card.id]);
 
   useFrame(({ clock }, delta) => {
     const sprite = spriteRef.current;
     if (!sprite) return;
-    const t = clock.getElapsedTime() * speed + angleOffset;
+    const time = clock.getElapsedTime();
+    const t = time * speed + angleOffset;
     sprite.position.set(
       Math.cos(t) * radius,
       Math.sin(t * 0.5) * 0.3,
       Math.sin(t) * radius
     );
-    const target = hoverRef.current ? 1.12 : 1;
+    const hovered = hoverRef.current;
+    const target = hovered ? 1.12 : 1;
     scaleRef.current += (target - scaleRef.current) * Math.min(1, delta * 12);
     sprite.scale.set(SPRITE_W * scaleRef.current, SPRITE_H * scaleRef.current, 1);
+    const sway = Math.sin(time * tilt.swaySpeed + tilt.phase) * tilt.swayAmp;
+    const targetRot = hovered ? 0 : tilt.base + sway;
+    sprite.material.rotation += (targetRot - sprite.material.rotation) * Math.min(1, delta * 8);
   });
 
   return (
