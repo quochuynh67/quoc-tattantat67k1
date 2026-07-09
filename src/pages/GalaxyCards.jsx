@@ -424,6 +424,202 @@ function Planet({ planetKey, onClick }) {
   );
 }
 
+// ── Cặp đôi nắm tay trên hành tinh ───────────────────────────────────────────
+
+// Đèn scene ở xa bị suy giảm vật lý gần hết nên material thường sẽ tối;
+// cho nhân vật tự phát sáng nhẹ theo màu gốc để luôn tươi sáng.
+function ChibiMaterial({ color }) {
+  return (
+    <meshStandardMaterial
+      color={color}
+      emissive={color}
+      emissiveIntensity={0.45}
+      roughness={0.6}
+    />
+  );
+}
+
+// Chi (tay/chân): capsule nối 2 điểm bất kỳ
+function Limb({ from, to, radius = 0.025, color }) {
+  const { pos, quat, len } = useMemo(() => {
+    const s = new THREE.Vector3(...from);
+    const e = new THREE.Vector3(...to);
+    const d = e.clone().sub(s);
+    const len = d.length();
+    const pos = s.clone().add(e).multiplyScalar(0.5);
+    const quat = new THREE.Quaternion().setFromUnitVectors(
+      new THREE.Vector3(0, 1, 0),
+      d.normalize()
+    );
+    return { pos, quat, len };
+  }, [from, to]);
+  return (
+    <mesh position={pos} quaternion={quat}>
+      <capsuleGeometry args={[radius, len, 4, 10]} />
+      <ChibiMaterial color={color} />
+    </mesh>
+  );
+}
+
+// Một nhân vật chibi. side = -1: đứng bên trái (tay phải đưa ra nắm),
+// side = +1: đứng bên phải. dress = true: bé gái mặc váy, tóc dài.
+function Person({ position, side, skin, hairColor, topColor, bottomColor, dress }) {
+  return (
+    <group position={position}>
+      {/* Chân + thân */}
+      {dress ? (
+        <>
+          <Limb from={[-0.04, 0.02, 0]} to={[-0.04, 0.1, 0]} radius={0.028} color={skin} />
+          <Limb from={[0.04, 0.02, 0]} to={[0.04, 0.1, 0]} radius={0.028} color={skin} />
+          <mesh position={[0, 0.2, 0]}>
+            <coneGeometry args={[0.13, 0.26, 20]} />
+            <ChibiMaterial color={topColor} />
+          </mesh>
+          <mesh position={[0, 0.31, 0]}>
+            <capsuleGeometry args={[0.065, 0.07, 4, 12]} />
+            <ChibiMaterial color={topColor} />
+          </mesh>
+        </>
+      ) : (
+        <>
+          <Limb from={[-0.045, 0.02, 0]} to={[-0.045, 0.15, 0]} radius={0.032} color={bottomColor} />
+          <Limb from={[0.045, 0.02, 0]} to={[0.045, 0.15, 0]} radius={0.032} color={bottomColor} />
+          <mesh position={[0, 0.24, 0]}>
+            <capsuleGeometry args={[0.085, 0.12, 4, 12]} />
+            <ChibiMaterial color={topColor} />
+          </mesh>
+        </>
+      )}
+
+      {/* Đầu — nghiêng nhẹ về phía người kia */}
+      <group position={[0, 0.46, 0]} rotation={[0, 0, side * 0.1]}>
+        <mesh>
+          <sphereGeometry args={[0.115, 24, 24]} />
+          <ChibiMaterial color={skin} />
+        </mesh>
+        {/* Tóc */}
+        <mesh position={[0, 0.035, -0.015]} scale={[1.04, 0.78, 1.04]}>
+          <sphereGeometry args={[0.115, 20, 20]} />
+          <ChibiMaterial color={hairColor} />
+        </mesh>
+        {dress && (
+          <mesh position={[0, -0.07, -0.09]} scale={[0.75, 1.5, 0.45]}>
+            <sphereGeometry args={[0.09, 16, 16]} />
+            <ChibiMaterial color={hairColor} />
+          </mesh>
+        )}
+        {/* Mắt */}
+        <mesh position={[-0.042, 0.01, 0.102]}>
+          <sphereGeometry args={[0.013, 8, 8]} />
+          <ChibiMaterial color="#1a1a2e" />
+        </mesh>
+        <mesh position={[0.042, 0.01, 0.102]}>
+          <sphereGeometry args={[0.013, 8, 8]} />
+          <ChibiMaterial color="#1a1a2e" />
+        </mesh>
+        {/* Má hồng cho bé gái */}
+        {dress && (
+          <>
+            <mesh position={[-0.07, -0.025, 0.088]}>
+              <sphereGeometry args={[0.014, 8, 8]} />
+              <ChibiMaterial color="#ff9eb5" />
+            </mesh>
+            <mesh position={[0.07, -0.025, 0.088]}>
+              <sphereGeometry args={[0.014, 8, 8]} />
+              <ChibiMaterial color="#ff9eb5" />
+            </mesh>
+          </>
+        )}
+      </group>
+
+      {/* Tay trong — đưa ra giữa nắm tay người kia */}
+      <Limb from={[side * -0.08, 0.3, 0]} to={[side * -0.16, 0.185, 0.02]} color={skin} />
+      <mesh position={[side * -0.165, 0.18, 0.02]}>
+        <sphereGeometry args={[0.03, 12, 12]} />
+        <ChibiMaterial color={skin} />
+      </mesh>
+
+      {/* Tay ngoài — buông xuôi tự nhiên */}
+      <Limb from={[side * 0.08, 0.3, 0]} to={[side * 0.135, 0.16, 0.02]} color={skin} />
+      <mesh position={[side * 0.14, 0.155, 0.02]}>
+        <sphereGeometry args={[0.028, 12, 12]} />
+        <ChibiMaterial color={skin} />
+      </mesh>
+    </group>
+  );
+}
+
+function FloatingHeart() {
+  const ref = useRef();
+  const geometry = useMemo(() => {
+    const shape = new THREE.Shape();
+    shape.moveTo(2.5, 2.5);
+    shape.bezierCurveTo(2.5, 2.5, 2.0, 0, 0, 0);
+    shape.bezierCurveTo(-3.0, 0, -3.0, 3.5, -3.0, 3.5);
+    shape.bezierCurveTo(-3.0, 5.5, -1.0, 7.7, 2.5, 9.5);
+    shape.bezierCurveTo(6.0, 7.7, 8.0, 5.5, 8.0, 3.5);
+    shape.bezierCurveTo(8.0, 3.5, 8.0, 0, 5.0, 0);
+    shape.bezierCurveTo(3.5, 0, 2.5, 2.5, 2.5, 2.5);
+    const geo = new THREE.ExtrudeGeometry(shape, {
+      depth: 1.6,
+      bevelEnabled: true,
+      bevelSize: 0.6,
+      bevelThickness: 0.4,
+      bevelSegments: 2,
+    });
+    geo.center();
+    return geo;
+  }, []);
+
+  useFrame(({ clock }) => {
+    if (!ref.current) return;
+    const t = clock.getElapsedTime();
+    // đập nhẹ như nhịp tim + trôi lên xuống + xoay chầm chậm
+    ref.current.scale.setScalar(0.016 * (1 + Math.sin(t * 2.4) * 0.12));
+    ref.current.position.y = 0.8 + Math.sin(t * 1.3) * 0.035;
+    ref.current.rotation.set(0, t * 0.6, Math.PI);
+  });
+
+  return (
+    <mesh ref={ref} geometry={geometry} position={[0, 0.8, 0]} rotation={[0, 0, Math.PI]}>
+      <meshStandardMaterial color="#ff4d7e" emissive="#ff2e63" emissiveIntensity={0.6} />
+    </mesh>
+  );
+}
+
+function Couple() {
+  const ref = useRef();
+  // Xoay quanh trục Y cùng tốc độ với hành tinh (0.08 rad/s) như đang đứng trên đó
+  useFrame((_, delta) => {
+    if (ref.current) ref.current.rotation.y += delta * 0.08;
+  });
+  return (
+    <group ref={ref}>
+      <group position={[0, 2, 0]} scale={1.5}>
+        {/* Đèn ấm riêng cho cặp đôi (đèn của scene ở quá xa, suy giảm gần hết) */}
+        <pointLight position={[0, 1.4, 1.1]} intensity={8} distance={7} decay={2} color="#fff2dd" />
+        <Person
+          position={[-0.17, 0, 0]}
+          side={-1}
+          skin="#ffd9b3"
+          hairColor="#2f2038"
+          topColor="#4a90d9"
+          bottomColor="#2c3e50"
+        />
+        <Person
+          position={[0.17, 0, 0]}
+          side={1}
+          dress
+          skin="#ffe0bd"
+          hairColor="#4a2c2a"
+          topColor="#ff7eb3"
+        />
+        <FloatingHeart />
+      </group>
+    </group>
+  );
+}
+
 function OrbitRing({ radius, tilt = 0, color = "#ffffff" }) {
   const points = useMemo(() => {
     const pts = [];
@@ -683,6 +879,9 @@ function Scene({ cards, selectedPlanet, onSelectCard, isMobile }) {
 
       {/* Planet */}
       <Planet planetKey={selectedPlanet} />
+
+      {/* Cặp đôi nắm tay trên đỉnh hành tinh */}
+      <Couple />
 
       {/* Orbit rings */}
       <OrbitRing radius={orbitRadii[0]} color={planet.glow} />
