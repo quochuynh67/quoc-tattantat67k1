@@ -2,7 +2,7 @@
 // 3D Galaxy simulation with orbiting quote cards around diverse planets
 import React, { useState, useRef, useMemo, useCallback, useEffect, Suspense } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { Stars, OrbitControls, Html, Line } from "@react-three/drei";
+import { Stars, OrbitControls, Line } from "@react-three/drei";
 import * as THREE from "three";
 import { useNavigate } from "react-router-dom";
 import { useAdminAuth } from "../contexts/AdminAuthContext";
@@ -52,20 +52,23 @@ function processDriveUrl(url, width = 0) {
 
 const imgQueue = { active: 0, max: 4, pending: [] };
 
-function requestImageLoad(url) {
+// Resolve với chính element ảnh (hoặc null nếu lỗi) để có thể vẽ lên canvas.
+// cors = true khi ảnh sẽ được upload lên WebGL texture (cần crossOrigin).
+function requestImageLoad(url, cors = false) {
   return new Promise((resolve) => {
     const task = () => {
       imgQueue.active++;
       const img = new Image();
-      const done = (ok) => {
+      const done = (result) => {
         imgQueue.active--;
         const next = imgQueue.pending.shift();
         if (next) next();
-        resolve(ok);
+        resolve(result);
       };
-      img.onload = () => done(true);
-      img.onerror = () => done(false);
+      img.onload = () => done(img);
+      img.onerror = () => done(null);
       img.decoding = "async";
+      if (cors && !url.startsWith("data:")) img.crossOrigin = "anonymous";
       img.src = url;
     };
     if (imgQueue.active < imgQueue.max) task();
@@ -99,6 +102,151 @@ function QueuedImage({ src, alt = "", style, placeholderStyle }) {
   }
 
   return <img src={src} alt={alt} style={style} decoding="async" />;
+}
+
+// ── Thẻ bài → CanvasTexture ──────────────────────────────────────────────────
+// Trước đây mỗi thẻ là 1 <Html> (DOM + backdrop-filter) bị cập nhật transform
+// mỗi frame → 30 thẻ là 30 lần style-recalc/composite mỗi frame, gây lag nặng.
+// Giờ mỗi thẻ được vẽ đúng 1 lần vào canvas rồi render bằng GPU sprite: 0 DOM.
+
+const CARD_TEX_W = 140;
+const CARD_TEX_IMG_H = 90;
+const CARD_TEX_H = 168;
+const CARD_TEX_SCALE = 2; // vẽ 2x cho nét
+
+function pathRoundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+function wrapCanvasText(ctx, text, maxWidth, maxLines) {
+  const words = text.split(/\s+/).filter(Boolean);
+  const lines = [];
+  let line = "";
+  let truncated = false;
+  for (const word of words) {
+    const test = line ? `${line} ${word}` : word;
+    if (line && ctx.measureText(test).width > maxWidth) {
+      lines.push(line);
+      line = word;
+      if (lines.length >= maxLines) {
+        truncated = true;
+        break;
+      }
+    } else {
+      line = test;
+    }
+  }
+  if (!truncated && line && lines.length < maxLines) lines.push(line);
+  if (truncated) {
+    let last = lines[maxLines - 1];
+    while (last.length && ctx.measureText(last + "…").width > maxWidth) {
+      last = last.slice(0, -1);
+    }
+    lines[maxLines - 1] = last + "…";
+    lines.length = maxLines;
+  }
+  return lines;
+}
+
+function drawCardCanvas(ctx, card, img) {
+  const s = CARD_TEX_SCALE;
+  const W = CARD_TEX_W * s;
+  const H = CARD_TEX_H * s;
+  const IMG_H = CARD_TEX_IMG_H * s;
+  const R = 14 * s;
+
+  ctx.clearRect(0, 0, W, H);
+  ctx.save();
+  pathRoundRect(ctx, s, s, W - 2 * s, H - 2 * s, R);
+  ctx.fillStyle = "rgba(10,10,30,0.94)";
+  ctx.fill();
+  ctx.clip();
+
+  if (img) {
+    // crop kiểu object-fit: cover
+    const target = W / IMG_H;
+    const ar = img.width / img.height;
+    let sx = 0, sy = 0, sw = img.width, sh = img.height;
+    if (ar > target) {
+      sw = sh * target;
+      sx = (img.width - sw) / 2;
+    } else {
+      sh = sw / target;
+      sy = (img.height - sh) / 2;
+    }
+    ctx.drawImage(img, sx, sy, sw, sh, s, s, W - 2 * s, IMG_H - s);
+  } else {
+    const g = ctx.createLinearGradient(0, 0, W, IMG_H);
+    g.addColorStop(0, "rgba(124,77,255,0.30)");
+    g.addColorStop(1, "rgba(20,20,60,0.85)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, IMG_H);
+    ctx.font = `${28 * s}px serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("✨", W / 2, IMG_H / 2);
+  }
+
+  ctx.fillStyle = "rgba(255,255,255,0.08)";
+  ctx.fillRect(0, IMG_H, W, s);
+
+  ctx.textAlign = "left";
+  ctx.textBaseline = "alphabetic";
+  ctx.font = `${11 * s}px 'Inter', -apple-system, sans-serif`;
+  ctx.fillStyle = "#e0e0e0";
+  const quote = `"${(card.quote || "...").slice(0, 60)}"`;
+  const lines = wrapCanvasText(ctx, quote, W - 24 * s, 2);
+  lines.forEach((line, i) => {
+    ctx.fillText(line, 12 * s, IMG_H + (24 + i * 15) * s);
+  });
+
+  if (card.author) {
+    ctx.font = `700 ${9 * s}px 'Inter', -apple-system, sans-serif`;
+    ctx.fillStyle = "#a78bfa";
+    ctx.fillText(`— ${card.author.toUpperCase().slice(0, 28)}`, 12 * s, H - 12 * s);
+  }
+  ctx.restore();
+
+  pathRoundRect(ctx, s, s, W - 2 * s, H - 2 * s, R);
+  ctx.strokeStyle = "rgba(255,255,255,0.18)";
+  ctx.lineWidth = s;
+  ctx.stroke();
+}
+
+// Cache texture theo card.id: đổi hành tinh / re-render không vẽ lại,
+// ảnh tải xong chỉ vẽ đè lên canvas + needsUpdate, không tạo re-render React.
+const cardTextureCache = new Map();
+
+function getCardTexture(card) {
+  const cached = cardTextureCache.get(card.id);
+  if (cached) return cached;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = CARD_TEX_W * CARD_TEX_SCALE;
+  canvas.height = CARD_TEX_H * CARD_TEX_SCALE;
+  const ctx = canvas.getContext("2d");
+  drawCardCanvas(ctx, card, null);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.anisotropy = 2;
+
+  if (card.imageUrl) {
+    requestImageLoad(card.imageUrl, true).then((img) => {
+      if (!img) return;
+      drawCardCanvas(ctx, card, img);
+      texture.needsUpdate = true;
+    });
+  }
+
+  cardTextureCache.set(card.id, texture);
+  return texture;
 }
 
 const MOCK_CARDS = [
@@ -304,105 +452,47 @@ function OrbitRing({ radius, tilt = 0, color = "#ffffff" }) {
   );
 }
 
-function OrbitCard({ card, index, total, radius, speed, onSelect, planetGlow }) {
-  const groupRef = useRef();
-  const angleOffset = (index / Math.max(total, 1)) * Math.PI * 2;
-  const [hovered, setHovered] = useState(false);
+const SPRITE_W = 1.6;
+const SPRITE_H = SPRITE_W * (CARD_TEX_H / CARD_TEX_W);
 
-  useFrame(({ clock }) => {
-    if (!groupRef.current) return;
+function OrbitCard({ card, index, total, radius, speed, onSelect }) {
+  const spriteRef = useRef();
+  const hoverRef = useRef(false);
+  const scaleRef = useRef(1);
+  const angleOffset = (index / Math.max(total, 1)) * Math.PI * 2;
+  const texture = useMemo(() => getCardTexture(card), [card.id]);
+
+  useFrame(({ clock }, delta) => {
+    const sprite = spriteRef.current;
+    if (!sprite) return;
     const t = clock.getElapsedTime() * speed + angleOffset;
-    groupRef.current.position.x = Math.cos(t) * radius;
-    groupRef.current.position.z = Math.sin(t) * radius;
-    groupRef.current.position.y = Math.sin(t * 0.5) * 0.3;
+    sprite.position.set(
+      Math.cos(t) * radius,
+      Math.sin(t * 0.5) * 0.3,
+      Math.sin(t) * radius
+    );
+    const target = hoverRef.current ? 1.12 : 1;
+    scaleRef.current += (target - scaleRef.current) * Math.min(1, delta * 12);
+    sprite.scale.set(SPRITE_W * scaleRef.current, SPRITE_H * scaleRef.current, 1);
   });
 
   return (
-    <group ref={groupRef}>
-      <Html
-        center
-        distanceFactor={8}
-        style={{ pointerEvents: "auto" }}
-        zIndexRange={[10, 0]}
-      >
-        <div
-          onClick={(e) => { e.stopPropagation(); onSelect(card); }}
-          onMouseEnter={() => setHovered(true)}
-          onMouseLeave={() => setHovered(false)}
-          style={{
-            width: 140,
-            cursor: "pointer",
-            transition: "transform 0.3s, box-shadow 0.3s",
-            transform: hovered ? "scale(1.12)" : "scale(1)",
-          }}
-        >
-          <div style={{
-            borderRadius: 16,
-            overflow: "hidden",
-            background: "rgba(10,10,30,0.85)",
-            backdropFilter: "blur(12px)",
-            border: `1px solid ${hovered ? planetGlow : "rgba(255,255,255,0.15)"}`,
-            boxShadow: hovered
-              ? `0 0 24px ${planetGlow}60, 0 8px 32px rgba(0,0,0,0.5)`
-              : "0 4px 20px rgba(0,0,0,0.4)",
-            transition: "all 0.3s ease",
-          }}>
-            {card.imageUrl && (
-              <QueuedImage
-                src={card.imageUrl}
-                style={{
-                  width: "100%",
-                  height: 90,
-                  objectFit: "cover",
-                  display: "block",
-                  borderBottom: `1px solid rgba(255,255,255,0.08)`,
-                }}
-              />
-            )}
-            {!card.imageUrl && (
-              <div style={{
-                width: "100%",
-                height: 90,
-                background: `linear-gradient(135deg, ${planetGlow}30, rgba(20,20,60,0.8))`,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 32,
-              }}>
-                ✨
-              </div>
-            )}
-            <div style={{
-              padding: "10px 12px",
-              color: "#e0e0e0",
-              fontSize: 11,
-              lineHeight: 1.4,
-              fontFamily: "'Inter', sans-serif",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              display: "-webkit-box",
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: "vertical",
-              minHeight: 30,
-            }}>
-              "{card.quote?.slice(0, 60) || "..."}"
-            </div>
-            {card.author && (
-              <div style={{
-                padding: "0 12px 8px",
-                color: planetGlow,
-                fontSize: 9,
-                fontWeight: 700,
-                letterSpacing: "0.05em",
-                textTransform: "uppercase",
-              }}>
-                — {card.author}
-              </div>
-            )}
-          </div>
-        </div>
-      </Html>
-    </group>
+    <sprite
+      ref={spriteRef}
+      scale={[SPRITE_W, SPRITE_H, 1]}
+      onClick={(e) => { e.stopPropagation(); onSelect(card); }}
+      onPointerOver={(e) => {
+        e.stopPropagation();
+        hoverRef.current = true;
+        document.body.style.cursor = "pointer";
+      }}
+      onPointerOut={() => {
+        hoverRef.current = false;
+        document.body.style.cursor = "";
+      }}
+    >
+      <spriteMaterial map={texture} transparent depthWrite={false} />
+    </sprite>
   );
 }
 
@@ -449,9 +539,8 @@ function GalaxyParticles() {
   );
 }
 
-function MilkyWay() {
+function MilkyWay({ count = 15000 }) {
   const { positions, colors, texture } = useMemo(() => {
-    const count = 15000;
     const pos = new Float32Array(count * 3);
     const col = new Float32Array(count * 3);
     const c = new THREE.Color();
@@ -496,7 +585,7 @@ function MilkyWay() {
     const tex = new THREE.CanvasTexture(canvas);
 
     return { positions: pos, colors: col, texture: tex };
-  }, []);
+  }, [count]);
 
   const ref = useRef();
   useFrame(() => {
@@ -535,7 +624,7 @@ function MilkyWay() {
   );
 }
 
-function Scene({ cards, selectedPlanet, onSelectCard }) {
+function Scene({ cards, selectedPlanet, onSelectCard, isMobile }) {
   const planet = PLANETS.find((p) => p.key === selectedPlanet) || PLANETS[0];
   const orbitRadii = [6.5, 10.5];
 
@@ -550,11 +639,11 @@ function Scene({ cards, selectedPlanet, onSelectCard }) {
       <pointLight position={[10, 10, 10]} intensity={1.2} color="#ffffff" />
       <pointLight position={[-5, -5, 5]} intensity={0.3} color={planet.glow} />
 
-      {/* Starfield */}
+      {/* Starfield — 50k điểm là quá thừa cho nền, giảm mạnh vẫn dày đặc */}
       <Stars
         radius={120}
         depth={60}
-        count={50000}
+        count={isMobile ? 6000 : 20000}
         factor={12}
         saturation={1}
         fade
@@ -565,7 +654,7 @@ function Scene({ cards, selectedPlanet, onSelectCard }) {
       <GalaxyParticles />
 
       {/* Milky Way glowing band */}
-      <MilkyWay />
+      <MilkyWay count={isMobile ? 7000 : 15000} />
 
       {/* Planet */}
       <Planet planetKey={selectedPlanet} />
@@ -584,7 +673,6 @@ function Scene({ cards, selectedPlanet, onSelectCard }) {
           radius={orbitRadii[0]}
           speed={0.12}
           onSelect={onSelectCard}
-          planetGlow={planet.glow}
         />
       ))}
 
@@ -598,7 +686,6 @@ function Scene({ cards, selectedPlanet, onSelectCard }) {
           radius={orbitRadii[1]}
           speed={0.08}
           onSelect={onSelectCard}
-          planetGlow={planet.glow}
         />
       ))}
 
@@ -1703,14 +1790,15 @@ export default function GalaxyCards() {
             near: 0.1,
             far: 200,
           }}
-          gl={{ antialias: true, alpha: false }}
-          dpr={[1, 1.5]}
+          gl={{ antialias: !isMobile, alpha: false, powerPreference: "high-performance" }}
+          dpr={isMobile ? [1, 1.25] : [1, 1.5]}
         >
           <Suspense fallback={null}>
             <Scene
               cards={cards}
               selectedPlanet={selectedPlanet}
               onSelectCard={handleSelectCard}
+              isMobile={isMobile}
             />
           </Suspense>
         </Canvas>
@@ -1743,9 +1831,9 @@ export default function GalaxyCards() {
             zIndex: 90,
             overflowY: "auto",
             overflowX: "hidden",
-            background: isMobile ? "rgba(0,0,15,0.85)" : "rgba(0,0,15,0.55)",
-            backdropFilter: "blur(14px)",
-            WebkitBackdropFilter: "blur(14px)",
+            // Không dùng backdrop-filter: blur trên canvas WebGL động
+            // bắt trình duyệt re-blur cả vùng lớn mỗi frame → rất tốn.
+            background: isMobile ? "rgba(3,3,18,0.92)" : "rgba(3,3,18,0.82)",
             border: "1px solid rgba(255,255,255,0.08)",
             boxShadow: "0 8px 40px rgba(0,0,0,0.6)",
             ...(isMobile
@@ -1810,6 +1898,9 @@ export default function GalaxyCards() {
             {timeline.map((m, i) => (
               <div key={i} style={{
                 display:"flex", gap:12, marginBottom:24, position:"relative",
+                // Mốc nằm ngoài viewport không bị layout/paint/decode ảnh
+                contentVisibility: "auto",
+                containIntrinsicSize: "auto 175px",
               }}>
                 {/* Dot */}
                 <div style={{
