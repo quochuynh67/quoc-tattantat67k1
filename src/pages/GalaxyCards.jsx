@@ -12,7 +12,24 @@ import { getSiteSetting } from "../lib/phuTanApi";
 
 const LS_PLANET_KEY = "galaxy_planet";
 
-function processDriveUrl(url) {
+const MOBILE_QUERY = "(max-width: 768px)";
+
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== "undefined" ? window.matchMedia(MOBILE_QUERY).matches : false
+  );
+  useEffect(() => {
+    const mq = window.matchMedia(MOBILE_QUERY);
+    const handler = (e) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+  return isMobile;
+}
+
+// width > 0: trả về thumbnail Drive đúng kích thước (nhẹ hơn nhiều so với file gốc).
+// width = 0: giữ link download gốc (dùng cho audio/bgm).
+function processDriveUrl(url, width = 0) {
   if (!url) return url;
   let fileId = null;
   const match1 = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
@@ -23,9 +40,65 @@ function processDriveUrl(url) {
     if (match2) fileId = match2[1];
   }
   if (fileId) {
+    if (width > 0) {
+      return `https://drive.google.com/thumbnail?id=${fileId}&sz=w${width}`;
+    }
     return `https://drive.google.com/uc?export=download&id=${fileId}`;
   }
   return url;
+}
+
+// ── Hàng đợi tải ảnh: tối đa N ảnh tải song song để không nghẽn mạng/giật hình ─
+
+const imgQueue = { active: 0, max: 4, pending: [] };
+
+function requestImageLoad(url) {
+  return new Promise((resolve) => {
+    const task = () => {
+      imgQueue.active++;
+      const img = new Image();
+      const done = (ok) => {
+        imgQueue.active--;
+        const next = imgQueue.pending.shift();
+        if (next) next();
+        resolve(ok);
+      };
+      img.onload = () => done(true);
+      img.onerror = () => done(false);
+      img.decoding = "async";
+      img.src = url;
+    };
+    if (imgQueue.active < imgQueue.max) task();
+    else imgQueue.pending.push(task);
+  });
+}
+
+function QueuedImage({ src, alt = "", style, placeholderStyle }) {
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    if (!src) return;
+    let cancelled = false;
+    setLoaded(false);
+    requestImageLoad(src).then((ok) => {
+      if (!cancelled && ok) setLoaded(true);
+    });
+    return () => { cancelled = true; };
+  }, [src]);
+
+  if (!loaded) {
+    return (
+      <div style={{
+        ...style,
+        background: "linear-gradient(110deg, rgba(255,255,255,0.05) 30%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.05) 70%)",
+        backgroundSize: "200% 100%",
+        animation: "imgShimmer 1.4s linear infinite",
+        ...placeholderStyle,
+      }} />
+    );
+  }
+
+  return <img src={src} alt={alt} style={style} decoding="async" />;
 }
 
 const MOCK_CARDS = [
@@ -275,9 +348,8 @@ function OrbitCard({ card, index, total, radius, speed, onSelect, planetGlow }) 
             transition: "all 0.3s ease",
           }}>
             {card.imageUrl && (
-              <img
+              <QueuedImage
                 src={card.imageUrl}
-                alt=""
                 style={{
                   width: "100%",
                   height: 90,
@@ -616,9 +688,8 @@ function CardDetailModal({ card, onClose, onPrev, onNext, planetGlow, hasPrev, h
 
         {/* Image */}
         {card.imageUrl ? (
-          <img
-            src={card.imageUrl}
-            alt=""
+          <QueuedImage
+            src={card.fullImageUrl || card.imageUrl}
             style={{
               width: "100%",
               height: 320,
@@ -1353,7 +1424,11 @@ export default function GalaxyCards() {
   const [bgmList, setBgmList] = useState([]);
   const [bgmIndex, setBgmIndex] = useState(0);
   const [timeline, setTimeline] = useState([]);
-  const [showTimeline, setShowTimeline] = useState(true);
+  const isMobile = useIsMobile();
+  // Trên mobile mặc định ẩn timeline để không che hành tinh
+  const [showTimeline, setShowTimeline] = useState(
+    () => !(typeof window !== "undefined" && window.matchMedia(MOBILE_QUERY).matches)
+  );
   const audioRef = useRef(null);
 
   const planet = PLANETS.find((p) => p.key === selectedPlanet) || PLANETS[0];
@@ -1369,7 +1444,8 @@ export default function GalaxyCards() {
         setCards(
           memories.map((m, i) => ({
             id: `sb_${i}`,
-            imageUrl: processDriveUrl(m.img || ""),
+            imageUrl: processDriveUrl(m.img || "", 400),
+            fullImageUrl: processDriveUrl(m.img || "", 1200),
             quote: m.quote || "",
             author: m.author || "",
           }))
@@ -1598,6 +1674,14 @@ export default function GalaxyCards() {
           from { opacity: 0; transform: translateX(20px); }
           to { opacity: 1; transform: translateX(0); }
         }
+        @keyframes timelineSlideUp {
+          from { opacity: 0; transform: translateY(24px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes imgShimmer {
+          from { background-position: 200% 0; }
+          to { background-position: -200% 0; }
+        }
         .galaxy-timeline::-webkit-scrollbar { width: 3px; }
         .galaxy-timeline::-webkit-scrollbar-track { background: transparent; }
         .galaxy-timeline::-webkit-scrollbar-thumb { background: rgba(124,77,255,0.4); border-radius: 3px; }
@@ -1656,23 +1740,61 @@ export default function GalaxyCards() {
           className="galaxy-timeline"
           style={{
             position: "fixed",
-            top: 70,
-            right: 16,
-            bottom: 90,
-            width: 260,
             zIndex: 90,
             overflowY: "auto",
             overflowX: "hidden",
-            background: "rgba(0,0,15,0.55)",
+            background: isMobile ? "rgba(0,0,15,0.85)" : "rgba(0,0,15,0.55)",
             backdropFilter: "blur(14px)",
             WebkitBackdropFilter: "blur(14px)",
             border: "1px solid rgba(255,255,255,0.08)",
-            borderRadius: 20,
-            padding: "20px 16px 24px",
-            animation: "timelineFadeIn 0.4s ease",
             boxShadow: "0 8px 40px rgba(0,0,0,0.6)",
+            ...(isMobile
+              ? {
+                  // Bottom-sheet: chừa chỗ phía trên cho hành tinh
+                  left: 12,
+                  right: 12,
+                  bottom: 96,
+                  maxHeight: "42vh",
+                  borderRadius: 16,
+                  padding: "14px 14px 18px",
+                  animation: "timelineSlideUp 0.35s ease",
+                }
+              : {
+                  top: 70,
+                  right: 16,
+                  bottom: 90,
+                  width: 260,
+                  borderRadius: 20,
+                  padding: "20px 16px 24px",
+                  animation: "timelineFadeIn 0.4s ease",
+                }),
           }}
         >
+          {isMobile && (
+            <button
+              onClick={() => setShowTimeline(false)}
+              style={{
+                position: "sticky",
+                top: 0,
+                float: "right",
+                width: 28,
+                height: 28,
+                borderRadius: "50%",
+                border: "none",
+                background: "rgba(255,255,255,0.12)",
+                color: "#fff",
+                fontSize: 13,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                zIndex: 2,
+              }}
+              title="Ẩn cột mốc"
+            >
+              ✕
+            </button>
+          )}
           <p style={{ color:"rgba(255,255,255,0.5)", fontSize:10, fontWeight:600, letterSpacing:3, textTransform:"uppercase", margin:"0 0 20px", textAlign:"center" }}>
             ⏳ Hành trình ký ức
           </p>
@@ -1713,8 +1835,10 @@ export default function GalaxyCards() {
                   )}
                   {m.img && (
                     <img
-                      src={processDriveUrl(m.img)}
+                      src={processDriveUrl(m.img, 480)}
                       alt={m.title || ""}
+                      loading="lazy"
+                      decoding="async"
                       style={{
                         width:"100%", aspectRatio:"16/9", objectFit:"cover",
                         borderRadius:8, marginBottom:6,
