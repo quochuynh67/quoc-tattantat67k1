@@ -9,6 +9,7 @@ import MenuIcon from "@mui/icons-material/Menu";
 import OndemandVideoIcon from "@mui/icons-material/OndemandVideo";
 import LogoutIcon from "@mui/icons-material/Logout";
 import SmartToyIcon from "@mui/icons-material/SmartToy";
+import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import { useAdminAuth } from "../../contexts/AdminAuthContext";
 
 const drawerWidth = 240;
@@ -55,6 +56,10 @@ const AdminLayout = () => {
         <ListItemButton component={NavLink} to="/admin/settings" selected={location.pathname.startsWith('/admin/settings')}>
           <ListItemIcon><SettingsIcon /></ListItemIcon>
           <ListItemText primary="Settings" />
+        </ListItemButton>
+        <ListItemButton component={NavLink} to="/admin/galaxy" selected={location.pathname.startsWith('/admin/galaxy')}>
+          <ListItemIcon><AutoAwesomeIcon /></ListItemIcon>
+          <ListItemText primary="Galaxy" />
         </ListItemButton>
       </List>
     </div>

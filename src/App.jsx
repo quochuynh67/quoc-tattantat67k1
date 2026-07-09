@@ -26,6 +26,7 @@ const WishGenerator = lazy(() => import("./pages/WishGenerator"));
 const MenuCreator   = lazy(() => import("./pages/MenuCreator"));
 const PhotoRestore  = lazy(() => import("./pages/PhotoRestore"));
 const AgriStats     = lazy(() => import("./pages/AgriStats"));
+const GalaxyCards   = lazy(() => import("./pages/GalaxyCards"));
 
 // Admin — separate chunk, rarely visited
 const AdminLogin = lazy(() => import("./pages/AdminLogin"));
@@ -36,6 +37,7 @@ const AdminPosts = lazy(() => import("./pages/admin/Posts"));
 const AdminVlogs = lazy(() => import("./pages/admin/Vlogs"));
 const AdminSettings = lazy(() => import("./pages/admin/Settings"));
 const AdminAiAgents = lazy(() => import("./pages/admin/AiAgents"));
+const AdminGalaxy = lazy(() => import("./pages/admin/GalaxySettings"));
 
 // Trading module
 const TradingLayout = lazy(() => import("./pages/trading/TradingLayout"));
@@ -55,12 +57,13 @@ const AppLayout = () => {
   const isHome = location.pathname === "/";
   const isTrading = location.pathname.startsWith("/trading");
   const isAdmin = location.pathname.startsWith("/admin");
-  const showSubmitFab = !isTrading && !isAdmin && canChatWithAi;
+  const isGalaxy = location.pathname === "/galaxy";
+  const showSubmitFab = !isTrading && !isAdmin && !isGalaxy && canChatWithAi;
 
   return (
     <>
       <ScrollRestoration />
-      {!isVlogFeed && !isTrading && <Header />}
+      {!isVlogFeed && !isTrading && !isGalaxy && <Header />}
       {showSubmitFab && (
         <NavLink to="/submit" className="submit-fab-button" title="Đăng bài / video">
           ✍️
@@ -94,6 +97,7 @@ const AppLayout = () => {
             <Route path="/menu"   element={<MenuCreator />} />
             <Route path="/photo-restore" element={<PhotoRestore />} />
             <Route path="/agri-stats" element={<AgriStats />} />
+            <Route path="/galaxy" element={<GalaxyCards />} />
             <Route path="/admin-login" element={<AdminLogin />} />
             <Route path="/admin/*" element={<ProtectedAdminRoute><AdminLayout /></ProtectedAdminRoute>}>
               <Route index element={<AdminDashboard />} />
@@ -103,6 +107,7 @@ const AppLayout = () => {
               <Route path="vlogs" element={<AdminVlogs />} />
               <Route path="ai-agents" element={<AdminAiAgents />} />
               <Route path="settings" element={<AdminSettings />} />
+              <Route path="galaxy" element={<AdminGalaxy />} />
             </Route>
             <Route path="/trading-login" element={<TradingLogin />} />
             <Route path="/trading" element={<ProtectedTradingRoute><TradingLayout /></ProtectedTradingRoute>}>
@@ -118,7 +123,7 @@ const AppLayout = () => {
           </Routes>
         </Suspense>
       </main>
-      {!isVlogFeed && !isTrading && <Footer />}
+      {!isVlogFeed && !isTrading && !isGalaxy && <Footer />}
     </>
   );
 };
