@@ -4,6 +4,7 @@ import React, { useState, useRef, useMemo, useCallback, useEffect, Suspense } fr
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Stars, OrbitControls, Html, Line } from "@react-three/drei";
 import * as THREE from "three";
+import { useNavigate } from "react-router-dom";
 import { useAdminAuth } from "../contexts/AdminAuthContext";
 import { getSiteSetting } from "../lib/phuTanApi";
 
@@ -1098,7 +1099,7 @@ function PlanetSelector({ selected, onChange, autoSwitch, onToggleAutoSwitch }) 
   );
 }
 
-function TopBar({ cardCount, onAddCard, onDeleteAll, isPlaying, onToggleMusic, isAdmin }) {
+function TopBar({ cardCount, onAddCard, onDeleteAll, isPlaying, onToggleMusic, isAdmin, onBack }) {
   return (
     <div style={{
       position: "fixed",
@@ -1113,7 +1114,36 @@ function TopBar({ cardCount, onAddCard, onDeleteAll, isPlaying, onToggleMusic, i
       background: "linear-gradient(180deg, rgba(0,0,8,0.9) 0%, transparent 100%)",
       pointerEvents: "none",
     }}>
-
+      {/* Back Button */}
+      <button
+        onClick={onBack}
+        style={{
+          padding: "10px 18px",
+          borderRadius: 12,
+          border: "1px solid rgba(255,255,255,0.2)",
+          background: "rgba(255,255,255,0.05)",
+          color: "#fff",
+          fontSize: 13,
+          fontWeight: 600,
+          cursor: "pointer",
+          backdropFilter: "blur(8px)",
+          pointerEvents: "auto",
+          transition: "all 0.2s",
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = "rgba(255,255,255,0.15)";
+          e.currentTarget.style.transform = "translateX(-2px)";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = "rgba(255,255,255,0.05)";
+          e.currentTarget.style.transform = "translateX(0)";
+        }}
+      >
+        <span>⬅️</span> Quay về Trang chủ
+      </button>
 
       <div style={{ display: "flex", gap: 10, pointerEvents: "auto", alignItems: "center" }}>
         <button
@@ -1274,6 +1304,7 @@ function EmptyState({ onAddCard, planetGlow, isAdmin }) {
 
 export default function GalaxyCards() {
   const { isLoggedIn: isAdmin } = useAdminAuth();
+  const navigate = useNavigate();
   const [cards, setCards] = useState(MOCK_CARDS);
   const [selectedPlanet, setSelectedPlanet] = useState(loadPlanet);
   const [selectedCard, setSelectedCard] = useState(null);
@@ -1347,6 +1378,10 @@ export default function GalaxyCards() {
   const handleToggleMusic = useCallback(() => {
     setIsPlaying(p => !p);
   }, []);
+
+  const handleBack = useCallback(() => {
+    navigate("/");
+  }, [navigate]);
 
   // Auto-switch planets
   useEffect(() => {
@@ -1455,6 +1490,7 @@ export default function GalaxyCards() {
         isPlaying={isPlaying}
         onToggleMusic={handleToggleMusic}
         isAdmin={isAdmin}
+        onBack={handleBack}
       />
 
       {currentBgmUrl && (

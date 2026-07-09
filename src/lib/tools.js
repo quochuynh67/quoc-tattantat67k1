@@ -57,6 +57,14 @@ export const TOOLS = [
     gradient: "linear-gradient(135deg, #0F2027 0%, #2C5364 100%)",
   },
   {
+    id: "galaxy",
+    label: "Vũ trụ ký ức",
+    icon: "🌌",
+    url: "/galaxy",
+    tagline: "Không gian 3D lãng mạn",
+    gradient: "linear-gradient(135deg, #020111 0%, #3a007c 100%)",
+  },
+  {
     id: "scale",
     label: "Tính toán cân lúa",
     icon: "🧮",
