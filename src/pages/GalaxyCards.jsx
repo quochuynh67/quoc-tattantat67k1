@@ -280,6 +280,13 @@ const PLANETS = [
   { key: "neptune", label: "Sao Hải Vương", emoji: "🔵", colors: ["#1565c0", "#0d47a1", "#42a5f5"], glow: "#64b5f6", rings: false },
   { key: "saturn", label: "Sao Thổ", emoji: "🪐", colors: ["#d4a24e", "#c9963a", "#b8860b"], glow: "#ffe082", rings: true },
   { key: "crystal", label: "Tinh Thể", emoji: "💎", colors: ["#9c27b0", "#e040fb", "#7b1fa2"], glow: "#ea80fc", rings: false },
+  // ── Các tinh cầu lãng mạn ──
+  { key: "love", label: "Tinh Cầu Tình Yêu", emoji: "💗", colors: ["#ff5e8a", "#ff8fb3", "#c2185b"], glow: "#ff80ab", rings: false },
+  { key: "sakura", label: "Anh Đào", emoji: "🌸", colors: ["#f8bbd0", "#f48fb1", "#ad1457"], glow: "#ffc1e3", rings: false },
+  { key: "sunset", label: "Hoàng Hôn", emoji: "🌅", colors: ["#ff7043", "#f06292", "#6a1b9a"], glow: "#ffab91", rings: false },
+  { key: "lavender", label: "Oải Hương", emoji: "💜", colors: ["#9575cd", "#b39ddb", "#5e35b1"], glow: "#b39ddb", rings: false },
+  { key: "candy", label: "Kẹo Ngọt", emoji: "🍬", colors: ["#ff9eb5", "#80deea", "#f48fb1"], glow: "#ffd1dc", rings: true },
+  { key: "moonlight", label: "Ánh Trăng", emoji: "🌙", colors: ["#90a4ae", "#cfd8dc", "#546e7a"], glow: "#e3f2fd", rings: false },
 ];
 
 // ── Planet vertex/fragment shaders ───────────────────────────────────────────
@@ -1584,6 +1591,14 @@ function AddCardForm({ onAdd, onClose, planetGlow }) {
 }
 
 function PlanetSelector({ selected, onChange, autoSwitch, onToggleAutoSwitch }) {
+  const scrollRef = useRef(null);
+
+  // Tự cuộn hành tinh đang chọn vào giữa (hữu ích khi auto-switch)
+  useEffect(() => {
+    const el = scrollRef.current?.querySelector(`[data-planet="${selected}"]`);
+    if (el) el.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+  }, [selected]);
+
   return (
     <div style={{
       position: "fixed",
@@ -1593,7 +1608,8 @@ function PlanetSelector({ selected, onChange, autoSwitch, onToggleAutoSwitch }) 
       zIndex: 100,
       display: "flex",
       gap: 8,
-      padding: "10px 20px",
+      maxWidth: "min(92vw, 620px)",
+      padding: "10px 16px",
       borderRadius: 99,
       background: "rgba(10,10,30,0.8)",
       backdropFilter: "blur(20px)",
@@ -1617,59 +1633,78 @@ function PlanetSelector({ selected, onChange, autoSwitch, onToggleAutoSwitch }) 
           alignItems: "center",
           justifyContent: "center",
           fontSize: 16,
-          marginRight: 8,
+          flex: "0 0 auto",
           transition: "background 0.2s"
         }}
       >
         {autoSwitch ? "⏸️" : "▶️"}
       </button>
-      <div style={{ width: 1, height: 24, background: "rgba(255,255,255,0.2)", marginRight: 8 }} />
+      <div style={{ width: 1, height: 24, background: "rgba(255,255,255,0.2)", flex: "0 0 auto" }} />
 
-      {PLANETS.map((p) => {
-        const isActive = selected === p.key;
-        return (
-          <button
-            key={p.key}
-            onClick={() => onChange(p.key)}
-            title={p.label}
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: "50%",
-              border: isActive ? `2px solid ${p.glow}` : "2px solid transparent",
-              background: isActive
-                ? `radial-gradient(circle, ${p.glow}40, transparent)`
-                : "rgba(255,255,255,0.05)",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 20,
-              transition: "all 0.3s ease",
-              transform: isActive ? "scale(1.15)" : "scale(1)",
-              boxShadow: isActive ? `0 0 16px ${p.glow}50` : "none",
-              position: "relative",
-            }}
-          >
-            {p.emoji}
-            {isActive && (
-              <span style={{
-                position: "absolute",
-                bottom: -18,
-                left: "50%",
-                transform: "translateX(-50%)",
-                fontSize: 9,
-                color: p.glow,
-                fontWeight: 700,
-                whiteSpace: "nowrap",
-                letterSpacing: "0.05em",
-              }}>
-                {p.label}
-              </span>
-            )}
-          </button>
-        );
-      })}
+      {/* Danh sách hành tinh: 1 hàng, cuộn ngang, ẩn scrollbar.
+          padding-bottom + margin-bottom âm để nhãn tên (absolute) không bị cắt */}
+      <div
+        ref={scrollRef}
+        className="galaxy-planetbar"
+        style={{
+          display: "flex",
+          gap: 8,
+          alignItems: "center",
+          overflowX: "auto",
+          scrollbarWidth: "none",
+          WebkitOverflowScrolling: "touch",
+          padding: "4px 4px 24px",
+          marginBottom: -20,
+        }}
+      >
+        {PLANETS.map((p) => {
+          const isActive = selected === p.key;
+          return (
+            <button
+              key={p.key}
+              data-planet={p.key}
+              onClick={() => onChange(p.key)}
+              title={p.label}
+              style={{
+                width: 44,
+                height: 44,
+                flex: "0 0 auto",
+                borderRadius: "50%",
+                border: isActive ? `2px solid ${p.glow}` : "2px solid transparent",
+                background: isActive
+                  ? `radial-gradient(circle, ${p.glow}40, transparent)`
+                  : "rgba(255,255,255,0.05)",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 20,
+                transition: "all 0.3s ease",
+                transform: isActive ? "scale(1.15)" : "scale(1)",
+                boxShadow: isActive ? `0 0 16px ${p.glow}50` : "none",
+                position: "relative",
+              }}
+            >
+              {p.emoji}
+              {isActive && (
+                <span style={{
+                  position: "absolute",
+                  bottom: -18,
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                  fontSize: 9,
+                  color: p.glow,
+                  fontWeight: 700,
+                  whiteSpace: "nowrap",
+                  letterSpacing: "0.05em",
+                }}>
+                  {p.label}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -2186,6 +2221,7 @@ export default function GalaxyCards() {
           from { background-position: 200% 0; }
           to { background-position: -200% 0; }
         }
+        .galaxy-planetbar::-webkit-scrollbar { display: none; }
         .galaxy-timeline::-webkit-scrollbar { width: 3px; }
         .galaxy-timeline::-webkit-scrollbar-track { background: transparent; }
         .galaxy-timeline::-webkit-scrollbar-thumb { background: rgba(124,77,255,0.4); border-radius: 3px; }
