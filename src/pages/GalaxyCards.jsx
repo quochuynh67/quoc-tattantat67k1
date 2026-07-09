@@ -533,7 +533,7 @@ function Scene({ cards, selectedPlanet, onSelectCard }) {
       <OrbitControls
         enablePan={false}
         minDistance={6}
-        maxDistance={40}
+        maxDistance={100}
         maxPolarAngle={Math.PI / 2.2}
         minPolarAngle={0.2}
         autoRotate
