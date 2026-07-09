@@ -845,6 +845,196 @@ function MilkyWay({ count = 15000 }) {
   );
 }
 
+// ── Màn trình diễn chòm sao: rải rác → trái tim → chữ, đổi hình mỗi 10 giây ──
+
+function makeGlowTexture() {
+  const canvas = document.createElement("canvas");
+  canvas.width = 32;
+  canvas.height = 32;
+  const ctx = canvas.getContext("2d");
+  const gradient = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
+  gradient.addColorStop(0, "rgba(255,255,255,1)");
+  gradient.addColorStop(0.3, "rgba(255,255,255,0.7)");
+  gradient.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, 32, 32);
+  return new THREE.CanvasTexture(canvas);
+}
+
+// Vẽ "Quốc ❤ Trâm" (trái tim vẽ bằng bezier, không dùng glyph font) lên canvas
+// ẩn rồi lấy mẫu pixel → toạ độ điểm sao (hỗ trợ dấu tiếng Việt)
+function sampleTextTargets(count, worldWidth) {
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+  const font = "700 100px 'Inter', 'Segoe UI', sans-serif";
+  ctx.font = font;
+  const part1 = "Quốc";
+  const part2 = "Trâm";
+  const gap = 30;
+  const heartW = 96;
+  const w1 = ctx.measureText(part1).width;
+  const w2 = ctx.measureText(part2).width;
+  const w = Math.ceil(w1 + gap + heartW + gap + w2) + 40;
+  const h = 220;
+  canvas.width = w;
+  canvas.height = h;
+  ctx.font = font;
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = "#fff";
+  const midY = h / 2 + 14;
+  ctx.fillText(part1, 20, midY);
+  ctx.fillText(part2, 20 + w1 + gap + heartW + gap, midY);
+
+  // Trái tim ở giữa (path gốc rộng 11, cao 9.5 đơn vị, gốc x = -3)
+  const s = heartW / 11;
+  ctx.save();
+  ctx.translate(20 + w1 + gap + 3 * s, midY - (9.5 * s) / 2 - 6);
+  ctx.scale(s, s);
+  ctx.beginPath();
+  ctx.moveTo(2.5, 2.5);
+  ctx.bezierCurveTo(2.5, 2.5, 2.0, 0, 0, 0);
+  ctx.bezierCurveTo(-3.0, 0, -3.0, 3.5, -3.0, 3.5);
+  ctx.bezierCurveTo(-3.0, 5.5, -1.0, 7.7, 2.5, 9.5);
+  ctx.bezierCurveTo(6.0, 7.7, 8.0, 5.5, 8.0, 3.5);
+  ctx.bezierCurveTo(8.0, 3.5, 8.0, 0, 5.0, 0);
+  ctx.bezierCurveTo(3.5, 0, 2.5, 2.5, 2.5, 2.5);
+  ctx.fill();
+  ctx.restore();
+
+  const data = ctx.getImageData(0, 0, w, h).data;
+  const pts = [];
+  const step = 3;
+  for (let y = 0; y < h; y += step) {
+    for (let x = 0; x < w; x += step) {
+      if (data[(y * w + x) * 4 + 3] > 128) pts.push([x, y]);
+    }
+  }
+  const scale = worldWidth / w;
+  const out = new Float32Array(count * 3);
+  for (let i = 0; i < count; i++) {
+    const p = pts.length ? pts[(Math.random() * pts.length) | 0] : [w / 2, h / 2];
+    out[i * 3] = (p[0] - w / 2) * scale + (Math.random() - 0.5) * 0.06;
+    out[i * 3 + 1] = (h / 2 - p[1]) * scale + (Math.random() - 0.5) * 0.06;
+    out[i * 3 + 2] = (Math.random() - 0.5) * 0.3;
+  }
+  return out;
+}
+
+const PHASE_SECONDS = 10;
+
+function ConstellationShow({ isMobile }) {
+  const pointsRef = useRef();
+  const groupRef = useRef();
+  const count = isMobile ? 900 : 1500;
+
+  const { positions, colors, targets, glowTex } = useMemo(() => {
+    // Pha 0: rải thành ~12 chòm sao nhỏ
+    const scatter = new Float32Array(count * 3);
+    const clusters = [];
+    for (let c = 0; c < 12; c++) {
+      clusters.push([
+        (Math.random() - 0.5) * 20,
+        (Math.random() - 0.5) * 10,
+        (Math.random() - 0.5) * 4,
+      ]);
+    }
+    for (let i = 0; i < count; i++) {
+      const cl = clusters[i % clusters.length];
+      scatter[i * 3] = cl[0] + (Math.random() - 0.5) * 3.2;
+      scatter[i * 3 + 1] = cl[1] + (Math.random() - 0.5) * 2.2;
+      scatter[i * 3 + 2] = cl[2] + (Math.random() - 0.5) * 1.5;
+    }
+
+    // Pha 1: trái tim (đường cong tim tham số, tô đầy thiên về viền)
+    const heart = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+      const t = Math.random() * Math.PI * 2;
+      const f = 0.4 + 0.6 * Math.sqrt(Math.random());
+      const hx = 16 * Math.pow(Math.sin(t), 3);
+      const hy = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t);
+      heart[i * 3] = hx * 0.32 * f;
+      heart[i * 3 + 1] = hy * 0.32 * f + 0.8;
+      heart[i * 3 + 2] = (Math.random() - 0.5) * 0.5;
+    }
+
+    // Pha 2: chữ "Quốc ❤ Trâm"
+    const text = sampleTextTargets(count, 15.5);
+
+    const colors = new Float32Array(count * 3);
+    const palette = [
+      [1, 0.82, 0.91], // hồng nhạt
+      [1, 1, 1],       // trắng
+      [0.77, 0.71, 0.99], // tím nhạt
+      [1, 0.62, 0.78], // hồng đậm
+    ];
+    for (let i = 0; i < count; i++) {
+      const p = palette[(Math.random() * palette.length) | 0];
+      colors[i * 3] = p[0];
+      colors[i * 3 + 1] = p[1];
+      colors[i * 3 + 2] = p[2];
+    }
+
+    return {
+      positions: scatter.slice(),
+      colors,
+      targets: [scatter, heart, text],
+      glowTex: makeGlowTexture(),
+    };
+  }, [count]);
+
+  useFrame(({ clock, camera }, delta) => {
+    const points = pointsRef.current;
+    const group = groupRef.current;
+    if (!points || !group) return;
+    const t = clock.getElapsedTime();
+
+    // Đổi đội hình mỗi PHASE_SECONDS giây: chòm sao → tim → chữ → lặp lại
+    const target = targets[Math.floor(t / PHASE_SECONDS) % targets.length];
+    const attr = points.geometry.attributes.position;
+    const arr = attr.array;
+    const k = Math.min(1, delta * 2.2);
+    for (let i = 0; i < arr.length; i++) {
+      arr[i] += (target[i] - arr[i]) * k;
+    }
+    attr.needsUpdate = true;
+
+    // Lấp lánh nhẹ + luôn quay mặt về camera để đọc được chữ
+    points.material.size = 0.14 * (1 + Math.sin(t * 3) * 0.18);
+    group.quaternion.copy(camera.quaternion);
+  });
+
+  return (
+    <group ref={groupRef} position={[0, 8.5, 0]}>
+      <points ref={pointsRef} frustumCulled={false}>
+        <bufferGeometry>
+          <bufferAttribute
+            attach="attributes-position"
+            count={count}
+            array={positions}
+            itemSize={3}
+          />
+          <bufferAttribute
+            attach="attributes-color"
+            count={count}
+            array={colors}
+            itemSize={3}
+          />
+        </bufferGeometry>
+        <pointsMaterial
+          size={0.14}
+          map={glowTex}
+          vertexColors
+          transparent
+          opacity={0.95}
+          sizeAttenuation
+          blending={THREE.AdditiveBlending}
+          depthWrite={false}
+        />
+      </points>
+    </group>
+  );
+}
+
 function Scene({ cards, selectedPlanet, onSelectCard, isMobile }) {
   const planet = PLANETS.find((p) => p.key === selectedPlanet) || PLANETS[0];
   const orbitRadii = [6.5, 10.5];
@@ -882,6 +1072,9 @@ function Scene({ cards, selectedPlanet, onSelectCard, isMobile }) {
 
       {/* Cặp đôi nắm tay trên đỉnh hành tinh */}
       <Couple />
+
+      {/* Chòm sao trình diễn: tụ thành trái tim rồi thành chữ, mỗi 10s đổi hình */}
+      <ConstellationShow isMobile={isMobile} />
 
       {/* Orbit rings */}
       <OrbitRing radius={orbitRadii[0]} color={planet.glow} />
