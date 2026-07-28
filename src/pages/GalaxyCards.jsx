@@ -1929,7 +1929,374 @@ function EmptyState({ onAddCard, planetGlow, isAdmin }) {
 
 
 
+// ── Wedding example photos (Unsplash free) ───────────────────────────────────
+const DEMO_SLIDES = [
+  {
+    img: "https://images.unsplash.com/photo-1519741347686-c1e0aadf4611?w=1200&q=80",
+    quote: "Yêu không phải là nhìn nhau, mà là cùng nhau nhìn về một hướng.",
+    author: "Antoine de Saint-Exupéry",
+  },
+  {
+    img: "https://images.unsplash.com/photo-1537633552985-df8429e8048b?w=1200&q=80",
+    quote: "Em là bình yên duy nhất giữa thế giới ồn ào này.",
+    author: "Sưu tầm",
+  },
+  {
+    img: "https://images.unsplash.com/photo-1606216840775-1e1af81fb8cd?w=1200&q=80",
+    quote: "Tình yêu là khi hạnh phúc của người đó quan trọng hơn hạnh phúc của chính mình.",
+    author: "H. Jackson Brown Jr.",
+  },
+  {
+    img: "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=1200&q=80",
+    quote: "Mỗi ngày bên em là một ngày hạnh phúc nhất cuộc đời anh.",
+    author: "Khuyết danh",
+  },
+  {
+    img: "https://images.unsplash.com/photo-1591604129939-f1efa4d9f7fa?w=1200&q=80",
+    quote: "Giữa hàng vạn người, anh chỉ nhìn thấy mình em.",
+    author: "Khuyết danh",
+  },
+  {
+    img: "https://images.unsplash.com/photo-1465495976277-4387d4b0b4c6?w=1200&q=80",
+    quote: "Nơi em ở là nơi anh gọi là nhà.",
+    author: "Sưu tầm",
+  },
+];
+
+// Fallback music nếu Supabase chưa có BGM
+const FALLBACK_MUSIC_URL = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3";
+
+const GUEST_MODE_CARDS = Array.from({ length: 20 }).map((_, i) => {
+  const quotes = [
+    "Yêu không phải là nhìn nhau, mà là cùng nhau nhìn về một hướng.",
+    "Em là bình yên duy nhất giữa thế giới ồn ào này.",
+    "Tình yêu là khi hạnh phúc của người đó quan trọng hơn hạnh phúc của chính mình.",
+    "Mỗi ngày bên em là một ngày hạnh phúc nhất cuộc đời anh.",
+    "Giữa hàng vạn người, anh chỉ nhìn thấy mình em.",
+    "Nơi em ở là nơi anh gọi là nhà.",
+    "Gặp được nhau là duyên, đi cùng nhau là phận.",
+    "Chỉ cần em vui, thế giới của anh sẽ tỏa nắng.",
+    "Tình yêu đích thực không có kết thúc có hậu, vì tình yêu đích thực không bao giờ kết thúc.",
+    "Anh sẽ luôn nắm tay em, dù cho có chuyện gì xảy ra."
+  ];
+  const images = [
+    "1519741347686-c1e0aadf4611", "1537633552985-df8429e8048b", "1606216840775-1e1af81fb8cd",
+    "1511285560929-80b456fea0bc", "1591604129939-f1efa4d9f7fa", "1465495976277-4387d4b0b4c6",
+    "1518199266791-5375a83190b7", "1494774157365-9e04c6720e47", "1516589178581-6cd7833ae3b2",
+    "1474552226712-ac0f0961a954"
+  ];
+  return {
+    id: `guest_${i}`,
+    imageUrl: `https://images.unsplash.com/photo-${images[i % images.length]}?w=400&q=80`,
+    fullImageUrl: `https://images.unsplash.com/photo-${images[i % images.length]}?w=1200&q=80`,
+    quote: quotes[i % quotes.length],
+    author: "Khuyết danh",
+  };
+});
+
+function PasscodeLockScreen({ onUnlock, onBack, onGuestMode }) {
+  const [passcode, setPasscode] = useState("");
+  const [passcodeError, setPasscodeError] = useState(false);
+  const [slideIdx, setSlideIdx] = useState(0);
+  const [fade, setFade] = useState(true);
+  const [musicPlaying, setMusicPlaying] = useState(false);
+  const [bgmList, setBgmList] = useState([]);
+  const [bgmIndex, setBgmIndex] = useState(0);
+  const audioRef = useRef(null);
+
+  // Fetch BGM từ Supabase (cùng nguồn với sau khi unlock)
+  useEffect(() => {
+    getSiteSetting("galaxy").then((value) => {
+      if (!value || typeof value !== "object") return;
+      const bgm = Array.isArray(value.bgm)
+        ? value.bgm.filter(Boolean).map((u) => processDriveUrl(u))
+        : [];
+      if (bgm.length > 0) setBgmList(bgm);
+    });
+  }, []);
+
+  const currentBgmUrl = bgmList.length > 0 ? bgmList[bgmIndex] : FALLBACK_MUSIC_URL;
+
+  const handleMusicEnded = useCallback(() => {
+    if (bgmList.length > 1) {
+      setBgmIndex((i) => (i + 1) % bgmList.length);
+    }
+  }, [bgmList.length]);
+
+  // Auto-rotate slides every 5 s
+  useEffect(() => {
+    const id = setInterval(() => {
+      setFade(false);
+      setTimeout(() => {
+        setSlideIdx(i => (i + 1) % DEMO_SLIDES.length);
+        setFade(true);
+      }, 600);
+    }, 5000);
+    return () => clearInterval(id);
+  }, []);
+
+  const toggleMusic = () => {
+    if (!audioRef.current) return;
+    if (musicPlaying) {
+      audioRef.current.pause();
+      setMusicPlaying(false);
+    } else {
+      audioRef.current.play().catch(() => { });
+      setMusicPlaying(true);
+    }
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (passcode === "quocs2tram") {
+      sessionStorage.setItem("galaxy_unlocked", "true");
+      onUnlock();
+    } else {
+      setPasscodeError(true);
+      setTimeout(() => setPasscodeError(false), 1200);
+    }
+  };
+
+  const slide = DEMO_SLIDES[slideIdx];
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 9999,
+      fontFamily: "'Inter', sans-serif",
+      overflow: "hidden",
+    }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        @keyframes lockGlow { 0%,100%{box-shadow:0 0 24px #7c4dff40;} 50%{box-shadow:0 0 48px #7c4dff90;} }
+        @keyframes lockShake { 0%,100%{transform:translateX(0);} 20%,60%{transform:translateX(-8px);} 40%,80%{transform:translateX(8px);} }
+        @keyframes passFadeIn { from{opacity:0;transform:translateY(18px);} to{opacity:1;transform:translateY(0);} }
+        @keyframes starTwinkle { 0%,100%{opacity:0.15;} 50%{opacity:0.9;} }
+        @keyframes lockStar { 0%,100%{opacity:0.15;} 50%{opacity:0.9;} }
+        .lock-slide-img {
+          transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+        .lock-slide-img.fade-in { opacity: 1; transform: scale(1); }
+        .lock-slide-img.fade-out { opacity: 0; transform: scale(1.03); }
+        .lock-dot { width:7px; height:7px; border-radius:50%; background:rgba(255,255,255,0.35); cursor:pointer; transition:all 0.3s; border:none; padding:0; }
+        .lock-dot.active { background:#fff; width:20px; border-radius:4px; }
+        .lock-music-btn { border:1px solid rgba(255,255,255,0.2); background:rgba(255,255,255,0.08); border-radius:99px; padding:7px 16px; color:#fff; font-size:13px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px; backdrop-filter:blur(12px); transition:all 0.2s; }
+        .lock-music-btn:hover { background:rgba(255,255,255,0.18); }
+      `}</style>
+
+      {/* ── Background: full-screen slideshow ── */}
+      <div style={{ position: "absolute", inset: 0 }}>
+        <img
+          key={slideIdx}
+          src={slide.img}
+          alt=""
+          className={`lock-slide-img ${fade ? "fade-in" : "fade-out"}`}
+          style={{
+            width: "100%", height: "100%", objectFit: "cover",
+            position: "absolute", inset: 0,
+          }}
+        />
+        {/* Dark gradient overlay */}
+        <div style={{
+          position: "absolute", inset: 0,
+          background: "linear-gradient(to right, rgba(0,0,12,0.85) 0%, rgba(0,0,12,0.5) 50%, rgba(0,0,12,0.75) 100%)",
+        }} />
+        {/* Bottom gradient */}
+        <div style={{
+          position: "absolute", bottom: 0, left: 0, right: 0, height: 220,
+          background: "linear-gradient(to top, rgba(0,0,12,0.95), transparent)",
+        }} />
+      </div>
+
+      {/* ── Stars overlay ── */}
+      <div style={{ position: "absolute", inset: 0, pointerEvents: "none", overflow: "hidden" }}>
+        {Array.from({ length: 60 }).map((_, i) => (
+          <div key={i} style={{
+            position: "absolute",
+            width: (Math.random() * 1.5 + 0.5) + "px",
+            height: (Math.random() * 1.5 + 0.5) + "px",
+            borderRadius: "50%", background: "#fff",
+            left: Math.random() * 100 + "%",
+            top: Math.random() * 100 + "%",
+            animation: `lockStar ${2 + Math.random() * 4}s ${Math.random() * 4}s infinite`,
+            opacity: 0.15,
+          }} />
+        ))}
+      </div>
+
+      {/* ── Layout: left panel (demo) + right panel (passcode) ── */}
+      <div style={{
+        position: "relative", zIndex: 1,
+        display: "flex", height: "100%",
+        flexDirection: window.innerWidth < 768 ? "column" : "row",
+      }}>
+
+        {/* Left — Romantic demo preview */}
+        <div style={{
+          flex: 1,
+          display: "flex", flexDirection: "column",
+          justifyContent: "flex-end",
+          padding: window.innerWidth < 768 ? "24px 24px 0" : "48px",
+          animation: "passFadeIn 0.8s ease",
+        }}>
+          {/* Music toggle */}
+          <div style={{ marginBottom: "auto", paddingTop: 24 }}>
+            <button className="lock-music-btn" onClick={toggleMusic}>
+              {musicPlaying ? "🎵" : "🎶"}
+              {musicPlaying ? "Đang phát nhạc" : "Nghe nhạc nền"}
+            </button>
+          </div>
+
+          {/* Quote */}
+          <div style={{ marginBottom: 32 }}>
+            <div style={{
+              fontSize: 48, lineHeight: 1, opacity: 0.25,
+              fontFamily: "Georgia, serif", color: "#ff80ab",
+              marginBottom: 4,
+            }}>"</div>
+            <p style={{
+              color: "rgba(255,255,255,0.92)", fontSize: window.innerWidth < 768 ? 16 : 22,
+              fontWeight: 500, lineHeight: 1.7,
+              margin: "0 0 12px",
+              transition: "opacity 0.5s",
+              opacity: fade ? 1 : 0,
+              maxWidth: 480,
+            }}>
+              {slide.quote}
+            </p>
+            <p style={{
+              color: "#ff80ab", fontSize: 13, fontWeight: 700,
+              letterSpacing: "0.08em", textTransform: "uppercase",
+              opacity: fade ? 1 : 0,
+              transition: "opacity 0.5s 0.1s",
+            }}>
+              — {slide.author}
+            </p>
+
+            {/* Slide dots */}
+            <div style={{ display: "flex", gap: 6, marginTop: 20 }}>
+              {DEMO_SLIDES.map((_, i) => (
+                <button
+                  key={i}
+                  className={`lock-dot${i === slideIdx ? " active" : ""}`}
+                  onClick={() => { setFade(false); setTimeout(() => { setSlideIdx(i); setFade(true); }, 300); }}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Preview label */}
+          <div style={{
+            display: "inline-flex", alignItems: "center", gap: 8,
+            background: "rgba(255,255,255,0.07)",
+            backdropFilter: "blur(12px)",
+            border: "1px solid rgba(255,255,255,0.12)",
+            borderRadius: 99, padding: "8px 18px",
+            marginBottom: window.innerWidth < 768 ? 20 : 48,
+            width: "fit-content",
+          }}>
+            <span style={{ fontSize: 16 }}>💍</span>
+            <span style={{ color: "rgba(255,255,255,0.7)", fontSize: 12, fontWeight: 500 }}>
+              Ví dụ ảnh cưới · Dữ liệu thật sẽ hiện sau khi mở khoá
+            </span>
+          </div>
+        </div>
+
+        {/* Right — Passcode form */}
+        <div style={{
+          width: window.innerWidth < 768 ? "100%" : 380,
+          flexShrink: 0,
+          display: "flex", flexDirection: "column",
+          alignItems: "center", justifyContent: "center",
+          padding: window.innerWidth < 768 ? "24px 24px 48px" : "48px 40px",
+          background: "rgba(0,0,12,0.55)",
+          backdropFilter: "blur(24px)",
+          borderLeft: window.innerWidth < 768 ? "none" : "1px solid rgba(255,255,255,0.08)",
+          animation: "passFadeIn 0.9s 0.15s ease both",
+        }}>
+          <div style={{ textAlign: "center", marginBottom: 36 }}>
+            <div style={{ fontSize: 52, marginBottom: 12 }}>🌌</div>
+            <h1 style={{ color: "#fff", fontSize: 24, fontWeight: 800, margin: "0 0 8px", letterSpacing: "-0.5px" }}>
+              Vũ Trụ Ký Ức
+            </h1>
+            <p style={{ color: "rgba(255,255,255,0.45)", fontSize: 13, margin: 0 }}>
+              Chỉ dành cho người được chọn ✨
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14, width: "100%", maxWidth: 280 }}>
+            <input
+              type="password"
+              placeholder="Nhập mã vũ trụ..."
+              value={passcode}
+              onChange={(e) => setPasscode(e.target.value)}
+              autoFocus
+              style={{
+                width: "100%", padding: "14px 20px",
+                borderRadius: 14,
+                border: passcodeError ? "1.5px solid #ff5252" : "1.5px solid rgba(255,255,255,0.15)",
+                background: "rgba(255,255,255,0.07)",
+                backdropFilter: "blur(12px)",
+                color: "#fff", fontSize: 16, outline: "none",
+                textAlign: "center", letterSpacing: 4,
+                transition: "border 0.2s",
+                animation: passcodeError ? "lockShake 0.4s ease" : "none",
+                boxSizing: "border-box",
+              }}
+            />
+            {passcodeError && (
+              <p style={{ color: "#ff5252", fontSize: 12, margin: "-6px 0 0", fontWeight: 500, textAlign: "center" }}>
+                ❌ Mã không đúng. Thử lại nhé!
+              </p>
+            )}
+            <button type="submit" style={{
+              width: "100%", padding: "14px",
+              borderRadius: 14, border: "none",
+              background: "linear-gradient(135deg, #7c4dff, #536dfe)",
+              color: "#fff", fontSize: 15, fontWeight: 700,
+              cursor: "pointer", letterSpacing: 0.5,
+              animation: "lockGlow 2.5s infinite",
+              transition: "transform 0.15s",
+            }}
+              onMouseEnter={e => e.currentTarget.style.transform = "scale(1.02)"}
+              onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
+            >
+              🚀 Mở cửa vũ trụ
+            </button>
+          </form>
+
+          <div style={{ display: "flex", gap: 16, marginTop: 28 }}>
+            <button
+              onClick={onBack}
+              style={{
+                background: "none", border: "none",
+                color: "rgba(255,255,255,0.35)", fontSize: 13,
+                cursor: "pointer", textDecoration: "underline",
+              }}
+            >
+              ← Trang chủ
+            </button>
+            <button
+              onClick={onGuestMode}
+              style={{
+                background: "none", border: "none",
+                color: "#a78bfa", fontSize: 13,
+                cursor: "pointer", textDecoration: "underline", fontWeight: 600
+              }}
+            >
+              👀 Xem chế độ khách
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Background music */}
+      <audio ref={audioRef} src={currentBgmUrl} loop={bgmList.length <= 1} onEnded={handleMusicEnded} preload="none" />
+    </div>
+  );
+}
+
 // ── Main Page Component ──────────────────────────────────────────────────────
+
 
 export default function GalaxyCards() {
   const { isLoggedIn: isAdmin } = useAdminAuth();
@@ -1939,8 +2306,15 @@ export default function GalaxyCards() {
   const [isUnlocked, setIsUnlocked] = useState(
     () => isAdmin || sessionStorage.getItem("galaxy_unlocked") === "true"
   );
+  const [isGuestMode, setIsGuestMode] = useState(false);
   const [passcode, setPasscode] = useState("");
   const [passcodeError, setPasscodeError] = useState(false);
+
+  const handleGuestMode = useCallback(() => {
+    setIsGuestMode(true);
+    setCards(GUEST_MODE_CARDS);
+    setTimeline([]);
+  }, []);
 
   const handlePasscodeSubmit = useCallback((e) => {
     e.preventDefault();
@@ -2096,99 +2470,8 @@ export default function GalaxyCards() {
   const selectedIdx = selectedCard ? cards.findIndex((c) => c.id === selectedCard.id) : -1;
 
   // ── Passcode lock screen ─────────────────────────────────────────────────
-  if (!isUnlocked) {
-    return (
-      <div style={{
-        position: "fixed", inset: 0,
-        background: "radial-gradient(ellipse at 50% 60%, #0d0025 0%, #000005 100%)",
-        display: "flex", flexDirection: "column",
-        alignItems: "center", justifyContent: "center",
-        fontFamily: "'Inter', sans-serif",
-        zIndex: 9999,
-      }}>
-        <style>{`
-          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-          @keyframes lockGlow { 0%,100%{box-shadow:0 0 24px #7c4dff40;} 50%{box-shadow:0 0 48px #7c4dff90;} }
-          @keyframes lockShake { 0%,100%{transform:translateX(0);} 20%,60%{transform:translateX(-8px);} 40%,80%{transform:translateX(8px);} }
-        `}</style>
-
-        {/* Stars bg */}
-        <div style={{ position:"fixed", inset:0, overflow:"hidden", pointerEvents:"none" }}>
-          {Array.from({length:80}).map((_,i)=>(
-            <div key={i} style={{
-              position:"absolute",
-              width: Math.random()*2+1+"px",
-              height: Math.random()*2+1+"px",
-              borderRadius:"50%",
-              background:"#fff",
-              opacity: Math.random()*0.7+0.1,
-              left: Math.random()*100+"%",
-              top: Math.random()*100+"%",
-            }}/>
-          ))}
-        </div>
-
-        <div style={{ fontSize: 64, marginBottom: 8 }}>🌌</div>
-        <h1 style={{ color:"#fff", fontSize: 26, fontWeight:800, margin:"0 0 6px", letterSpacing:"-0.5px" }}>
-          Vũ Trụ Ký Ức
-        </h1>
-        <p style={{ color:"rgba(255,255,255,0.45)", fontSize:13, margin:"0 0 36px" }}>
-          Chỉ dành cho người được chọn ✨
-        </p>
-
-        <form onSubmit={handlePasscodeSubmit} style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:14, width:280 }}>
-          <input
-            type="password"
-            placeholder="Nhập mã vũ trụ..."
-            value={passcode}
-            onChange={(e) => setPasscode(e.target.value)}
-            autoFocus
-            style={{
-              width:"100%", padding:"14px 20px",
-              borderRadius:14,
-              border: passcodeError ? "1.5px solid #ff5252" : "1.5px solid rgba(255,255,255,0.15)",
-              background:"rgba(255,255,255,0.06)",
-              backdropFilter:"blur(12px)",
-              color:"#fff", fontSize:16, outline:"none",
-              textAlign:"center", letterSpacing:4,
-              transition:"border 0.2s",
-              animation: passcodeError ? "lockShake 0.4s ease" : "none",
-              boxSizing:"border-box",
-            }}
-          />
-          {passcodeError && (
-            <p style={{ color:"#ff5252", fontSize:12, margin:"-6px 0 0", fontWeight:500 }}>
-              ❌ Mã không đúng. Thử lại nhé!
-            </p>
-          )}
-          <button type="submit" style={{
-            width:"100%", padding:"14px",
-            borderRadius:14, border:"none",
-            background:"linear-gradient(135deg, #7c4dff, #536dfe)",
-            color:"#fff", fontSize:15, fontWeight:700,
-            cursor:"pointer", letterSpacing:0.5,
-            animation:"lockGlow 2.5s infinite",
-            transition:"transform 0.15s",
-          }}
-          onMouseEnter={e=>e.currentTarget.style.transform="scale(1.02)"}
-          onMouseLeave={e=>e.currentTarget.style.transform="scale(1)"}
-          >
-            🚀 Mở cửa vũ trụ
-          </button>
-        </form>
-
-        <button
-          onClick={() => navigate("/")}
-          style={{
-            marginTop:32, background:"none", border:"none",
-            color:"rgba(255,255,255,0.4)", fontSize:13,
-            cursor:"pointer", textDecoration:"underline",
-          }}
-        >
-          ← Quay về Trang chủ
-        </button>
-      </div>
-    );
+  if (!isUnlocked && !isGuestMode) {
+    return <PasscodeLockScreen onUnlock={() => setIsUnlocked(true)} onBack={() => navigate("/")} onGuestMode={handleGuestMode} />;
   }
 
   return (
@@ -2291,24 +2574,24 @@ export default function GalaxyCards() {
             boxShadow: "0 8px 40px rgba(0,0,0,0.6)",
             ...(isMobile
               ? {
-                  // Bottom-sheet: chừa chỗ phía trên cho hành tinh
-                  left: 12,
-                  right: 12,
-                  bottom: 96,
-                  maxHeight: "42vh",
-                  borderRadius: 16,
-                  padding: "14px 14px 18px",
-                  animation: "timelineSlideUp 0.35s ease",
-                }
+                // Bottom-sheet: chừa chỗ phía trên cho hành tinh
+                left: 12,
+                right: 12,
+                bottom: 96,
+                maxHeight: "42vh",
+                borderRadius: 16,
+                padding: "14px 14px 18px",
+                animation: "timelineSlideUp 0.35s ease",
+              }
               : {
-                  top: 70,
-                  right: 16,
-                  bottom: 90,
-                  width: 260,
-                  borderRadius: 20,
-                  padding: "20px 16px 24px",
-                  animation: "timelineFadeIn 0.4s ease",
-                }),
+                top: 70,
+                right: 16,
+                bottom: 90,
+                width: 260,
+                borderRadius: 20,
+                padding: "20px 16px 24px",
+                animation: "timelineFadeIn 0.4s ease",
+              }),
           }}
         >
           {isMobile && (
@@ -2336,44 +2619,44 @@ export default function GalaxyCards() {
               ✕
             </button>
           )}
-          <p style={{ color:"rgba(255,255,255,0.5)", fontSize:10, fontWeight:600, letterSpacing:3, textTransform:"uppercase", margin:"0 0 20px", textAlign:"center" }}>
+          <p style={{ color: "rgba(255,255,255,0.5)", fontSize: 10, fontWeight: 600, letterSpacing: 3, textTransform: "uppercase", margin: "0 0 20px", textAlign: "center" }}>
             ⏳ Hành trình ký ức
           </p>
-          <div style={{ position:"relative" }}>
+          <div style={{ position: "relative" }}>
             {/* Vertical neon line */}
             <div style={{
-              position:"absolute", left:13, top:8, bottom:8,
-              width:2,
-              background:"linear-gradient(to bottom, transparent, #7c4dff80, #7c4dff, #7c4dff80, transparent)",
-              borderRadius:2,
+              position: "absolute", left: 13, top: 8, bottom: 8,
+              width: 2,
+              background: "linear-gradient(to bottom, transparent, #7c4dff80, #7c4dff, #7c4dff80, transparent)",
+              borderRadius: 2,
             }} />
 
             {timeline.map((m, i) => (
               <div key={i} style={{
-                display:"flex", gap:12, marginBottom:24, position:"relative",
+                display: "flex", gap: 12, marginBottom: 24, position: "relative",
                 // Mốc nằm ngoài viewport không bị layout/paint/decode ảnh
                 contentVisibility: "auto",
                 containIntrinsicSize: "auto 175px",
               }}>
                 {/* Dot */}
                 <div style={{
-                  width:14, height:14, borderRadius:"50%", flexShrink:0, marginTop:4,
-                  background:"linear-gradient(135deg, #7c4dff, #536dfe)",
-                  boxShadow:"0 0 8px #7c4dff80",
-                  border:"2px solid rgba(255,255,255,0.2)",
-                  zIndex:1,
+                  width: 14, height: 14, borderRadius: "50%", flexShrink: 0, marginTop: 4,
+                  background: "linear-gradient(135deg, #7c4dff, #536dfe)",
+                  boxShadow: "0 0 8px #7c4dff80",
+                  border: "2px solid rgba(255,255,255,0.2)",
+                  zIndex: 1,
                 }} />
                 {/* Content */}
-                <div style={{ flex:1 }}>
+                <div style={{ flex: 1 }}>
                   {m.year && (
                     <span style={{
-                      display:"inline-block", fontSize:9, fontWeight:700,
-                      color:"#a78bfa", letterSpacing:1.5, textTransform:"uppercase",
-                      marginBottom:3,
+                      display: "inline-block", fontSize: 9, fontWeight: 700,
+                      color: "#a78bfa", letterSpacing: 1.5, textTransform: "uppercase",
+                      marginBottom: 3,
                     }}>{m.year}</span>
                   )}
                   {m.title && (
-                    <p style={{ color:"#fff", fontSize:12, fontWeight:700, margin:"0 0 4px", lineHeight:1.4 }}>
+                    <p style={{ color: "#fff", fontSize: 12, fontWeight: 700, margin: "0 0 4px", lineHeight: 1.4 }}>
                       {m.title}
                     </p>
                   )}
@@ -2384,16 +2667,16 @@ export default function GalaxyCards() {
                       loading="lazy"
                       decoding="async"
                       style={{
-                        width:"100%", aspectRatio:"16/9", objectFit:"cover",
-                        borderRadius:8, marginBottom:6,
-                        border:"1px solid rgba(255,255,255,0.07)",
+                        width: "100%", aspectRatio: "16/9", objectFit: "cover",
+                        borderRadius: 8, marginBottom: 6,
+                        border: "1px solid rgba(255,255,255,0.07)",
                       }}
                     />
                   )}
                   {m.quote && (
                     <p style={{
-                      color:"rgba(255,255,255,0.55)", fontSize:11,
-                      fontStyle:"italic", lineHeight:1.5, margin:0,
+                      color: "rgba(255,255,255,0.55)", fontSize: 11,
+                      fontStyle: "italic", lineHeight: 1.5, margin: 0,
                     }}>
                       “{m.quote}”
                     </p>
