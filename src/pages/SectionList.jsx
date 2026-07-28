@@ -22,8 +22,7 @@ import {
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { getSectionItems, getSectionItemsSync } from "../lib/phuTanApi";
 import { stripHtml } from "../utils/stripHtml";
-import { CardSkeletonGrid, AlertSkeleton } from "../components/CardSkeleton";
-import { HealthCard } from "../components/HealthCard";
+import { CardSkeletonGrid } from "../components/CardSkeleton";
 import AgentChat from "../components/AgentChat";
 import { useSiteSettings } from "../contexts/SiteSettingsContext";
 
@@ -175,15 +174,7 @@ const SectionList = ({ sectionKey }) => {
         )}
 
         {loading ? (
-          pageSection.kind === "health"
-            ? <AlertSkeleton count={4} />
-            : <CardSkeletonGrid count={6} hasRating={pageSection.kind === "food" || pageSection.kind === "beautyHealth"} hasChip={pageSection.kind === "beautyHealth"} />
-        ) : pageSection.kind === "health" ? (
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
-            {pageSection.items.map((item) => (
-              <HealthCard key={item.id} item={item} showDesc={true} />
-            ))}
-          </Box>
+          <CardSkeletonGrid count={6} hasRating={pageSection.kind === "food" || pageSection.kind === "beautyHealth"} hasChip={pageSection.kind === "beautyHealth" || pageSection.kind === "health"} />
         ) : (
           <Box className="list-card-grid">
             {pageSection.items.map((item) => (
