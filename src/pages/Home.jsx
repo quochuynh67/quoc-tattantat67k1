@@ -31,7 +31,7 @@ const SPECIFIC_COMPONENTS = {
 };
 
 const Home = () => {
-  const { canChatWithAi, orderedSections } = useSiteSettings();
+  const { canChatWithAi, showOtherTab, orderedSections } = useSiteSettings();
 
   // While loading, show all built-in sections in default order
   const sectionsToRender = orderedSections
@@ -59,7 +59,7 @@ const Home = () => {
 
       <WishBannerSection />
       <VlogsMapSection />
-      <ToolsSection />
+      {showOtherTab && <ToolsSection />}
       <ContributorsSection />
       <SEOIntroSection />
       {/* <NewsletterCTA /> */}

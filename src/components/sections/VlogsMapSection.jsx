@@ -154,6 +154,11 @@ const LocationButton = ({ userLocation, onRequestLocation, isLoading, onError })
         aria-label={userLocation ? "Về vị trí của tôi" : "Xác định vị trí của tôi"}
         onClick={(e) => {
           e.stopPropagation();
+          console.log("[VlogsMapSection] locate-me button clicked", {
+            hasUserLocation: !!userLocation,
+            isInsideIframe: isInsideIframe(),
+            href: window.location.href,
+          });
           if (userLocation) {
             map.flyTo(userLocation, 14, { duration: 1.5 });
           } else {
@@ -220,13 +225,18 @@ const VlogsMapSection = () => {
   }, []);
 
   const handleRequestLocation = useCallback(() => {
+    console.log("[VlogsMapSection] requesting current location", {
+      isInsideIframe: isInsideIframe(),
+    });
     setLocationLoading(true);
     getCurrentLocation()
       .then((loc) => {
+        console.log("[VlogsMapSection] got current location", loc);
         setUserLocation([loc.latitude, loc.longitude]);
         setError({ open: false, message: "", code: null });
       })
       .catch((err) => {
+        console.log("[VlogsMapSection] failed to get current location", err);
         setError({ open: true, message: err.message, code: err.code });
       })
       .finally(() => setLocationLoading(false));
