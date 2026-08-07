@@ -65,6 +65,14 @@ export const TOOLS = [
     gradient: "linear-gradient(135deg, #020111 0%, #3a007c 100%)",
   },
   {
+    id: "fnbgames",
+    label: "Game Tích Điểm F&B",
+    icon: "🎮",
+    url: "/fnb-games",
+    tagline: "Chơi game – nhận ưu đãi",
+    gradient: "linear-gradient(135deg, #f7971e 0%, #f953c6 50%, #6a11cb 100%)",
+  },
+  {
     id: "scale",
     label: "Tính toán cân lúa",
     icon: "🧮",

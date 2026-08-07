@@ -27,6 +27,7 @@ const MenuCreator   = lazy(() => import("./pages/MenuCreator"));
 const PhotoRestore  = lazy(() => import("./pages/PhotoRestore"));
 const AgriStats     = lazy(() => import("./pages/AgriStats"));
 const GalaxyCards   = lazy(() => import("./pages/GalaxyCards"));
+const FnBGames      = lazy(() => import("./pages/FnBGames"));
 
 // Admin — separate chunk, rarely visited
 const AdminLogin = lazy(() => import("./pages/AdminLogin"));
@@ -98,6 +99,7 @@ const AppLayout = () => {
             <Route path="/photo-restore" element={<PhotoRestore />} />
             <Route path="/agri-stats" element={<AgriStats />} />
             <Route path="/galaxy" element={<GalaxyCards />} />
+            <Route path="/fnb-games" element={<FnBGames />} />
             <Route path="/admin-login" element={<AdminLogin />} />
             <Route path="/admin/*" element={<ProtectedAdminRoute><AdminLayout /></ProtectedAdminRoute>}>
               <Route index element={<AdminDashboard />} />
