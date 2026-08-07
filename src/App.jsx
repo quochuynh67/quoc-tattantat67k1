@@ -25,6 +25,7 @@ const GuestSubmit = lazy(() => import("./pages/GuestSubmit"));
 const WishGenerator = lazy(() => import("./pages/WishGenerator"));
 const MenuCreator   = lazy(() => import("./pages/MenuCreator"));
 const PhotoRestore  = lazy(() => import("./pages/PhotoRestore"));
+const NewspaperGenerator = lazy(() => import("./pages/NewspaperGenerator"));
 const AgriStats     = lazy(() => import("./pages/AgriStats"));
 const GalaxyCards   = lazy(() => import("./pages/GalaxyCards"));
 const FnBGames      = lazy(() => import("./pages/FnBGames"));
@@ -97,6 +98,7 @@ const AppLayout = () => {
             <Route path="/wishes" element={<WishGenerator />} />
             <Route path="/menu"   element={<MenuCreator />} />
             <Route path="/photo-restore" element={<PhotoRestore />} />
+            <Route path="/newspaper" element={<NewspaperGenerator />} />
             <Route path="/agri-stats" element={<AgriStats />} />
             <Route path="/galaxy" element={<GalaxyCards />} />
             <Route path="/fnb-games" element={<FnBGames />} />

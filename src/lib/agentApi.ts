@@ -1,5 +1,5 @@
 export type { AgentConfig } from "./promptBuilder";
-import { buildChatAgentPrompt, buildWishPrompt } from "./promptBuilder";
+import { buildChatAgentPrompt, buildWishPrompt, buildNewspaperPrompt } from "./promptBuilder";
 import type { AgentConfig } from "./promptBuilder";
 // Re-exported for any existing consumers: import { AgentConfig } from "./agentApi"
 
@@ -231,6 +231,69 @@ export async function generateWishes(
     .map((text) => ({ text }));
 
   return wishes.length > 0 ? wishes : [{ text: full.trim() }];
+}
+
+// ── Newspaper Generator ──────────────────────────────────────────────────────
+
+export interface NewspaperContent {
+  newspaperName: string;
+  headline: string;
+  date: string;
+  price: string;
+  subHeading1: string;
+  text1: string;
+  subHeading2: string;
+  text2: string;
+  sidebarTitle?: string;
+  sidebarText?: string;
+  quote?: string;
+  photoCaption?: string;
+}
+
+export async function generateNewspaperContent(
+  topic: string,
+  language: string,
+  templateStyle: string,
+  layoutName?: string
+): Promise<NewspaperContent> {
+  const apiKey = (import.meta as any).env?.VITE_GEMINI_API_KEY;
+  if (!apiKey) throw new Error("Gemini API key chưa được cấu hình");
+
+  const model = GEMINI_MODELS[_currentGeminiModelIdx] ?? GEMINI_MODELS[0];
+  const prompt = buildNewspaperPrompt(topic, language, templateStyle, layoutName);
+
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: { maxOutputTokens: 4096, temperature: 0.7 },
+      }),
+    }
+  );
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(`Lỗi tạo báo: ${body?.error?.message ?? ("HTTP " + res.status)}`);
+  }
+
+  const data = await res.json();
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+  
+  // Extract JSON from response (in case Gemini wraps it in markdown)
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    throw new Error("Không thể trích xuất JSON từ phản hồi của AI.");
+  }
+
+  try {
+    const parsed = JSON.parse(jsonMatch[0]);
+    return parsed as NewspaperContent;
+  } catch (err) {
+    throw new Error("AI trả về định dạng JSON không hợp lệ.");
+  }
 }
 
 // ── Claude (non-streaming, proxy-based) ──────────────────────────────────────

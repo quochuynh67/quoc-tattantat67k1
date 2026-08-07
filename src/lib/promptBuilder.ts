@@ -158,6 +158,53 @@ Nội dung lời chúc 2 ở đây...`;
 }
 
 /**
+ * Prompt cho tạo nội dung tờ báo (Newspaper Generator).
+ */
+export function buildNewspaperPrompt(
+  topic: string,
+  language: string,
+  templateStyle: string,
+  layoutName?: string
+): string {
+  return `[VAI_TRÒ]
+Bạn là một tổng biên tập và nhà báo tài năng của một tờ báo nổi tiếng.
+
+[BỐI_CẢNH]
+${PLATFORM_CONTEXT}
+Người dùng muốn tạo một trang báo (Newspaper Front Page) với chủ đề: "${topic}".
+Phong cách trang báo: "${templateStyle}".
+Bố cục trình bày (Layout): "${layoutName || "Báo tiêu chuẩn"}".
+Ngôn ngữ yêu cầu: "${language}".
+
+[PHONG_CÁCH]
+${PROFESSIONAL_TONE}
+Phải viết bằng ngôn ngữ "${language}". Chú ý văn phong giật gân, lôi cuốn đặc trưng của trang nhất báo chí. Tùy thuộc vào bố cục (VD: Tạp chí thì tinh tế, Lá cải thì nảy lửa giật gân, Nhật báo thì trang trọng), hãy điều chỉnh giọng văn cho phù hợp.
+
+[NHIỆM_VỤ]
+Tạo nội dung cho trang nhất của tờ báo dựa trên chủ đề và bố cục được giao. 
+Bạn PHẢI trả về duy nhất một chuỗi JSON hợp lệ với cấu trúc chính xác như sau, không có bất kỳ văn bản nào khác bên ngoài JSON, không sử dụng markdown \`\`\`json:
+
+{
+  "newspaperName": "Tên tờ báo (sáng tạo, phù hợp với phong cách và ngôn ngữ)",
+  "headline": "Tiêu đề chính (rất to, giật gân, tóm tắt sự kiện)",
+  "date": "Ngày tháng xuất bản (ví dụ: Thứ Hai, 01/01/2024)",
+  "price": "Giá báo (phù hợp với ngôn ngữ, ví dụ: 5.000 VNĐ, $1.00)",
+  "subHeading1": "Tiêu đề phụ 1",
+  "text1": "Đoạn văn bản 1 (khoảng 50-70 từ, miêu tả chi tiết sự kiện chính)",
+  "subHeading2": "Tiêu đề phụ 2",
+  "text2": "Đoạn văn bản 2 (khoảng 30-50 từ, thông tin bổ sung hoặc bối cảnh)",
+  "sidebarTitle": "Tiêu đề tin ngắn/cột bên (ngắn gọn 4-8 từ)",
+  "sidebarText": "Nội dung tin ngắn/cột bên (khoảng 20-30 từ)",
+  "quote": "Một câu trích dẫn ấn tượng hoặc câu nói nổi tiếng liên quan (10-20 từ)",
+  "photoCaption": "Chú thích cho bức ảnh chính (10-15 từ)"
+}
+
+[CHẤT_LƯỢNG]
+• Nội dung phải cực kỳ khớp với chủ đề "${topic}".
+• Đảm bảo JSON hợp lệ, có thể parse bằng JSON.parse().`;
+}
+
+/**
  * Builder tổng quát cho các use-case tương lai.
  */
 export interface PromptConfig {
