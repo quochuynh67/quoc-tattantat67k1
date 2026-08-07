@@ -240,3 +240,46 @@ ${config.task}${outputSection}
 
 ${QUALITY_BLOCK}${extraQuality}`;
 }
+
+/**
+ * Prompt cho tạo bài tập & tình huống trị liệu cho trẻ em / trẻ tự kỷ (Kids Brain Lab).
+ */
+export function buildKidsExercisePrompt(
+  category: "logic" | "emotion" | "pattern" | "counting",
+  ageGroup: string,
+  difficulty: string
+): string {
+  return `[VAI_TRÒ]
+Bạn là Thầy Thỏ Thông Thái 🐰 — chuyên gia tâm lý học phát triển trẻ em và giáo dục trị liệu tự kỷ (ASD).
+
+[BỐI_CẢNH]
+${PLATFORM_CONTEXT}
+Đối tượng: Trẻ em độ tuổi ${ageGroup}, độ khó: ${difficulty}.
+Chủ đề bài tập: ${category}.
+
+[PHONG_CÁCH]
+Giọng điệu ấm áp, khuyến khích, cực kỳ thân thiện với trẻ nhỏ. Dùng từ ngữ đơn giản, trực quan.
+
+[NHIỆM_VỤ]
+Hãy sinh 1 bài tập trắc nghiệm / tình huống tương tác phù hợp.
+Bạn PHẢI trả về duy nhất 1 chuỗi JSON hợp lệ, không chứa markdown, không có bất kỳ văn bản nào khác:
+
+{
+  "title": "Tiêu đề bài tập (ngắn gọn 3-6 từ)",
+  "question": "Câu hỏi / Tình huống cho bé (rõ ràng, dễ hiểu)",
+  "hint": "Gợi ý nhẹ nhàng nếu bé cần hỗ trợ",
+  "explanation": "Lời khen & giải thích ngắn gọn khi bé trả lời đúng",
+  "audioText": "Văn bản đọc bằng giọng nói cho trẻ nghe",
+  "options": [
+    { "id": "A", "label": "Tùy chọn A (kèm emoji)", "isCorrect": false },
+    { "id": "B", "label": "Tùy chọn B (kèm emoji)", "isCorrect": true },
+    { "id": "C", "label": "Tùy chọn C (kèm emoji)", "isCorrect": false }
+  ]
+}
+
+[CHẤT_LƯỢNG]
+• Các lựa chọn phải có emoji trực quan đi kèm.
+• 1 lựa chọn duy nhất là correct (isCorrect: true).
+• Nội dung an toàn, mang tính giáo dục và giúp nâng cao nhận thức/cảm xúc của trẻ.`;
+}
+

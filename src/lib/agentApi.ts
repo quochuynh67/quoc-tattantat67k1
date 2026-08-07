@@ -1,5 +1,5 @@
 export type { AgentConfig } from "./promptBuilder";
-import { buildChatAgentPrompt, buildWishPrompt, buildNewspaperPrompt } from "./promptBuilder";
+import { buildChatAgentPrompt, buildWishPrompt, buildNewspaperPrompt, buildKidsExercisePrompt } from "./promptBuilder";
 import type { AgentConfig } from "./promptBuilder";
 // Re-exported for any existing consumers: import { AgentConfig } from "./agentApi"
 
@@ -335,3 +335,65 @@ export async function callClaudeAgent(messages: Message[], section: string, agen
   const data = await res.json();
   return data.content?.[0]?.text ?? "Hỏng hiểu ý cưng rồi, hỏi lại nha~";
 }
+
+// ── Kids Brain Lab AI Exercise Generator ─────────────────────────────────────
+
+export interface KidsExerciseOption {
+  id: string;
+  label: string;
+  isCorrect: boolean;
+}
+
+export interface KidsExerciseData {
+  title: string;
+  question: string;
+  hint: string;
+  explanation: string;
+  audioText: string;
+  options: KidsExerciseOption[];
+}
+
+export async function generateKidsExercise(
+  category: "logic" | "emotion" | "pattern" | "counting",
+  ageGroup: string = "3-5",
+  difficulty: string = "Dễ"
+): Promise<KidsExerciseData> {
+  const apiKey = (import.meta as any).env?.VITE_GEMINI_API_KEY;
+  if (!apiKey) throw new Error("Gemini API key chưa được cấu hình");
+
+  const model = GEMINI_MODELS[_currentGeminiModelIdx] ?? GEMINI_MODELS[0];
+  const prompt = buildKidsExercisePrompt(category, ageGroup, difficulty);
+
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: { maxOutputTokens: 1024, temperature: 0.75 },
+      }),
+    }
+  );
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(`Lỗi sinh bài tập AI: ${body?.error?.message ?? ("HTTP " + res.status)}`);
+  }
+
+  const data = await res.json();
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    throw new Error("Không thể trích xuất định dạng JSON từ phản hồi AI.");
+  }
+
+  try {
+    const parsed = JSON.parse(jsonMatch[0]);
+    return parsed as KidsExerciseData;
+  } catch (err) {
+    throw new Error("Dữ liệu bài tập AI không đúng định dạng JSON.");
+  }
+}
+

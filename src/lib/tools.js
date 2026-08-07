@@ -104,6 +104,19 @@ export const TOOL_SECTIONS = [
       },
     ],
   },
+  {
+    section: "👶 Bé & Trị liệu",
+    tools: [
+      {
+        id: "kidsbrain",
+        label: "Rèn Trí Nào & Trị Liệu",
+        icon: "🧠",
+        url: "/kids-brain-lab",
+        tagline: "Game AI & Trợ Lý Tự Kỷ",
+        gradient: "linear-gradient(135deg, #FF6B6B 0%, #FFD93D 50%, #6BCB77 100%)",
+      },
+    ],
+  },
 ];
 
 // Flat list for carousel and backward-compatible consumers
