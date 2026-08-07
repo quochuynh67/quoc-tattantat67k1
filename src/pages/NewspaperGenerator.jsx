@@ -198,17 +198,57 @@ const NewspaperGenerator = () => {
         style: { margin: '0', boxShadow: 'none' }
       });
       
+      // Restore original dimensions
       newspaperRef.current.style.maxWidth = originalMaxWidth;
       newspaperRef.current.style.width = '100%';
       newspaperRef.current.style.transform = originalTransform;
       newspaperRef.current.style.maxHeight = originalMaxHeight;
 
-      const link = document.createElement('a');
-      link.download = `newspaper-${layout}-${Date.now()}.png`;
-      link.href = dataUrl;
-      link.click();
-      
-      toast.show("Xuất ảnh thành công!", "success");
+      const filename = `newspaper-${layout}-${Date.now()}.png`;
+
+      // Convert dataUrl to a File object for Web Share API
+      const response = await fetch(dataUrl);
+      const blob = await response.blob();
+      const file = new File([blob], filename, { type: "image/png" });
+
+      const isInIframe = window.self !== window.top;
+      let sharedSuccessfully = false;
+
+      // 1. Try Web Share API (native OS share menu on mobile apps/browsers)
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({
+            files: [file],
+            title: content.newspaperName || "Trang Báo Phú Tân",
+            text: content.headline || "Xem trang báo riêng của tôi!",
+          });
+          sharedSuccessfully = true;
+          toast.show("Đã mở menu chia sẻ ảnh!", "success");
+        } catch (shareErr) {
+          // If user cancels share sheet (AbortError), don't throw error
+          if (shareErr.name !== "AbortError") {
+            console.warn("Share API error:", shareErr);
+          }
+        }
+      }
+
+      // 2. If in iframe, postMessage to parent mobile app container
+      if (isInIframe) {
+        window.parent.postMessage(
+          { type: "NEWSPAPER_EXPORT", dataUrl, filename },
+          "*"
+        );
+      }
+
+      // 3. Fallback standard download if share was not used
+      if (!sharedSuccessfully) {
+        const link = document.createElement("a");
+        link.download = filename;
+        link.href = dataUrl;
+        link.target = "_blank";
+        link.click();
+        toast.show("Xuất ảnh thành công!", "success");
+      }
     } catch (err) {
       console.error(err);
       toast.show("Có lỗi xảy ra khi xuất ảnh", "error");
