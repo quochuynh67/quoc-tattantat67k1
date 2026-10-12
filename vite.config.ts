@@ -14,6 +14,7 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
+          if (id.includes('three') || id.includes('@react-three')) return 'vendor-three';
           if (id.includes('@mui/icons-material')) return 'vendor-mui-icons';
           if (id.includes('@mui/material') || id.includes('@emotion')) return 'vendor-mui';
           if (id.includes('node_modules/react-dom')) return 'vendor-react';

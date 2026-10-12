@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 220" width="100%" height="100%">
+  <!-- Water background -->
+  <rect id="water" x="0" y="0" width="320" height="220" fill="#ffffff" stroke="#222" stroke-width="2"/>
+  <!-- Tail -->
+  <path id="tail" d="M 60 110 L 20 70 L 25 110 L 20 150 Z" fill="#ffffff" stroke="#222" stroke-width="3" stroke-linejoin="round"/>
+  <!-- Fish body -->
+  <ellipse id="fish-body" cx="160" cy="110" rx="100" ry="55" fill="#ffffff" stroke="#222" stroke-width="3"/>
+  <!-- Belly stripe -->
+  <path id="belly" d="M 70 125 Q 160 170 250 125" fill="#ffffff" stroke="#222" stroke-width="2.5"/>
+  <!-- Top fin -->
+  <path id="fin-top" d="M 140 55 C 140 20 180 15 190 55" fill="#ffffff" stroke="#222" stroke-width="2.5" stroke-linejoin="round"/>
+  <!-- Bottom fin -->
+  <path id="fin-bottom" d="M 150 165 C 145 195 170 200 175 165" fill="#ffffff" stroke="#222" stroke-width="2.5" stroke-linejoin="round"/>
+  <!-- Eye outer -->
+  <circle id="eye-outer" cx="220" cy="95" r="16" fill="#ffffff" stroke="#222" stroke-width="2.5"/>
+  <!-- Eye pupil -->
+  <circle id="eye-pupil" cx="224" cy="93" r="7" fill="#222" stroke="none"/>
+  <!-- Mouth -->
+  <path d="M 258 115 Q 265 120 258 125" fill="none" stroke="#222" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Scales pattern -->
+  <path id="scales1" d="M 120 90 Q 130 80 140 90" fill="none" stroke="#222" stroke-width="1.5"/>
+  <path id="scales2" d="M 140 100 Q 150 90 160 100" fill="none" stroke="#222" stroke-width="1.5"/>
+  <path id="scales3" d="M 160 90 Q 170 80 180 90" fill="none" stroke="#222" stroke-width="1.5"/>
+  <!-- Bubble 1 -->
+  <circle id="bubble1" cx="275" cy="60" r="8" fill="#ffffff" stroke="#222" stroke-width="1.5"/>
+  <!-- Bubble 2 -->
+  <circle id="bubble2" cx="290" cy="40" r="5" fill="#ffffff" stroke="#222" stroke-width="1.5"/>
+  <!-- Bubble 3 -->
+  <circle id="bubble3" cx="285" cy="80" r="6" fill="#ffffff" stroke="#222" stroke-width="1.5"/>
+</svg>

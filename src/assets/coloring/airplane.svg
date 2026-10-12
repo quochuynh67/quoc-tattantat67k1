@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 220" width="100%" height="100%">
+  <!-- Sky -->
+  <rect id="plane-sky" x="0" y="0" width="320" height="220" fill="#ffffff" stroke="#222" stroke-width="2"/>
+  <!-- Wing Rear/Far -->
+  <polygon id="wing-far" points="160,70 190,20 215,20 180,70" fill="#ffffff" stroke="#222" stroke-width="2.5" stroke-linejoin="round"/>
+  <!-- Fuselage / Airplane Main Body -->
+  <path id="plane-body" d="M 40 100 Q 140 60 260 100 Q 280 110 260 120 Q 140 135 40 115 Z" fill="#ffffff" stroke="#222" stroke-width="3" stroke-linejoin="round"/>
+  <!-- Tail fin -->
+  <polygon id="tail-fin" points="50,96 15,30 45,30 85,90" fill="#ffffff" stroke="#222" stroke-width="3" stroke-linejoin="round"/>
+  <!-- Front windshield/Cabin -->
+  <path id="plane-cabin" d="M 215 88 Q 235 90 248 100 L 210 100 Z" fill="#ffffff" stroke="#222" stroke-width="2.5" stroke-linejoin="round"/>
+  <!-- Passenger Window 1 -->
+  <circle id="p-window1" cx="170" cy="103" r="6" fill="#ffffff" stroke="#222" stroke-width="2"/>
+  <!-- Passenger Window 2 -->
+  <circle id="p-window2" cx="135" cy="103" r="6" fill="#ffffff" stroke="#222" stroke-width="2"/>
+  <!-- Passenger Window 3 -->
+  <circle id="p-window3" cx="100" cy="103" r="6" fill="#ffffff" stroke="#222" stroke-width="2"/>
+  <!-- Wing Near/Close -->
+  <polygon id="wing-near" points="140,112 110,190 145,190 200,115" fill="#ffffff" stroke="#222" stroke-width="3" stroke-linejoin="round"/>
+  <!-- Propeller Spinner Nose -->
+  <path id="plane-nose" d="M 260 100 C 275 100 275 118 260 118 Z" fill="#ffffff" stroke="#222" stroke-width="2.5"/>
+  <!-- Propeller Blade 1 -->
+  <ellipse id="blade1" cx="268" cy="75" rx="6" ry="22" fill="#ffffff" stroke="#222" stroke-width="2" transform="rotate(15 268 75)"/>
+  <!-- Propeller Blade 2 -->
+  <ellipse id="blade2" cx="268" cy="142" rx="6" ry="22" fill="#ffffff" stroke="#222" stroke-width="2" transform="rotate(-15 268 142)"/>
+  <!-- Decorative Cloud -->
+  <path id="plane-cloud" d="M 285 160 C 275 145 305 140 310 150 C 315 140 330 145 325 160 Z" fill="#ffffff" stroke="#222" stroke-width="2"/>
+</svg>

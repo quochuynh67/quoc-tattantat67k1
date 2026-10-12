@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 320" width="100%" height="100%">
+  <!-- Pot -->
+  <path id="pot" d="M 90 210 L 80 300 L 200 300 L 190 210 Z" fill="#ffffff" stroke="#222" stroke-width="3" stroke-linejoin="round"/>
+  <!-- Pot Rim -->
+  <rect id="pot-rim" x="75" y="200" width="130" height="18" rx="4" fill="#ffffff" stroke="#222" stroke-width="3"/>
+  <!-- Soil -->
+  <ellipse id="soil" cx="140" cy="215" rx="55" ry="8" fill="#ffffff" stroke="#222" stroke-width="2"/>
+  <!-- Main Stem -->
+  <rect id="stem-main" x="136" y="100" width="8" height="115" fill="#ffffff" stroke="#222" stroke-width="2"/>
+  <!-- Left Stem -->
+  <path id="stem-left" d="M 140 160 C 110 140 80 145 75 135" fill="none" stroke="#222" stroke-width="3" stroke-linecap="round"/>
+  <!-- Right Stem -->
+  <path id="stem-right" d="M 140 145 C 170 125 195 135 205 120" fill="none" stroke="#222" stroke-width="3" stroke-linecap="round"/>
+  <!-- Left leaf -->
+  <path id="leaf-left" d="M 75 135 C 60 115 45 140 75 145 Z" fill="#ffffff" stroke="#222" stroke-width="2"/>
+  <!-- Right leaf -->
+  <path id="leaf-right" d="M 205 120 C 225 100 235 125 205 130 Z" fill="#ffffff" stroke="#222" stroke-width="2"/>
+  <!-- Flower Center -->
+  <circle id="flower-center" cx="140" cy="70" r="18" fill="#ffffff" stroke="#222" stroke-width="2.5"/>
+  <!-- Petal Top -->
+  <ellipse id="petal-top" cx="140" cy="35" rx="16" ry="22" fill="#ffffff" stroke="#222" stroke-width="2.5"/>
+  <!-- Petal Right -->
+  <ellipse id="petal-right" cx="170" cy="58" rx="16" ry="22" fill="#ffffff" stroke="#222" stroke-width="2.5" transform="rotate(60 170 58)"/>
+  <!-- Petal Bottom-Right -->
+  <ellipse id="petal-br" cx="165" cy="92" rx="16" ry="22" fill="#ffffff" stroke="#222" stroke-width="2.5" transform="rotate(120 165 92)"/>
+  <!-- Petal Bottom-Left -->
+  <ellipse id="petal-bl" cx="115" cy="92" rx="16" ry="22" fill="#ffffff" stroke="#222" stroke-width="2.5" transform="rotate(60 115 92)"/>
+  <!-- Petal Left -->
+  <ellipse id="petal-left" cx="110" cy="58" rx="16" ry="22" fill="#ffffff" stroke="#222" stroke-width="2.5" transform="rotate(120 110 58)"/>
+</svg>

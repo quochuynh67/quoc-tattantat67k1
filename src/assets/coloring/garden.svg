@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 240" width="100%" height="100%">
+  <!-- Sky -->
+  <rect id="garden-sky" x="0" y="0" width="320" height="150" fill="#ffffff" stroke="#222" stroke-width="2"/>
+  <!-- Grass ground -->
+  <rect id="garden-grass" x="0" y="150" width="320" height="90" fill="#ffffff" stroke="#222" stroke-width="2"/>
+  <!-- Sun core -->
+  <circle id="sun-core" cx="260" cy="50" r="26" fill="#ffffff" stroke="#222" stroke-width="3"/>
+  <!-- Sun rays -->
+  <circle id="sun-ray1" cx="260" cy="12" r="4" fill="#ffffff" stroke="#222" stroke-width="1.5"/>
+  <circle id="sun-ray2" cx="222" cy="50" r="4" fill="#ffffff" stroke="#222" stroke-width="1.5"/>
+  <circle id="sun-ray3" cx="260" cy="88" r="4" fill="#ffffff" stroke="#222" stroke-width="1.5"/>
+  <circle id="sun-ray4" cx="298" cy="50" r="4" fill="#ffffff" stroke="#222" stroke-width="1.5"/>
+  <!-- Cloud 1 -->
+  <path id="cloud1" d="M 40 50 C 30 30 70 20 80 35 C 85 20 120 25 115 45 C 130 40 135 60 120 65 L 35 65 C 20 65 20 50 40 50 Z" fill="#ffffff" stroke="#222" stroke-width="2"/>
+  <!-- Main Flower Stem -->
+  <rect id="flower-stem" x="145" y="110" width="10" height="75" fill="#ffffff" stroke="#222" stroke-width="2"/>
+  <!-- Leaves -->
+  <path id="leaf-left" d="M 145 150 C 115 135 105 160 145 165 Z" fill="#ffffff" stroke="#222" stroke-width="2"/>
+  <path id="leaf-right" d="M 155 140 C 185 125 195 150 155 155 Z" fill="#ffffff" stroke="#222" stroke-width="2"/>
+  <!-- Flower Center -->
+  <circle id="flower-center" cx="150" cy="90" r="20" fill="#ffffff" stroke="#222" stroke-width="3"/>
+  <!-- Petals -->
+  <circle id="petal-top" cx="150" cy="55" r="16" fill="#ffffff" stroke="#222" stroke-width="2"/>
+  <circle id="petal-bottom" cx="150" cy="125" r="16" fill="#ffffff" stroke="#222" stroke-width="2"/>
+  <circle id="petal-left" cx="115" cy="90" r="16" fill="#ffffff" stroke="#222" stroke-width="2"/>
+  <circle id="petal-right" cx="185" cy="90" r="16" fill="#ffffff" stroke="#222" stroke-width="2 Petal Top-Right"/>
+  <circle id="petal-tr" cx="175" cy="65" r="16" fill="#ffffff" stroke="#222" stroke-width="2"/>
+  <circle id="petal-tl" cx="125" cy="65" r="16" fill="#ffffff" stroke="#222" stroke-width="2"/>
+  <!-- Mushroom cap -->
+  <path id="mushroom-cap" d="M 50 185 C 50 160 90 160 90 185 Z" fill="#ffffff" stroke="#222" stroke-width="2.5"/>
+  <rect id="mushroom-stem" x="63" y="185" width="14" height="25" fill="#ffffff" stroke="#222" stroke-width="2"/>
+</svg>

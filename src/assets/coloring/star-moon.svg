@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 280" width="100%" height="100%">
+  <!-- Night sky -->
+  <rect id="night-sky" x="0" y="0" width="300" height="280" fill="#ffffff" stroke="#222" stroke-width="2"/>
+  <!-- Moon crescent -->
+  <path id="moon" d="M 150 30 C 200 30 230 90 230 140 C 230 200 190 250 140 250 C 170 230 190 190 190 140 C 190 90 170 50 150 30 Z" fill="#ffffff" stroke="#222" stroke-width="3"/>
+  <!-- Star 1 (large) -->
+  <polygon id="star1" points="70,60 78,85 105,85 83,100 91,125 70,110 49,125 57,100 35,85 62,85" fill="#ffffff" stroke="#222" stroke-width="2.5"/>
+  <!-- Star 2 -->
+  <polygon id="star2" points="50,170 56,188 75,188 60,198 66,216 50,206 34,216 40,198 25,188 44,188" fill="#ffffff" stroke="#222" stroke-width="2"/>
+  <!-- Star 3 -->
+  <polygon id="star3" points="120,200 125,215 140,215 128,224 132,239 120,230 108,239 112,224 100,215 115,215" fill="#ffffff" stroke="#222" stroke-width="2"/>
+  <!-- Star 4 (small) -->
+  <polygon id="star4" points="250,60 254,72 267,72 257,80 260,92 250,84 240,92 243,80 233,72 246,72" fill="#ffffff" stroke="#222" stroke-width="1.8"/>
+  <!-- Star 5 (small) -->
+  <polygon id="star5" points="100,120 104,132 117,132 107,140 110,152 100,144 90,152 93,140 83,132 96,132" fill="#ffffff" stroke="#222" stroke-width="1.8"/>
+  <!-- Star 6 tiny -->
+  <polygon id="star6" points="240,180 243,189 252,189 245,195 247,204 240,198 233,204 235,195 228,189 237,189" fill="#ffffff" stroke="#222" stroke-width="1.5"/>
+  <!-- Star 7 tiny -->
+  <polygon id="star7" points="270,130 273,139 282,139 275,145 277,154 270,148 263,154 265,145 258,139 267,139" fill="#ffffff" stroke="#222" stroke-width="1.5"/>
+</svg>

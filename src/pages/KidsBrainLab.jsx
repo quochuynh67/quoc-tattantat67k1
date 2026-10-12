@@ -10,6 +10,7 @@ import {
   stopSpeech,
 } from "../utils/kidsAudio";
 import { generateKidsExercise } from "../lib/agentApi";
+import ColoringGame from "../components/coloring/ColoringGame";
 
 // ── Built-in Fallback Exercises Bank ──────────────────────────────────────────
 
@@ -236,7 +237,7 @@ const PECS_CARDS = [
   { id: 20, label: "Con yêu ba mẹ", emoji: "❤️", color: "#FFCDD2", text: "Con yêu ba mẹ nhiều lắm" },
 ];
 
-// ── Memory Game Card Decks ────────────────────────────────────────────────────
+// ── Memory Activity Card Decks ────────────────────────────────────────────────────
 
 const MEMORY_THEMES = {
   animals: [
@@ -282,7 +283,7 @@ const MEMORY_THEMES = {
 };
 
 export default function KidsBrainLab() {
-  const [activeTab, setActiveTab] = useState("memory"); // 'memory' | 'therapy' | 'sensory' | 'pecs'
+  const [activeTab, setActiveTab] = useState("memory"); // 'memory' | 'therapy' | 'sensory' | 'pecs' | 'coloring'
   const [ageGroup, setAgeGroup] = useState("3-5");
   const [stars, setStars] = useState(() => {
     return parseInt(localStorage.getItem("kids_brain_stars") || "12", 10);
@@ -294,7 +295,7 @@ export default function KidsBrainLab() {
   // Sound & voice state
   const [soundEnabled, setSoundEnabled] = useState(true);
 
-  // ── 1. Memory Game State ───────────────────────────────────────────────────
+  // ── 1. Memory Activity State ───────────────────────────────────────────────────
   const [memoryTheme, setMemoryTheme] = useState("animals");
   const [cards, setCards] = useState([]);
   const [flippedIndices, setFlippedIndices] = useState([]);
@@ -302,7 +303,7 @@ export default function KidsBrainLab() {
   const [moves, setMoves] = useState(0);
   const [memoryVictory, setMemoryVictory] = useState(false);
 
-  // Initialize Memory Game
+  // Initialize Memory Activity
   const initMemoryGame = (themeKey = memoryTheme) => {
     const themeItems = MEMORY_THEMES[themeKey] || MEMORY_THEMES.animals;
     const duplicated = [...themeItems, ...themeItems];
@@ -471,7 +472,7 @@ export default function KidsBrainLab() {
     <div style={{ minHeight: "100vh", background: "linear-gradient(180deg, #F0F4FF 0%, #E8EEFF 100%)", paddingBottom: 60 }}>
       <Helmet>
         <title>Góc Rèn Luyện Trí Nào & Trị Liệu Cho Bé — Tất Tần Tật Phú Tân</title>
-        <meta name="description" content="Vô tận game rèn luyện trí não, bài tập trí tuệ cảm xúc và trị liệu tự kỷ (ASD) hỗ trợ phát triển toàn diện cho trẻ em." />
+        <meta name="description" content="Vô vàn hoạt động rèn luyện trí não, bài tập trí tuệ cảm xúc và trị liệu tự kỷ (ASD) hỗ trợ phát triển toàn diện cho trẻ em." />
       </Helmet>
 
       {/* Hero Header */}
@@ -494,7 +495,7 @@ export default function KidsBrainLab() {
                 Góc Rèn Trí Não & Trị Liệu Cho Bé 🎈
               </h1>
               <p style={{ margin: "6px 0 0", opacity: 0.95, fontSize: "0.95rem" }}>
-                Trò chơi vô tận phát triển tư duy + Bài tập trị liệu tự kỷ & cảm xúc cho trẻ em
+                Hoạt động vô tận phát triển tư duy + Bài tập trị liệu tự kỷ & cảm xúc cho trẻ em
               </p>
             </div>
 
@@ -576,6 +577,7 @@ export default function KidsBrainLab() {
             { id: "therapy", label: "😃 Trị Liệu Cảm Xúc AI", color: "#4ECDC4" },
             { id: "sensory", label: "🌬️ Điều Hòa Cảm Giác", color: "#A8E6CF" },
             { id: "pecs", label: "🗣️ Thẻ Giao Tiếp PECS", color: "#FFD166" },
+            { id: "coloring", label: "🎨 Bé Tập Tô Màu", color: "#A29BFE" },
           ].map((tab) => {
             const isActive = activeTab === tab.id;
             return (
@@ -605,7 +607,7 @@ export default function KidsBrainLab() {
           })}
         </div>
 
-        {/* ── TAB 1: MEMORY GAME ───────────────────────────────────────────── */}
+        {/* ── TAB 1: MEMORY ACTIVITY ───────────────────────────────────────── */}
         {activeTab === "memory" && (
           <div
             style={{
@@ -617,7 +619,7 @@ export default function KidsBrainLab() {
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 20 }}>
               <div>
-                <h2 style={{ margin: 0, fontSize: "1.3rem", color: "#2D3436" }}>🧩 Trò Chơi Lật Thẻ Ghi Nhớ</h2>
+                <h2 style={{ margin: 0, fontSize: "1.3rem", color: "#2D3436" }}>🧩 Thử Thách Lật Thẻ Ghi Nhớ</h2>
                 <p style={{ margin: "4px 0 0", color: "#636E72", fontSize: "0.88rem" }}>
                   Rèn luyện trí nhớ ngắn hạn và thị giác cho trẻ.
                 </p>
@@ -1097,6 +1099,11 @@ export default function KidsBrainLab() {
               ))}
             </div>
           </div>
+        )}
+
+        {/* ── TAB 5: COLORING ACTIVITY ─────────────────────────────── */}
+        {activeTab === "coloring" && (
+          <ColoringGame />
         )}
       </div>
 

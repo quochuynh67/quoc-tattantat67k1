@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 280" width="100%" height="100%">
+  <!-- Background sky -->
+  <rect id="dino-sky" x="0" y="0" width="280" height="200" fill="#ffffff" stroke="#222" stroke-width="2"/>
+  <!-- Ground -->
+  <rect id="dino-ground" x="0" y="200" width="280" height="80" fill="#ffffff" stroke="#222" stroke-width="2"/>
+  <!-- Dinosaur Tail -->
+  <path id="dino-tail" d="M 60 170 C 20 180 10 140 30 120 C 45 105 60 135 60 170 Z" fill="#ffffff" stroke="#222" stroke-width="3" stroke-linejoin="round"/>
+  <!-- Dinosaur Body -->
+  <ellipse id="dino-body" cx="110" cy="165" rx="55" ry="40" fill="#ffffff" stroke="#222" stroke-width="3"/>
+  <!-- Neck & Head -->
+  <path id="dino-neck" d="M 145 145 C 160 110 175 70 190 70 C 210 70 215 95 190 105 L 155 155 Z" fill="#ffffff" stroke="#222" stroke-width="3" stroke-linejoin="round"/>
+  <!-- Dino Head Top -->
+  <circle id="dino-head" cx="190" cy="70" r="22" fill="#ffffff" stroke="#222" stroke-width="3"/>
+  <!-- Eye -->
+  <circle id="dino-eye" cx="196" cy="66" r="5" fill="#ffffff" stroke="#222" stroke-width="2.5"/>
+  <circle cx="197" cy="65" r="2" fill="#000000"/>
+  <!-- Back Spikes -->
+  <polygon id="spike1" points="75,130 65,115 85,123" fill="#ffffff" stroke="#222" stroke-width="2.5" stroke-linejoin="round"/>
+  <polygon id="spike2" points="95,127 90,110 108,120" fill="#ffffff" stroke="#222" stroke-width="2.5" stroke-linejoin="round"/>
+  <polygon id="spike3" points="115,130 115,112 128,125" fill="#ffffff" stroke="#222" stroke-width="2.5" stroke-linejoin="round"/>
+  <!-- Front Leg -->
+  <rect id="dino-leg-front" x="125" y="195" width="22" height="40" rx="6" fill="#ffffff" stroke="#222" stroke-width="3"/>
+  <!-- Back Leg -->
+  <rect id="dino-leg-back" x="75" y="195" width="22" height="40" rx="6" fill="#ffffff" stroke="#222" stroke-width="3"/>
+  <!-- Tiny Arm -->
+  <path id="dino-arm" d="M 155 150 C 170 150 175 160 165 165 Z" fill="#ffffff" stroke="#222" stroke-width="2.5" stroke-linejoin="round"/>
+  <!-- Cute Cloud -->
+  <path id="dino-cloud" d="M 215 35 C 205 20 230 15 235 25 C 240 15 260 20 255 35 Z" fill="#ffffff" stroke="#222" stroke-width="2"/>
+</svg>

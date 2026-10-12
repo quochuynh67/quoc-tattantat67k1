@@ -1,5 +1,5 @@
 // src/App.jsx – root component with routing and theme provider
-import React, { lazy, Suspense } from "react";
+import React, { lazy, Suspense, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, useLocation, NavLink } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import { ThemeProvider } from "./hooks/useTheme";
@@ -28,8 +28,9 @@ const PhotoRestore  = lazy(() => import("./pages/PhotoRestore"));
 const NewspaperGenerator = lazy(() => import("./pages/NewspaperGenerator"));
 const AgriStats     = lazy(() => import("./pages/AgriStats"));
 const GalaxyCards   = lazy(() => import("./pages/GalaxyCards"));
-const FnBGames      = lazy(() => import("./pages/FnBGames"));
 const KidsBrainLab  = lazy(() => import("./pages/KidsBrainLab"));
+const MuaNuocNoi    = lazy(() => import("./pages/MuaNuocNoi"));
+const MuaNuocNoiEditor = lazy(() => import("./pages/MuaNuocNoiEditor"));
 
 // Admin — separate chunk, rarely visited
 const AdminLogin = lazy(() => import("./pages/AdminLogin"));
@@ -53,26 +54,40 @@ const TradingProducts = lazy(() => import("./pages/trading/Products"));
 const TradingLogin = lazy(() => import("./pages/trading/TradingLogin"));
 const ProtectedTradingRoute = lazy(() => import("./components/trading/ProtectedTradingRoute"));
 
+const JX2_BROWSER_URL = "https://quocjx2web-public.vercel.app/?embded=zalo";
+
 const AppLayout = () => {
   const location = useLocation();
+  // Deep link /vlogs?v=jx2browser → open the JX2 browser web app instead of a vlog
+  const isJx2Browser =
+    location.pathname === "/vlogs" &&
+    new URLSearchParams(location.search).get("v") === "jx2browser";
+
+  useEffect(() => {
+    if (isJx2Browser) window.location.replace(JX2_BROWSER_URL);
+  }, [isJx2Browser]);
+
   const { canChatWithAi } = useSiteSettings();
   const isVlogFeed = location.pathname === "/vlogs";
   const isHome = location.pathname === "/";
   const isTrading = location.pathname.startsWith("/trading");
   const isAdmin = location.pathname.startsWith("/admin");
   const isGalaxy = location.pathname === "/galaxy";
-  const showSubmitFab = !isTrading && !isAdmin && !isGalaxy && canChatWithAi;
+  const isMuaNuocNoi = location.pathname.startsWith("/mua-nuoc-noi");
+  const showSubmitFab = !isTrading && !isAdmin && !isGalaxy && !isMuaNuocNoi && canChatWithAi;
+
+  if (isJx2Browser) return null;
 
   return (
     <>
       <ScrollRestoration />
-      {!isVlogFeed && !isTrading && !isGalaxy && <Header />}
+      {!isVlogFeed && !isTrading && !isGalaxy && !isMuaNuocNoi && <Header />}
       {showSubmitFab && (
         <NavLink to="/submit" className="submit-fab-button" title="Đăng bài / video">
           ✍️
         </NavLink>
       )}
-      <main style={{ minHeight: isVlogFeed || isTrading ? "100vh" : "80vh", padding: isTrading ? 0 : undefined }}>
+      <main style={{ minHeight: isVlogFeed || isTrading || isMuaNuocNoi ? "100vh" : "80vh", padding: isTrading || isMuaNuocNoi ? 0 : undefined }}>
         {/* Home: always mounted, hidden when not active */}
         <div style={{ display: isHome ? "block" : "none" }}>
           <Home />
@@ -102,8 +117,9 @@ const AppLayout = () => {
             <Route path="/newspaper" element={<NewspaperGenerator />} />
             <Route path="/agri-stats" element={<AgriStats />} />
             <Route path="/galaxy" element={<GalaxyCards />} />
-            <Route path="/fnb-games" element={<FnBGames />} />
             <Route path="/kids-brain-lab" element={<KidsBrainLab />} />
+            <Route path="/mua-nuoc-noi" element={<MuaNuocNoi />} />
+            <Route path="/mua-nuoc-noi/editor" element={<MuaNuocNoiEditor />} />
             <Route path="/admin-login" element={<AdminLogin />} />
             <Route path="/admin/*" element={<ProtectedAdminRoute><AdminLayout /></ProtectedAdminRoute>}>
               <Route index element={<AdminDashboard />} />
@@ -129,7 +145,7 @@ const AppLayout = () => {
           </Routes>
         </Suspense>
       </main>
-      {!isVlogFeed && !isTrading && !isGalaxy && <Footer />}
+      {!isVlogFeed && !isTrading && !isGalaxy && !isMuaNuocNoi && <Footer />}
     </>
   );
 };
