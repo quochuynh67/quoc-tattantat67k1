@@ -178,16 +178,17 @@ a {
 /* Custom properties – map tokens to CSS variables */
 :root {
   /* Colors */
-  --color-background: #FAF8F3;
-  --color-background-alt: #F3EFE6;
+  --color-background: #f7f8f3;
+  --color-background-alt: #edf2e8;
   --color-surface: #FFFFFF;
   --color-text: #2B241B;
   --color-subtle: #9A8F79;
   --color-text-subtle: #6B6152;
   --color-border: rgba(43, 36, 27, 0.10);
-  --color-primary: #2E7D32;
-  --color-secondary: #00695C;
-  --color-accent-gold: #F9A825;
+  --color-primary: #176b4d;
+  --color-primary-rgb: 23, 107, 77;
+  --color-secondary: #0f766e;
+  --color-accent-gold: #d99a27;
 
   /* Dark mode – will be swapped via .dark class */
   --color-dm-background: #191613;
@@ -214,9 +215,9 @@ a {
   --spacing-xxl: 72px;
 
   /* Radius */
-  --radius-sm: 8px;
-  --radius-md: 14px;
-  --radius-lg: 24px;
+  --radius-sm: 10px;
+  --radius-md: 18px;
+  --radius-lg: 28px;
 
   /* Shadows – layered, softer & warmer */
   --shadow-subtle: 0 1px 2px rgba(43, 36, 27, 0.05), 0 2px 10px rgba(43, 36, 27, 0.07);
@@ -292,22 +293,82 @@ html.dark {
   scrollbar-width: none;
 }
 
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 1100;
+  border-bottom: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-background) 84%, transparent);
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+}
+
 .header {
   align-items: center;
   display: flex;
   justify-content: space-between;
-  min-height: 64px;
+  min-height: 76px;
+  gap: 28px;
   padding-right: 72px;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 11px;
+  min-width: max-content;
+}
+
+.brand-mark {
+  display: block;
+  width: 48px;
+  height: 48px;
+  padding: 2px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, .32);
+  border-radius: 50%;
+  background: #edf7f6;
+  box-shadow: 0 7px 22px rgba(4, 32, 47, .24);
+  box-sizing: border-box;
+}
+
+.brand-mark img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.brand-copy { display: grid; line-height: 1.05; }
+.brand-copy strong { color: var(--color-text); font-family: var(--font-display); font-size: 1.05rem; }
+.brand-copy small { margin-top: 6px; color: var(--color-text-subtle); font-size: .68rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+
+.mobile-menu-button { display: none; }
+
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
 }
 
 .nav a {
   color: var(--color-text);
-  font-weight: 600;
+  font-size: .88rem;
+  font-weight: 700;
+  padding: 9px 11px;
+  border-radius: 999px;
+  transition: color .2s ease, background-color .2s ease, transform .2s ease;
 }
 
+.nav a:hover { background: rgba(var(--color-primary-rgb), .07); color: var(--color-primary); }
 .nav a.active {
   color: var(--color-primary);
+  background: rgba(var(--color-primary-rgb), .1);
 }
+
+.nav button { font-family: var(--font-body); }
 
 .theme-toggle-button {
   position: fixed !important;
@@ -388,20 +449,79 @@ html.dark .theme-toggle-button {
 }
 
 @media (max-width: 768px) {
+  .site-header { background: color-mix(in srgb, var(--color-background) 94%, transparent); }
   .header {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: var(--spacing-sm);
-    padding-bottom: var(--spacing-sm);
-    padding-right: 68px;
-    padding-top: var(--spacing-sm);
+    min-height: 68px;
+    padding-right: 64px;
   }
 
   .nav {
-    flex-wrap: wrap;
-    row-gap: var(--spacing-xs);
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 16px;
+    right: 16px;
+    display: grid;
+    gap: 4px;
+    padding: 10px;
+    border: 1px solid var(--color-border);
+    border-radius: 20px;
+    background: var(--color-surface);
+    box-shadow: var(--shadow-strong);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-8px) scale(.98);
+    transform-origin: top;
+    transition: .2s ease;
   }
+  .nav.is-open { opacity: 1; visibility: visible; transform: none; }
+  .nav a { width: 100%; box-sizing: border-box; padding: 11px 14px; }
+  .mobile-menu-button {
+    display: grid;
+    gap: 4px;
+    margin-left: auto;
+    width: 40px;
+    height: 40px;
+    place-content: center;
+    border: 1px solid var(--color-border);
+    border-radius: 13px;
+    background: var(--color-surface);
+  }
+  .mobile-menu-button span { width: 17px; height: 2px; border-radius: 9px; background: var(--color-text); }
+  .brand-copy strong { font-size: .93rem; }
+  .brand-copy small { font-size: .6rem; }
+  .brand-mark { width: 42px; height: 42px; }
+  .theme-toggle-button { top: 14px; right: 12px; }
 }
+
+@media (min-width: 769px) and (max-width: 1100px) {
+  .brand-copy { display: none; }
+  .nav a { padding-inline: 7px; font-size: .8rem; }
+}
+
+/* Shared modern surface language across public, admin and utility screens */
+.MuiPaper-root, .MuiCard-root {
+  background-image: none !important;
+}
+
+.MuiCard-root:not(.MuiAlert-root) {
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-subtle) !important;
+  transition: transform .24s ease, box-shadow .24s ease, border-color .24s ease;
+}
+
+a.MuiCard-root:hover {
+  transform: translateY(-5px);
+  border-color: rgba(var(--color-primary-rgb), .25);
+  box-shadow: var(--shadow-medium) !important;
+}
+
+.MuiButton-root { font-weight: 750 !important; border-radius: 12px !important; }
+.MuiButton-contained { box-shadow: 0 8px 20px rgba(var(--color-primary-rgb), .2) !important; }
+.MuiOutlinedInput-root { border-radius: 12px !important; background: var(--color-surface); }
+.MuiTableContainer-root { border: 1px solid var(--color-border); border-radius: var(--radius-md) !important; box-shadow: var(--shadow-subtle) !important; }
+
+.home-page { overflow: hidden; }
+.content-section:nth-of-type(even) { background: var(--color-background-alt); }
 
 .vlog-review-page {
   background: var(--color-background);

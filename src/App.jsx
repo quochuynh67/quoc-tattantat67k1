@@ -31,6 +31,7 @@ const GalaxyCards   = lazy(() => import("./pages/GalaxyCards"));
 const KidsBrainLab  = lazy(() => import("./pages/KidsBrainLab"));
 const MuaNuocNoi    = lazy(() => import("./pages/MuaNuocNoi"));
 const MuaNuocNoiEditor = lazy(() => import("./pages/MuaNuocNoiEditor"));
+const CommunityHub = lazy(() => import("./pages/CommunityHub"));
 
 // Admin — separate chunk, rarely visited
 const AdminLogin = lazy(() => import("./pages/AdminLogin"));
@@ -118,6 +119,7 @@ const AppLayout = () => {
             <Route path="/agri-stats" element={<AgriStats />} />
             <Route path="/galaxy" element={<GalaxyCards />} />
             <Route path="/kids-brain-lab" element={<KidsBrainLab />} />
+            <Route path="/phu-tan-hom-nay" element={<CommunityHub />} />
             <Route path="/mua-nuoc-noi" element={<MuaNuocNoi />} />
             <Route path="/mua-nuoc-noi/editor" element={<MuaNuocNoiEditor />} />
             <Route path="/admin-login" element={<AdminLogin />} />

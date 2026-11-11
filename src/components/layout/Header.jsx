@@ -5,6 +5,7 @@ import { useMediaQuery } from "@mui/material";
 import ThemeToggle from "../ui/ThemeToggle";
 import { useSiteSettings } from "../../contexts/SiteSettingsContext";
 import { TOOL_SECTIONS, openTool } from "../../lib/tools";
+import logo67k1 from "../../assets/logo-67k1.jpg";
 
 // Map from slug → { to, label } for nav rendering
 const SECTION_NAV = [
@@ -18,6 +19,7 @@ const SECTION_NAV = [
 
 const Header = () => {
   const [toolsOpen, setToolsOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const toolsRef = useRef(null);
   const { showOtherTab, visibleSectionSlugs } = useSiteSettings();
   const navigate = useNavigate();
@@ -25,8 +27,11 @@ const Header = () => {
 
   const handleToolClick = (url) => {
     setToolsOpen(false);
+    setMobileMenuOpen(false);
     openTool(url, navigate);
   };
+
+  const closeMobileMenu = () => setMobileMenuOpen(false);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -39,16 +44,25 @@ const Header = () => {
   }, [toolsOpen]);
 
   return (
-    <header className="header container">
-      <div className="logo" style={{ display: "flex", alignItems: "center" }}>
-        <span style={{ marginLeft: 8, fontFamily: "var(--font-display)", fontSize: "1.5rem", color: "var(--color-primary)" }}>
-          Tất tần tật – Phú Tân 67K1
+    <header className="site-header">
+      <div className="header container">
+      <NavLink to="/" className="brand" onClick={closeMobileMenu} aria-label="Về trang chủ">
+        <span className="brand-mark" aria-hidden="true">
+          <img src={logo67k1} alt="" />
         </span>
-      </div>
-      <nav className="nav" style={{ display: "flex", gap: "var(--spacing-md)", alignItems: "center" }}>
-        <NavLink to="/" end className={({ isActive }) => (isActive ? "active" : "")}>Trang chủ</NavLink>
+        <span className="brand-copy">
+          <strong>Tất tần tật Phú Tân</strong>
+          <small>An Giang · 67K1</small>
+        </span>
+      </NavLink>
+      <button className="mobile-menu-button" onClick={() => setMobileMenuOpen((value) => !value)} aria-expanded={mobileMenuOpen} aria-label="Mở menu">
+        <span /> <span /> <span />
+      </button>
+      <nav className={`nav ${mobileMenuOpen ? "is-open" : ""}`}>
+        <NavLink to="/" end onClick={closeMobileMenu} className={({ isActive }) => (isActive ? "active" : "")}>Trang chủ</NavLink>
+        <NavLink to="/phu-tan-hom-nay" onClick={closeMobileMenu} className={({ isActive }) => (isActive ? "active" : "")}>Bà con</NavLink>
         {SECTION_NAV.filter((s) => !visibleSectionSlugs || visibleSectionSlugs.has(s.slug)).map((s) => (
-          <NavLink key={s.slug} to={s.to} className={({ isActive }) => (isActive ? "active" : "")}>
+          <NavLink key={s.slug} to={s.to} onClick={closeMobileMenu} className={({ isActive }) => (isActive ? "active" : "")}>
             {s.label}
           </NavLink>
         ))}
@@ -73,7 +87,6 @@ const Header = () => {
               }}
               className={toolsOpen ? "active" : ""}
             >
-              <span>⚙️</span>
               <span>Tiện ích</span>
             </button>
             {toolsOpen && (
@@ -242,6 +255,7 @@ const Header = () => {
         )}
       </nav>
       <ThemeToggle />
+      </div>
     </header>
   );
 };

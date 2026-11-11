@@ -2,6 +2,19 @@
 
 export const TOOL_SECTIONS = [
   {
+    section: "🤝 Cộng đồng",
+    tools: [
+      {
+        id: "community",
+        label: "Phú Tân hôm nay",
+        icon: "🏡",
+        url: "/phu-tan-hom-nay",
+        tagline: "Bản tin, chợ quê & sổ mùa vụ",
+        gradient: "linear-gradient(135deg, #176b4d 0%, #d99a27 100%)",
+      },
+    ],
+  },
+  {
     section: "🎨 Sáng tạo",
     tools: [
       {
