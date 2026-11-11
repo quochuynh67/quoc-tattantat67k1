@@ -60,7 +60,7 @@ const Header = () => {
       </button>
       <nav className={`nav ${mobileMenuOpen ? "is-open" : ""}`}>
         <NavLink to="/" end onClick={closeMobileMenu} className={({ isActive }) => (isActive ? "active" : "")}>Trang chủ</NavLink>
-        <NavLink to="/phu-tan-hom-nay" onClick={closeMobileMenu} className={({ isActive }) => (isActive ? "active" : "")}>Bà con</NavLink>
+        <NavLink to="/phu-tan-hom-nay" onClick={closeMobileMenu} className={({ isActive }) => (isActive ? "active" : "")}>🆕 Tin tức</NavLink>
         {SECTION_NAV.filter((s) => !visibleSectionSlugs || visibleSectionSlugs.has(s.slug)).map((s) => (
           <NavLink key={s.slug} to={s.to} onClick={closeMobileMenu} className={({ isActive }) => (isActive ? "active" : "")}>
             {s.label}
